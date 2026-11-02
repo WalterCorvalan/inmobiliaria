@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseEmpresa as supabaseAdmin, empresaActual } from "@/lib/empresa/db";
 import { crearPlantilla, eliminarPlantilla, TemplateError } from "@/lib/panel/whatsappTemplates";
 import { z } from "zod";
+import { conEmpresaDeSesion } from "@/lib/empresa/sesion";
 
 const CrearSchema = z.object({
   nombre: z.string().trim().min(1).max(100),
@@ -13,10 +14,6 @@ const CrearSchema = z.object({
   ejemplos: z.array(z.string().trim().max(100)).max(4).optional(),
 });
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE2_URL!,
-  process.env.SUPABASE2_SERVICE_ROLE_KEY!
-);
 
 async function requireAdmin() {
   const cookieStore = await cookies();
@@ -32,7 +29,7 @@ async function requireAdmin() {
   return user;
 }
 
-export async function GET() {
+async function GET_() {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
 
@@ -41,7 +38,7 @@ export async function GET() {
   return NextResponse.json({ templates: data });
 }
 
-export async function POST(request: Request) {
+async function POST_(request: Request) {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
 
@@ -60,7 +57,7 @@ export async function POST(request: Request) {
 }
 
 // Borrar una plantilla (en Meta y en el panel). Solo admin o director, como crear.
-export async function DELETE(request: Request) {
+async function DELETE_(request: Request) {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   const id = new URL(request.url).searchParams.get("id");
@@ -73,3 +70,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Error borrando la plantilla." }, { status: 500 });
   }
 }
+
+export const GET = conEmpresaDeSesion(GET_);
+export const POST = conEmpresaDeSesion(POST_);
+export const DELETE = conEmpresaDeSesion(DELETE_);

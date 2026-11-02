@@ -2,22 +2,19 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseEmpresa as supabaseAdmin, empresaActual } from "@/lib/empresa/db";
 import { getPhoneNumberStatus, registerPhoneNumber, MetaApiError } from "@/lib/meta/client";
 import { traducirErrorMeta } from "@/lib/meta/erroresWhatsapp";
 import { registrarError } from "@/lib/panel/logger";
 import { decrypt } from "@/lib/crypto";
+import { conEmpresaDeSesion } from "@/lib/empresa/sesion";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE2_URL!,
-  process.env.SUPABASE2_SERVICE_ROLE_KEY!
-);
 
 const BodySchema = z.object({ pin: z.string().regex(/^\d{6}$/, "El PIN son 6 números.") });
 
 // Conecta el número de WhatsApp a la Cloud API (estado DISCONNECTED -> CONNECTED) con el token ya guardado, sin
 // tener que usar la consola de Meta. Solo admin: es el número de producción. El token nunca sale en la respuesta.
-export async function POST(request: Request) {
+async function POST_(request: Request) {
   const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE2_URL!,
@@ -32,7 +29,7 @@ export async function POST(request: Request) {
   const parsed = BodySchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Datos inválidos." }, { status: 400 });
 
-  const { data: config } = await supabaseAdmin.from("whatsapp_configuracion").select("*").eq("id", true).maybeSingle();
+  const { data: config } = await supabaseAdmin.from("whatsapp_configuracion").select("*").eq("empresa_id", empresaActual()).maybeSingle();
   if (!config?.listo || !config.token_cifrado || !config.phone_number_id) {
     return NextResponse.json({ error: "Faltan credenciales cargadas en Configuración → WhatsApp." }, { status: 400 });
   }
@@ -49,3 +46,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: traducido ? `${traducido.titulo}. ${traducido.explicacion}` : crudo }, { status: 502 });
   }
 }
+
+export const POST = conEmpresaDeSesion(POST_);

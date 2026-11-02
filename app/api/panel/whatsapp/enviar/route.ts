@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseEmpresa as supabaseAdmin, empresaActual } from "@/lib/empresa/db";
 import { sendTextMessage } from "@/lib/meta/client";
 import { decrypt } from "@/lib/crypto";
 import { rateLimit, ipDesdeRequest } from "@/lib/rateLimit";
@@ -10,22 +10,19 @@ import { contieneLenguajeInapropiado } from "@/lib/panel/moderacion";
 import { crearAlerta } from "@/lib/panel/alertas";
 import { seQuedaLaCharla } from "@/lib/panel/asignacionWhatsapp";
 import { z } from "zod";
+import { conEmpresaDeSesion } from "@/lib/empresa/sesion";
 
 const EnviarSchema = z.object({
   conversacionId: z.string().uuid(),
   texto: z.string().trim().min(1).max(4000),
 });
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE2_URL!,
-  process.env.SUPABASE2_SERVICE_ROLE_KEY!
-);
 
 // El vendedor responde manualmente desde /panel/whatsapp — a diferencia
 // del bot, esto requiere sesión de staff logueada. Las credenciales de Meta
 // viven cifradas en whatsapp_configuracion (Configuración → WhatsApp), no en
 // variables de entorno como en v1.
-export async function POST(request: Request) {
+async function POST_(request: Request) {
   const limite = await rateLimit(ipDesdeRequest(request), { limite: 30, ventanaMs: 60 * 1000, proyecto: "v2" });
   if (!limite.ok) {
     return NextResponse.json({ error: "Demasiados mensajes. Esperá un momento." }, { status: 429 });
@@ -84,7 +81,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No se pudo guardar el mensaje." }, { status: 500 });
   }
 
-  const { data: config } = await supabaseAdmin.from("whatsapp_configuracion").select("*").eq("id", true).maybeSingle();
+  const { data: config } = await supabaseAdmin.from("whatsapp_configuracion").select("*").eq("empresa_id", empresaActual()).maybeSingle();
   if (!config?.listo || !config.token_cifrado || !config.token_iv || !config.token_tag || !config.phone_number_id) {
     await supabaseAdmin.from("whatsapp_mensajes").update({ status: "failed" }).eq("id", mensaje.id);
     return NextResponse.json({ error: "WhatsApp no está configurado — cargá las credenciales en Configuración." }, { status: 503 });
@@ -139,3 +136,5 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true, mensajeId: mensaje.id });
 }
+
+export const POST = conEmpresaDeSesion(POST_);

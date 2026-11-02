@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseEmpresa, empresaActual } from "@/lib/empresa/db";
 import { cookies } from "next/headers";
 import { randomBytes } from "crypto";
 import { encrypt } from "@/lib/crypto";
 import { registrarError } from "@/lib/panel/logger";
 import { resumenToken } from "@/lib/panel/tokenActual";
+import { conEmpresaDeSesion } from "@/lib/empresa/sesion";
+import { parcheDeCredenciales, separarSecretos } from "@/lib/empresa/credenciales";
 
 // Mismo patrón que /api/panel/instagram/configuracion, salvo el acceso a la
 // tabla (ver clienteConfiguracion).
@@ -31,32 +33,30 @@ async function clienteAutenticado() {
 // y escribe con la clave de servicio (igual que el webhook), y la fila se crea
 // si falta.
 async function clienteConfiguracion() {
-  const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE2_URL!, process.env.SUPABASE2_SERVICE_ROLE_KEY!);
-  const { error } = await admin.from("messenger_configuracion").upsert({ id: true }, { onConflict: "id", ignoreDuplicates: true });
-  if (error) registrarError("api/panel/messenger/configuracion:crear-fila", error);
-  return admin;
+  // La fila de la empresa la crea el alta de la empresa; se lee y escribe con la clave de servicio ya atada a ella.
+  return supabaseEmpresa;
 }
 
-export async function GET() {
+async function GET_() {
   const { esAdmin } = await clienteAutenticado();
   if (!esAdmin) return NextResponse.json({ error: "Solo Admin puede ver esto." }, { status: 403 });
   const supabase = await clienteConfiguracion();
 
-  const columnas = "page_id, listo, verify_token, tono, updated_at, token_cifrado, token_iv, token_tag";
-  let { data } = await supabase.from("messenger_configuracion").select(columnas).eq("id", true).maybeSingle();
+  const columnas = "page_id, listo, verify_token, tono, updated_at, token_cifrado, token_iv, token_tag, app_id, app_secret_cifrado, app_secret_iv, app_secret_tag";
+  let { data } = await supabase.from("messenger_configuracion").select(columnas).eq("empresa_id", empresaActual()).maybeSingle();
 
   if (data && !data.verify_token) {
     const verifyToken = randomBytes(24).toString("hex");
-    const { data: actualizado } = await supabase.from("messenger_configuracion").update({ verify_token: verifyToken }).eq("id", true)
+    const { data: actualizado } = await supabase.from("messenger_configuracion").update({ verify_token: verifyToken }).eq("empresa_id", empresaActual())
       .select(columnas).maybeSingle();
     data = actualizado;
   }
 
-  const { token_cifrado, token_iv, token_tag, ...config } = data || {};
-  return NextResponse.json({ config: data ? config : data, tokenCargado: resumenToken(data) });
+  const { config, secretos } = separarSecretos(data || {});
+  return NextResponse.json({ config, tokenCargado: resumenToken(data), secretos });
 }
 
-export async function POST(request: Request) {
+async function POST_(request: Request) {
   try {
     const { esAdmin } = await clienteAutenticado();
     if (!esAdmin) return NextResponse.json({ error: "Solo Admin puede modificar esto." }, { status: 403 });
@@ -71,6 +71,7 @@ export async function POST(request: Request) {
     if (!pageId) return NextResponse.json({ error: "Falta el Page ID." }, { status: 400 });
 
     const patch: Record<string, unknown> = { page_id: pageId, tono: tono || null, updated_at: new Date().toISOString() };
+    Object.assign(patch, parcheDeCredenciales(body, "messenger"));
 
     if (accessToken) {
       const { cipher, iv, tag } = encrypt(accessToken);
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
       patch.verify_token = randomBytes(24).toString("hex");
     }
 
-    const { data: actual } = await supabase.from("messenger_configuracion").select("token_cifrado").eq("id", true).maybeSingle();
+    const { data: actual } = await supabase.from("messenger_configuracion").select("token_cifrado").eq("empresa_id", empresaActual()).maybeSingle();
     patch.listo = !!(pageId && (accessToken || actual?.token_cifrado));
 
     // .maybeSingle() en vez de .single() -- este último tira "Cannot coerce
@@ -91,13 +92,16 @@ export async function POST(request: Request) {
     // filas (fila inexistente o RLS bloqueando el SELECT posterior al
     // update), en vez de simplemente data=null. Mismo fix ya aplicado en
     // configs/vistas/perfiles (commit b0cd241), faltaba acá.
-    const { data, error } = await supabase.from("messenger_configuracion").update(patch).eq("id", true).select("page_id, listo, verify_token, tono, updated_at, token_cifrado, token_iv, token_tag").maybeSingle();
+    const { data, error } = await supabase.from("messenger_configuracion").update(patch).eq("empresa_id", empresaActual()).select("page_id, listo, verify_token, tono, updated_at, token_cifrado, token_iv, token_tag, app_id, app_secret_cifrado, app_secret_iv, app_secret_tag").maybeSingle();
     if (error) throw error;
 
-    const { token_cifrado, token_iv, token_tag, ...config } = data || {};
-    return NextResponse.json({ config: data ? config : data, tokenCargado: resumenToken(data) });
+    const { config, secretos } = separarSecretos(data || {});
+    return NextResponse.json({ config, tokenCargado: resumenToken(data), secretos });
   } catch (error) {
     registrarError("api/panel/messenger/configuracion", error);
     return NextResponse.json({ error: "Error interno guardando la configuración." }, { status: 500 });
   }
 }
+
+export const GET = conEmpresaDeSesion(GET_);
+export const POST = conEmpresaDeSesion(POST_);

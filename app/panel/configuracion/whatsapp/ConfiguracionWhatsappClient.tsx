@@ -267,6 +267,8 @@ export default function ConfiguracionWhatsappClient() {
   const [phoneNumberId, setPhoneNumberId] = useState("");
   const [wabaId, setWabaId] = useState("");
   const [accessToken, setAccessToken] = useState("");
+  const [appSecret, setAppSecret] = useState("");
+  const [secretos, setSecretos] = useState<{ appSecretCargado: boolean }>({ appSecretCargado: false });
   const [botNombre, setBotNombre] = useState("");
   const [tono, setTono] = useState("");
   const [horarioInicio, setHorarioInicio] = useState(7);
@@ -281,6 +283,7 @@ export default function ConfiguracionWhatsappClient() {
     const res = await fetch("/api/panel/whatsapp/configuracion");
     const data = await res.json();
     if (res.ok) {
+      if (data.secretos) setSecretos(data.secretos);
       setConfig(data.config); if ("tokenCargado" in data) setTokenCargado(data.tokenCargado);
       setPhoneNumberId(data.config?.phone_number_id || "");
       setWabaId(data.config?.waba_id || "");
@@ -302,13 +305,15 @@ export default function ConfiguracionWhatsappClient() {
       const res = await fetch("/api/panel/whatsapp/configuracion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phoneNumberId, wabaId, accessToken, botNombre, tono, horarioInicio, horarioFin }),
+        body: JSON.stringify({ phoneNumberId, wabaId, accessToken, botNombre, tono, horarioInicio, horarioFin, appSecret }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo guardar.");
       setConfig(data.config); if ("tokenCargado" in data) setTokenCargado(data.tokenCargado);
       setNumeroConfirmado(data.numeroConfirmado || null);
       setAccessToken("");
+      setAppSecret("");
+      if (data.secretos) setSecretos(data.secretos);
       setMensaje(data.numeroConfirmado ? `Guardado — Meta confirma que este ID corresponde al número ${data.numeroConfirmado.numero}.` : "Guardado correctamente (no se pudo confirmar el número contra Meta — revisá el token/ID).");
     } catch (e: any) {
       setMensaje(e.message || "Error al guardar.");
@@ -387,6 +392,12 @@ export default function ConfiguracionWhatsappClient() {
           <label className={labelClass}>WABA ID (WhatsApp Business Account)</label>
           <input value={wabaId} onChange={(e) => setWabaId(e.target.value)} placeholder="Ej: 123456789012345" className={inputClass} />
           <p className="text-[10px] text-slate-400 mt-1">Meta Business Suite → Cuentas de WhatsApp — es distinto del phone_number_id. Lo pide el envío de plantillas (fuera de la ventana de 24hs).</p>
+        </div>
+        <div>
+          <label className={labelClass}>Secreto de la app de Meta</label>
+          {secretos.appSecretCargado ? <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mb-1">Cargado (se guarda cifrado).</p> : null}
+          <input type="password" value={appSecret} onChange={(e) => setAppSecret(e.target.value)} placeholder="•••••••• (dejalo vacío para no cambiarlo)" className={inputClass} />
+          <p className="text-[10px] text-slate-400 mt-1">Meta → tu app → Configuración → Básica → Clave secreta de la app. Sin ella no entra ningún mensaje.</p>
         </div>
         <div>
           <label className={labelClass}>Access Token</label>

@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseEmpresa as supabaseServicio, empresaActual } from "@/lib/empresa/db";
 import { cookies } from "next/headers";
 import { decrypt } from "@/lib/crypto";
 import { getInstagramUserProfile } from "@/lib/meta/client";
 import { registrarError } from "@/lib/panel/logger";
+import { conEmpresaDeSesion } from "@/lib/empresa/sesion";
 
 // Backfill manual (botón en Configuración > Instagram, 25/9): completa el
 // @usuario real de los contactos de Instagram que quedaron guardados con
@@ -13,10 +14,6 @@ import { registrarError } from "@/lib/panel/logger";
 // cron, corre bajo demanda porque es un trabajo de una sola vez (los
 // contactos NUEVOS ya se resuelven solos desde el webhook).
 
-const supabaseServicio = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE2_URL!,
-  process.env.SUPABASE2_SERVICE_ROLE_KEY!
-);
 
 async function clienteAutenticado() {
   const cookieStore = await cookies();
@@ -31,11 +28,11 @@ async function clienteAutenticado() {
   return perfil?.roles?.some((r: string) => r === "admin" || r === "director") ?? false;
 }
 
-export async function POST() {
+async function POST_() {
   const esAdmin = await clienteAutenticado();
   if (!esAdmin) return NextResponse.json({ error: "Solo Admin puede hacer esto." }, { status: 403 });
 
-  const { data: config } = await supabaseServicio.from("instagram_configuracion").select("token_cifrado, token_iv, token_tag").eq("id", true).maybeSingle();
+  const { data: config } = await supabaseServicio.from("instagram_configuracion").select("token_cifrado, token_iv, token_tag").eq("empresa_id", empresaActual()).maybeSingle();
   if (!config?.token_cifrado || !config.token_iv || !config.token_tag) {
     return NextResponse.json({ error: "Instagram no está conectado todavía." }, { status: 400 });
   }
@@ -68,3 +65,5 @@ export async function POST() {
 
   return NextResponse.json({ resueltos, fallidos, pendientes: pendientes ?? 0 });
 }
+
+export const POST = conEmpresaDeSesion(POST_);

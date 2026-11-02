@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { sincronizarPlantillas, TemplateError } from "@/lib/panel/whatsappTemplates";
+import { conEmpresaDeSesion } from "@/lib/empresa/sesion";
 
 async function requireAdmin() {
   const cookieStore = await cookies();
@@ -17,7 +18,7 @@ async function requireAdmin() {
   return user;
 }
 
-export async function POST() {
+async function POST_() {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
 
@@ -31,3 +32,5 @@ export async function POST() {
     return NextResponse.json({ error: "Error sincronizando plantillas." }, { status: 500 });
   }
 }
+
+export const POST = conEmpresaDeSesion(POST_);

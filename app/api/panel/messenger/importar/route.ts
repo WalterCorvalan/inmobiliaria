@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { type SupabaseClient } from "@supabase/supabase-js";
+import { supabaseEmpresa, empresaActual } from "@/lib/empresa/db";
 import { cookies } from "next/headers";
 import { decrypt } from "@/lib/crypto";
 import { listarConversacionesMessenger, type ConversacionHistorialMessenger } from "@/lib/meta/client";
 import { registrarError } from "@/lib/panel/logger";
+import { conEmpresaDeSesion } from "@/lib/empresa/sesion";
 
 // Trae a la bandeja y a Leads las conversaciones de Messenger de los últimos
 // días que llegaron ANTES de que el webhook funcionara (Meta no las reenvía).
@@ -30,7 +32,7 @@ async function esAdmin(): Promise<boolean> {
   return perfil?.roles?.some((r: string) => r === "admin" || r === "director") ?? false;
 }
 
-export async function POST(request: Request) {
+async function POST_(request: Request) {
   try {
     if (!(await esAdmin())) return NextResponse.json({ error: "Solo Admin puede importar conversaciones." }, { status: 403 });
 
@@ -38,8 +40,8 @@ export async function POST(request: Request) {
     const dias = Math.min(Math.max(Number(body?.dias) || DIAS_POR_DEFECTO, 1), 60);
     const limite = Date.now() - dias * 24 * 60 * 60 * 1000;
 
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE2_URL!, process.env.SUPABASE2_SERVICE_ROLE_KEY!);
-    const { data: config } = await supabase.from("messenger_configuracion").select("page_id, token_cifrado, token_iv, token_tag").eq("id", true).maybeSingle();
+    const supabase = supabaseEmpresa as unknown as SupabaseClient;
+    const { data: config } = await supabase.from("messenger_configuracion").select("page_id, token_cifrado, token_iv, token_tag").eq("empresa_id", empresaActual()).maybeSingle();
     if (!config?.page_id || !config.token_cifrado || !config.token_iv || !config.token_tag) {
       return NextResponse.json({ error: "Faltan el Page ID o el token de Messenger en Configuración." }, { status: 400 });
     }
@@ -139,3 +141,5 @@ async function importarConversacion(
 
   return { nuevos: filas.length, yaGuardados: mensajes.length - filas.length };
 }
+
+export const POST = conEmpresaDeSesion(POST_);

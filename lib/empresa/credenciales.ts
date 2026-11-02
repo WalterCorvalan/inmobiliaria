@@ -1,7 +1,7 @@
 // Credenciales de Meta de cada empresa (secreto de la app, ID de la app de Instagram). Se guardan cifradas en la
 // configuración de cada canal; ya no hay un secreto único del servidor. Usar siempre dentro de dentroDeEmpresa(...).
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { decrypt } from "@/lib/crypto";
+import { decrypt, encrypt } from "@/lib/crypto";
 import { supabaseEmpresa, type CanalConfig } from "@/lib/empresa/db";
 import { registrarError } from "@/lib/panel/logger";
 
@@ -48,4 +48,30 @@ export async function verificarFirmaDeMeta(canal: CanalConfig, cuerpo: string, f
     return false;
   }
   return true;
+}
+
+// ---- Para las pantallas de configuración de cada canal ----
+
+/** Cifra los secretos que el dueño pegó en la pantalla. Lo que viene vacío no se toca (el secreto guardado se conserva). */
+export function parcheDeCredenciales(cuerpo: Record<string, unknown>, canal: CanalConfig): Record<string, unknown> {
+  const parche: Record<string, unknown> = {};
+  const texto = (v: unknown) => String(v ?? "").trim();
+  if (canal === "instagram" && texto(cuerpo.appId)) parche.app_id = texto(cuerpo.appId);
+  const poner = (valor: string, prefijo: string) => {
+    if (!valor) return;
+    const { cipher, iv, tag } = encrypt(valor);
+    parche[`${prefijo}_cifrado`] = cipher;
+    parche[`${prefijo}_iv`] = iv;
+    parche[`${prefijo}_tag`] = tag;
+  };
+  poner(texto(cuerpo.appSecret), "app_secret");
+  if (canal === "instagram") poner(texto(cuerpo.metaAppSecret), "meta_app_secret");
+  return parche;
+}
+
+/** Saca de una fila de configuración todo lo cifrado (nunca sale del servidor) y dice qué secretos están cargados. */
+export function separarSecretos<T extends Record<string, unknown>>(fila: T | null | undefined): { config: Record<string, unknown>; secretos: { appSecretCargado: boolean; metaAppSecretCargado: boolean } } {
+  const config: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(fila ?? {})) if (!/_(cifrado|iv|tag)$/.test(k)) config[k] = v;
+  return { config, secretos: { appSecretCargado: !!fila?.app_secret_cifrado, metaAppSecretCargado: !!fila?.meta_app_secret_cifrado } };
 }

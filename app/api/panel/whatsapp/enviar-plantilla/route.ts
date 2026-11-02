@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { rateLimit, ipDesdeRequest } from "@/lib/rateLimit";
 import { enviarPlantilla, TemplateError } from "@/lib/panel/whatsappTemplates";
 import { z } from "zod";
+import { conEmpresaDeSesion } from "@/lib/empresa/sesion";
 
 const EnviarSchema = z.object({
   conversacionId: z.string().uuid(),
@@ -12,7 +13,7 @@ const EnviarSchema = z.object({
   variables: z.array(z.string().trim().max(200)).max(4).optional(),
 });
 
-export async function POST(request: Request) {
+async function POST_(request: Request) {
   const limite = await rateLimit(ipDesdeRequest(request), { limite: 30, ventanaMs: 60 * 1000, proyecto: "v2" });
   if (!limite.ok) return NextResponse.json({ error: "Demasiados mensajes. Esperá un momento." }, { status: 429 });
 
@@ -38,3 +39,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Error enviando la plantilla." }, { status: 500 });
   }
 }
+
+export const POST = conEmpresaDeSesion(POST_);

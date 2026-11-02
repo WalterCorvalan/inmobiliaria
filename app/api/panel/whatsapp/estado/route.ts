@@ -1,20 +1,17 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseEmpresa as supabaseAdmin, empresaActual } from "@/lib/empresa/db";
 import { getPhoneNumberStatus, getWabaVerificationStatus, MetaApiError } from "@/lib/meta/client";
 import { decrypt } from "@/lib/crypto";
+import { conEmpresaDeSesion } from "@/lib/empresa/sesion";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE2_URL!,
-  process.env.SUPABASE2_SERVICE_ROLE_KEY!
-);
 
 // Chequeo en vivo del estado real de envío contra la API de Meta -- para que
 // el equipo pueda verificar ustedes mismos si ya se destrabó la
 // verificación del negocio (error #141010, ver lib/meta/erroresWhatsapp.ts)
 // sin depender de herramientas externas ni de mí.
-export async function GET(request: Request) {
+async function GET_(request: Request) {
   const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE2_URL!,
@@ -28,7 +25,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Solo admin o encargado." }, { status: 403 });
   }
 
-  const { data: config } = await supabaseAdmin.from("whatsapp_configuracion").select("*").eq("id", true).maybeSingle();
+  const { data: config } = await supabaseAdmin.from("whatsapp_configuracion").select("*").eq("empresa_id", empresaActual()).maybeSingle();
   if (!config?.listo || !config.token_cifrado || !config.phone_number_id || !config.waba_id) {
     return NextResponse.json({ error: "Faltan credenciales cargadas en Configuración → WhatsApp." }, { status: 400 });
   }
@@ -114,3 +111,5 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: mensaje }, { status: 502 });
   }
 }
+
+export const GET = conEmpresaDeSesion(GET_);

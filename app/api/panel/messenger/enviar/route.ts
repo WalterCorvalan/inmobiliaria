@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseEmpresa as supabaseAdmin, empresaActual } from "@/lib/empresa/db";
 import { sendMessengerMessage } from "@/lib/meta/client";
 import { humanAgentActivo } from "@/lib/panel/ventana24h";
 import { decrypt } from "@/lib/crypto";
@@ -10,6 +10,7 @@ import { registrarError } from "@/lib/panel/logger";
 import { contieneLenguajeInapropiado } from "@/lib/panel/moderacion";
 import { crearAlerta } from "@/lib/panel/alertas";
 import { z } from "zod";
+import { conEmpresaDeSesion } from "@/lib/empresa/sesion";
 
 // Mismo patrón exacto que /api/panel/instagram/enviar.
 
@@ -18,12 +19,8 @@ const EnviarSchema = z.object({
   texto: z.string().trim().min(1).max(4000),
 });
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE2_URL!,
-  process.env.SUPABASE2_SERVICE_ROLE_KEY!
-);
 
-export async function POST(request: Request) {
+async function POST_(request: Request) {
   const limite = await rateLimit(ipDesdeRequest(request), { limite: 30, ventanaMs: 60 * 1000, proyecto: "v2" });
   if (!limite.ok) {
     return NextResponse.json({ error: "Demasiados mensajes. Esperá un momento." }, { status: 429 });
@@ -72,7 +69,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No se pudo guardar el mensaje." }, { status: 500 });
   }
 
-  const { data: config } = await supabaseAdmin.from("messenger_configuracion").select("*").eq("id", true).maybeSingle();
+  const { data: config } = await supabaseAdmin.from("messenger_configuracion").select("*").eq("empresa_id", empresaActual()).maybeSingle();
   if (!config?.listo || !config.token_cifrado || !config.token_iv || !config.token_tag || !config.page_id) {
     await supabaseAdmin.from("messenger_mensajes").update({ status: "failed" }).eq("id", mensaje.id);
     return NextResponse.json({ error: "Messenger no está configurado — cargá las credenciales en Configuración." }, { status: 503 });
@@ -111,3 +108,5 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true, mensajeId: mensaje.id });
 }
+
+export const POST = conEmpresaDeSesion(POST_);

@@ -5,6 +5,9 @@ import { randomBytes } from "crypto";
 import { encrypt } from "@/lib/crypto";
 import { registrarError } from "@/lib/panel/logger";
 import { resumenToken } from "@/lib/panel/tokenActual";
+import { empresaActual } from "@/lib/empresa/db";
+import { conEmpresaDeSesion } from "@/lib/empresa/sesion";
+import { parcheDeCredenciales, separarSecretos } from "@/lib/empresa/credenciales";
 
 async function clienteAutenticado() {
   const cookieStore = await cookies();
@@ -19,25 +22,25 @@ async function clienteAutenticado() {
   return { supabase, esAdmin: perfil?.roles?.some((r: string) => r === "admin" || r === "director") ?? false };
 }
 
-export async function GET() {
+async function GET_() {
   const { supabase, esAdmin } = await clienteAutenticado();
   if (!esAdmin) return NextResponse.json({ error: "Solo Admin puede ver esto." }, { status: 403 });
 
-  const columnas = "ig_user_id, listo, webhook_verify_token, tono, updated_at, token_cifrado, token_iv, token_tag";
-  let { data } = await supabase.from("instagram_configuracion").select(columnas).eq("id", true).maybeSingle();
+  const columnas = "ig_user_id, listo, webhook_verify_token, tono, updated_at, token_cifrado, token_iv, token_tag, app_id, app_secret_cifrado, app_secret_iv, app_secret_tag, meta_app_secret_cifrado, meta_app_secret_iv, meta_app_secret_tag";
+  let { data } = await supabase.from("instagram_configuracion").select(columnas).eq("empresa_id", empresaActual()).maybeSingle();
 
   if (data && !data.webhook_verify_token) {
     const verifyToken = randomBytes(24).toString("hex");
-    const { data: actualizado } = await supabase.from("instagram_configuracion").update({ webhook_verify_token: verifyToken }).eq("id", true)
+    const { data: actualizado } = await supabase.from("instagram_configuracion").update({ webhook_verify_token: verifyToken }).eq("empresa_id", empresaActual())
       .select(columnas).maybeSingle();
     data = actualizado;
   }
 
-  const { token_cifrado, token_iv, token_tag, ...config } = data || {};
-  return NextResponse.json({ config: data ? config : data, tokenCargado: resumenToken(data) });
+  const { config, secretos } = separarSecretos(data || {});
+  return NextResponse.json({ config, tokenCargado: resumenToken(data), secretos });
 }
 
-export async function POST(request: Request) {
+async function POST_(request: Request) {
   try {
     const { supabase, esAdmin } = await clienteAutenticado();
     if (!esAdmin) return NextResponse.json({ error: "Solo Admin puede modificar esto." }, { status: 403 });
@@ -51,6 +54,7 @@ export async function POST(request: Request) {
     if (!igUserId) return NextResponse.json({ error: "Falta el Instagram User ID (ig_user_id)." }, { status: 400 });
 
     const patch: Record<string, unknown> = { ig_user_id: igUserId, tono: tono || null, updated_at: new Date().toISOString() };
+    Object.assign(patch, parcheDeCredenciales(body, "instagram"));
 
     if (accessToken) {
       const { cipher, iv, tag } = encrypt(accessToken);
@@ -63,19 +67,22 @@ export async function POST(request: Request) {
       patch.webhook_verify_token = randomBytes(24).toString("hex");
     }
 
-    const { data: actual } = await supabase.from("instagram_configuracion").select("token_cifrado").eq("id", true).maybeSingle();
+    const { data: actual } = await supabase.from("instagram_configuracion").select("token_cifrado").eq("empresa_id", empresaActual()).maybeSingle();
     patch.listo = !!(igUserId && (accessToken || actual?.token_cifrado));
 
     // .maybeSingle() -- .single() tira 500 ("Cannot coerce the result to a
     // single JSON object") si el update no devuelve fila, mismo fix que
     // messenger/configuracion y configs/vistas/perfiles (commit b0cd241).
-    const { data, error } = await supabase.from("instagram_configuracion").update(patch).eq("id", true).select("ig_user_id, listo, webhook_verify_token, tono, updated_at, token_cifrado, token_iv, token_tag").maybeSingle();
+    const { data, error } = await supabase.from("instagram_configuracion").update(patch).eq("empresa_id", empresaActual()).select("ig_user_id, listo, webhook_verify_token, tono, updated_at, token_cifrado, token_iv, token_tag, app_id, app_secret_cifrado, app_secret_iv, app_secret_tag, meta_app_secret_cifrado, meta_app_secret_iv, meta_app_secret_tag").maybeSingle();
     if (error) throw error;
 
-    const { token_cifrado, token_iv, token_tag, ...config } = data || {};
-    return NextResponse.json({ config: data ? config : data, tokenCargado: resumenToken(data) });
+    const { config, secretos } = separarSecretos(data || {});
+    return NextResponse.json({ config, tokenCargado: resumenToken(data), secretos });
   } catch (error) {
     registrarError("api/panel/instagram/configuracion", error);
     return NextResponse.json({ error: "Error interno guardando la configuración." }, { status: 500 });
   }
 }
+
+export const GET = conEmpresaDeSesion(GET_);
+export const POST = conEmpresaDeSesion(POST_);

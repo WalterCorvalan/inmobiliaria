@@ -26,6 +26,8 @@ export default function ConfiguracionMessengerClient() {
   const [tokenCargado, setTokenCargado] = useState<{ ultimos6: string; largo: number } | null>(null);
   const [pageId, setPageId] = useState("");
   const [accessToken, setAccessToken] = useState("");
+  const [appSecret, setAppSecret] = useState("");
+  const [secretos, setSecretos] = useState<{ appSecretCargado: boolean }>({ appSecretCargado: false });
   const [tono, setTono] = useState("");
   const [copiado, setCopiado] = useState<"webhook" | "verify" | null>(null);
   const [mensaje, setMensaje] = useState("");
@@ -62,6 +64,7 @@ export default function ConfiguracionMessengerClient() {
     if (res.ok) {
       setConfig(data.config); if ("tokenCargado" in data) setTokenCargado(data.tokenCargado);
       setPageId(data.config?.page_id || "");
+      if (data.secretos) setSecretos(data.secretos);
       setTono(data.config?.tono || "");
     }
     setCargando(false);
@@ -76,12 +79,14 @@ export default function ConfiguracionMessengerClient() {
       const res = await fetch("/api/panel/messenger/configuracion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pageId, accessToken, tono }),
+        body: JSON.stringify({ pageId, accessToken, tono, appSecret }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo guardar.");
       setConfig(data.config); if ("tokenCargado" in data) setTokenCargado(data.tokenCargado);
       setAccessToken("");
+      setAppSecret("");
+      if (data.secretos) setSecretos(data.secretos);
       setMensaje("Guardado correctamente.");
     } catch (e: any) {
       setMensaje(e.message || "Error al guardar.");
@@ -151,6 +156,12 @@ export default function ConfiguracionMessengerClient() {
       <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-5 space-y-4 shadow-sm">
         <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Credenciales de Meta</p>
 
+        <div>
+          <label className={labelClass}>Secreto de la app de Meta</label>
+          {secretos.appSecretCargado ? <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mb-1">Cargado (se guarda cifrado).</p> : null}
+          <input type="password" value={appSecret} onChange={(e) => setAppSecret(e.target.value)} placeholder="•••••••• (dejalo vacío para no cambiarlo)" className={inputClass} />
+          <p className="text-[10px] text-slate-400 mt-1">Meta → tu app → Configuración → Básica → Clave secreta de la app. Sin ella no entra ningún mensaje.</p>
+        </div>
         <div>
           <label className={labelClass}>Page ID</label>
           <input value={pageId} onChange={(e) => setPageId(e.target.value)} placeholder="Ej: 123456789012345" className={inputClass} />
