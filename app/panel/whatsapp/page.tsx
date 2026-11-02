@@ -12,7 +12,7 @@ export default async function WhatsappPage() {
       .from("whatsapp_conversaciones")
       .select(`
         id, last_message_at, unread_count, handoff_at, handoff_reason, handoff_resumen, ai_habilitada, calificacion, origen_ads, notas, estado_pipeline, estado_lead, archivada,
-        whatsapp_contactos ( id, telefono, nombre_perfil ), cliente_id, vehiculo_id,
+        whatsapp_contactos ( id, telefono, nombre_perfil ), cliente_id,
         vendedor_id, vendedor:perfiles!whatsapp_conversaciones_vendedor_id_fkey ( id, nombre )
       `)
       .order("last_message_at", { ascending: false })

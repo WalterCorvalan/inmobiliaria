@@ -1,4 +1,3 @@
-import { asignacionPorAuto, autoDeLaCharla } from "@/lib/panel/asignacionPorAuto";
 import { asignarCharlaWhatsapp } from "@/lib/panel/asignacionWhatsapp";
 import { isAiConfiguredV2 } from "@/lib/ai/indexV2";
 import { generarRespuestaAgenteV2, dividirRespuestaEnMensajes } from "@/lib/ai/agenteV2";
@@ -7,16 +6,13 @@ import { decrypt } from "@/lib/crypto";
 import { subirArchivoR2, r2Configurado } from "@/lib/storage/r2";
 import { rateLimit, ipDesdeRequest } from "@/lib/rateLimit";
 import { registrarError } from "@/lib/panel/logger";
-import { buscarRespuestaMemoria, buscarRespuestaFueraHorario, textoPendienteDelCliente, REGEX_CONSULTA_AUTO } from "@/lib/panel/whatsappMemoria";
+import { buscarRespuestaMemoria, buscarRespuestaFueraHorario, textoPendienteDelCliente } from "@/lib/panel/whatsappMemoria";
 import { horarioDeConfig, estaEnHorario, debeAvisarFueraDeHorario, textoFueraDeHorarioPorDefecto } from "@/lib/panel/horarioBots";
 import { notificarPersona, notificarEncargados } from "@/lib/panel/notificaciones";
 import { resolverFechaVisitaConControl } from "@/lib/fechas";
 import { crearAlerta } from "@/lib/panel/alertas";
 import { avisoMensajeNoEnviado } from "@/lib/panel/ventana24h";
-import { cargarConsignacionDesdeChat } from "@/lib/panel/consignacionDesdeChat";
-import { cargarPedidoDesdeChat } from "@/lib/panel/pedidoDesdeChat";
 import { completarVisitaRepetida } from "@/lib/panel/visitaRepetida";
-import { guardarPedidoDelBot } from "@/lib/panel/pedidoDelBot";
 import { RESPUESTA_FALLBACK } from "@/lib/panel/textosBot";
 import { zonaActual, supabaseEmpresa as supabase, dentroDeEmpresa, empresaPorTokenDeWebhook } from "@/lib/empresa/db";
 import { verificarFirmaDeMeta } from "@/lib/empresa/credenciales";
@@ -40,7 +36,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
   const { token } = await params;
   const empresa = await empresaPorTokenDeWebhook("whatsapp", token);
   if (!empresa) return new Response("Not found", { status: 404 });
-  const empresaId = empresa.id;
 
   const url = new URL(req.url);
   const mode = url.searchParams.get("hub.mode");
@@ -198,7 +193,7 @@ async function guardarMensajeEntrante({ waId, nombrePerfil, msg }: { waId: strin
 
   let { data: conversacion } = await supabase
     .from("whatsapp_conversaciones")
-    .select("id, vendedor_id, ai_habilitada, canal_origen, vehiculo_id")
+    .select("id, vendedor_id, ai_habilitada, canal_origen")
     .eq("contacto_id", contacto.id)
     .maybeSingle();
 
@@ -212,14 +207,14 @@ async function guardarMensajeEntrante({ waId, nombrePerfil, msg }: { waId: strin
     // indefinidamente. Si el primer mensaje sí trae señal de Meta Ads o
     // MercadoLibre, los bloques de abajo lo pisan (ambos chequean también
     // canal_origen === "WhatsApp", no solo null).
-    const { data: nueva, error: errInsertConv } = await supabase.from("whatsapp_conversaciones").insert({ contacto_id: contacto.id, canal_origen: "WhatsApp" }).select("id, vendedor_id, ai_habilitada, canal_origen, vehiculo_id").single();
+    const { data: nueva, error: errInsertConv } = await supabase.from("whatsapp_conversaciones").insert({ contacto_id: contacto.id, canal_origen: "WhatsApp" }).select("id, vendedor_id, ai_habilitada, canal_origen").single();
     if (errInsertConv && errInsertConv.code === "23505") {
       // Dos mensajes casi simultáneos del mismo contacto nuevo, en
       // invocaciones de webhook distintas -- la otra ya creó la
       // conversación primero (ver migraciones/sql_whatsapp_conversaciones_
       // unique_contacto.sql), la buscamos de nuevo en vez de duplicarla.
       // Sin esto, cada una respondía el menú de bienvenida por separado.
-      ({ data: conversacion } = await supabase.from("whatsapp_conversaciones").select("id, vendedor_id, ai_habilitada, canal_origen, vehiculo_id").eq("contacto_id", contacto.id).maybeSingle());
+      ({ data: conversacion } = await supabase.from("whatsapp_conversaciones").select("id, vendedor_id, ai_habilitada, canal_origen").eq("contacto_id", contacto.id).maybeSingle());
     } else {
       conversacion = nueva;
     }
@@ -248,20 +243,6 @@ async function guardarMensajeEntrante({ waId, nombrePerfil, msg }: { waId: strin
     // lib/utm.ts ("MercadoLibre").
     const patch: Record<string, unknown> = {};
     if (!conversacion.canal_origen || conversacion.canal_origen === "WhatsApp") patch.canal_origen = "MercadoLibre";
-
-    // El link trae el ID de la publicación (MLA-2006584545-...) -- si ese
-    // mismo auto está publicado en ML desde Stock (vehiculos.ml_item_id se
-    // carga al publicar, ver lib/ads/mercadolibrePublish.ts), se vincula
-    // solo como "vehículo de interés" de la charla, sin que el vendedor
-    // tenga que cargarlo a mano. Deja "cuántas consultas por WhatsApp
-    // entraron por este auto publicado en ML" contable por vehiculo_id.
-    if (!conversacion.vehiculo_id) {
-      const mlaId = msg.text?.body?.match(/MLA-?(\d+)/i)?.[1];
-      if (mlaId) {
-        const { data: vehiculo } = await supabase.from("vehiculos").select("id").eq("ml_item_id", `MLA${mlaId}`).maybeSingle();
-        if (vehiculo) patch.vehiculo_id = vehiculo.id;
-      }
-    }
 
     if (Object.keys(patch).length > 0) {
       await supabase.from("whatsapp_conversaciones").update(patch).eq("id", conversacion.id);
@@ -371,7 +352,7 @@ async function ejecutarAgente(conversacionId: string, mensajeId: string) {
   // nada fijo (horarios, ubicación, formas de pago, datos de la empresa), o
   // si además pregunta por un auto (ver REGEX_CONSULTA_AUTO).
   const textoPendiente = textoPendienteDelCliente(historial);
-  if (textoPendiente && !REGEX_CONSULTA_AUTO.test(textoPendiente)) {
+  if (textoPendiente) {
     const respuestaMemoria = await buscarRespuestaMemoria(supabase, textoPendiente);
     if (respuestaMemoria) {
       await enviarMensajeFijo(conversacionId, respuestaMemoria, config);
@@ -381,7 +362,7 @@ async function ejecutarAgente(conversacionId: string, mensajeId: string) {
 
   if (!isAiConfiguredV2()) return;
 
-  const result = await generarRespuestaAgenteV2(historial, "panel-v2/webhooks/whatsapp", undefined, conversacionActual?.vehiculo_id ?? null, config?.tono ?? null);
+  const result = await generarRespuestaAgenteV2(historial, "panel-v2/webhooks/whatsapp", { nombreBot: config?.bot_nombre || undefined, tono: config?.tono ?? null });
 
   // Pedido del 5/10: el agente tarda 5-15 s en pensar. Si mientras tanto el
   // cliente mandó otro mensaje ("Hola buen día" y a los 10 s "¿tienen
@@ -398,13 +379,10 @@ async function ejecutarAgente(conversacionId: string, mensajeId: string) {
   }
 
   const { reply, handoff, pausar_sin_notificar, calificacion, resumen_handoff, datos_detectados } = result.data;
-  const { fotosParaEnviar, vehiculoFocoId, pedidoStock } = result;
-  const autoCharla = autoDeLaCharla(vehiculoFocoId, result.data.intencion);
 
   const estadoSegunCalificacion = calificacion === "caliente" ? "calificando" : undefined;
   const patchConversacion: Record<string, unknown> = { calificacion };
   if (estadoSegunCalificacion) patchConversacion.estado_lead = estadoSegunCalificacion;
-  if (autoCharla !== undefined) patchConversacion.vehiculo_id = autoCharla;
 
   // La sucursal que elige el cliente se guarda apenas la dice, no recién al pasar la charla: así sirve para asignarla
   // aunque el cliente deje de contestar a mitad de camino (Walter, 31/10/2026; lib/panel/asignacionWhatsapp.ts).
@@ -415,96 +393,21 @@ async function ejecutarAgente(conversacionId: string, mensajeId: string) {
     if (sucursalElegida && sucursalElegida.id !== conversacionActual?.sucursal_id) patchConversacion.sucursal_id = sucursalElegida.id;
   }
 
-  // Pedido del usuario: todo auto 0km que el bot elige como foco de la
-  // charla se deriva siempre a Gabriel (Casa Central), sin importar la
-  // ronda normal por sucursal -- lo maneja una sola persona. Se busca por
-  // nombre/sucursal en vivo (no un UUID hardcodeado) para no romper si
-  // cambia el perfil; si no se encuentra a Gabriel activo en Casa Central,
-  // no rompe el resto del flujo, solo no fuerza el cambio.
-  // Pedido del 29/9: consignación deja de ir a Gabriel -- ahora cae en la
-  // ronda común (el trigger asignar_vendedor_conversacion_nueva ya le puso
-  // vendedor al crear la charla), igual que Instagram/Messenger/Rodi, que
-  // nunca tuvieron este caso especial.
-    // Pedido del 29/9: además de avisarle al vendedor nuevo por qué le llegó
-  // (ya lo hacía la notificación de abajo), la reasignación automática
-  // queda anotada en Eventos del lead -- sin esto, quien abre el detalle
-  // más tarde (o el vendedor al que se lo sacaron) no tiene forma de saber
-  // que un lead que tenía asignado cambió de dueño solo, ni por qué.
-  const registrarEventoAsignacion = (descripcion: string) =>
-    supabase.from("eventos_lead").insert({ whatsapp_conversacion_id: conversacionId, tipo: "asignacion", descripcion }).then(({ error }) => {
-      if (error) registrarError("webhook-v2:evento-asignacion", error, { conversacionId });
-    });
-
-  // A quién va el lead: a quien tiene el auto (o a Gabriel si es consignación), salvo que lo hayan pasado a mano
-  // (Walter, 21/10/2026; reglas en lib/panel/asignacionPorAuto.ts). Reemplaza "todo 0 km a Gabriel".
-  const porAuto = await asignacionPorAuto(supabase, { fk: "whatsapp_conversacion_id", conversacionId, vehiculoId: autoCharla ?? null, intencion: result.data.intencion, vendedorActual: conversacionActual?.vendedor_id ?? null });
-  if (porAuto) {
-    patchConversacion.vendedor_id = porAuto.vendedorId;
-    patchConversacion.estado_lead = "asignado";
-    registrarEventoAsignacion(porAuto.descripcion);
-  }
-  // Pedido del 1/10: ya NO se reasigna la charla solo porque el auto en
-  // foco tenga otro vendedor en Stock -- antes esto le sacaba el lead al
-  // vendedor que lo venía atendiendo (y, con el filtro de visibilidad por
-  // vendedor de leads/page.tsx y los 4 módulos de conversaciones, el chat
-  // directamente desaparecía de su bandeja). Ahora el vendedor original
-  // se queda con la conversación; LeadDetailModal.tsx muestra un aviso de
-  // "este auto lo tiene asignado [otro vendedor]" comparando en vivo
-  // vehiculos.vendedor_asignado_id contra la conversación, sin tocar quién
-  // es el dueño del lead. El caso de Gabriel/0km (arriba) sigue igual, no
-  // se tocó -- ese sí es una regla de negocio explícita de reasignar.
-
   await supabase.from("whatsapp_conversaciones").update(patchConversacion).eq("id", conversacionId);
-
-  // Avisar recién después del update de arriba (así el link ya muestra la
-  // conversación con el vendedor correcto si abre desde la alerta).
-  if (patchConversacion.vendedor_id) {
-    // Única rama que llega acá: el lead fue a quien tiene el auto o, si es consignación, a Gabriel (asignacionPorAuto).
-    const textoAviso = result.data.intencion === "CONSIGNACION"
-      ? "Un cliente quiere dejar su auto en consignación — se te asignó automáticamente."
-      : "Un cliente está consultando por un auto que tenés asignado — se te asignó automáticamente.";
-    notificarPersona(supabase, patchConversacion.vendedor_id as string, "whatsapp_venta_zona", textoAviso, `/panel/whatsapp?conversacion=${conversacionId}`, { categoriaNotif: "leads", modulo: "leads" }).catch((err) => console.error("[webhook-v2] error notificando asignación:", err));
-  }
 
   // Nombre y mail que el cliente vaya dando durante la charla se guardan en
   // el contacto apenas se detectan, sin esperar al handoff — así quedan
   // aunque la charla se corte antes de derivar a un vendedor.
   let contactoIdActual: string | null = null;
-  if (datos_detectados?.nombre || datos_detectados?.email || datos_detectados?.cuil) {
+  if (datos_detectados?.nombre || datos_detectados?.email) {
     const { data: conv } = await supabase.from("whatsapp_conversaciones").select("contacto_id").eq("id", conversacionId).single();
     contactoIdActual = conv?.contacto_id ?? null;
     if (contactoIdActual) {
       const patchContacto: Record<string, unknown> = {};
       if (datos_detectados.nombre) patchContacto.nombre_perfil = datos_detectados.nombre;
       if (datos_detectados.email) patchContacto.email = datos_detectados.email;
-      if (datos_detectados.cuil) patchContacto.cuil = datos_detectados.cuil;
       const { error: errorContacto } = await supabase.from("whatsapp_contactos").update(patchContacto).eq("id", contactoIdActual);
       if (errorContacto) registrarError("webhook-v2:patch-contacto", errorContacto, { conversacionId });
-    }
-  }
-
-  // Sin stock que coincida: el bot ya avisó que va a notificar apenas entre
-  // un auto así -- queda registrado en Pedidos con lo que se sabe hasta
-  // ahora (aunque sea parcial), para que reasignar_pedidos_vencidos y el
-  // match automático de stock nuevo lo tengan en cuenta.
-  if (pedidoStock?.marca) {
-    const { data: convParaPedido } = await supabase.from("whatsapp_conversaciones").select("vendedor_id, contacto_id, whatsapp_contactos(telefono, nombre_perfil)").eq("id", conversacionId).single();
-    const telefonoContacto = (convParaPedido?.whatsapp_contactos as any)?.telefono;
-    if (telefonoContacto) {
-      // "nombre_cliente" es NOT NULL en "pedidos" -- fallback para no perder
-      // el pedido si todavía no tenemos el nombre. "marca" también es NOT
-      // NULL, pero esa la exige el prompt antes de completar pedido_stock
-      // (ver regla SIN STOCK QUE COINCIDA) -- no se rellena con un fallback
-      // acá porque un pedido con marca inventada no sirve para nada.
-      await guardarPedidoDelBot(supabase, {
-        telefono: telefonoContacto,
-        nombre_cliente: datos_detectados?.nombre || (convParaPedido?.whatsapp_contactos as any)?.nombre_perfil || "Cliente de WhatsApp",
-        marca: pedidoStock.marca, modelo: pedidoStock.modelo,
-        presupuesto_max: pedidoStock.presupuesto_max, moneda: pedidoStock.moneda || "ARS",
-        puertas: pedidoStock.puertas,
-        vendedor_id: convParaPedido?.vendedor_id ?? null,
-        origen: "whatsapp",
-      }, "webhook-v2:crear-pedido");
     }
   }
 
@@ -514,11 +417,6 @@ async function ejecutarAgente(conversacionId: string, mensajeId: string) {
   for (const parte of dividirRespuestaEnMensajes(reply)) {
     const { data: mensajeSaliente } = await supabase.from("whatsapp_mensajes").insert({ conversacion_id: conversacionId, direccion: "out", tipo: "text", texto: parte, status: "pending", ai_generado: true }).select("id").single();
     if (mensajeSaliente) await enviarYActualizarMensaje(mensajeSaliente.id, conversacionId, parte, config);
-  }
-
-  for (const fotoUrl of fotosParaEnviar) {
-    const { data: mensajeFoto } = await supabase.from("whatsapp_mensajes").insert({ conversacion_id: conversacionId, direccion: "out", tipo: "image", media_url: fotoUrl, status: "pending", ai_generado: true }).select("id").single();
-    if (mensajeFoto) await enviarYActualizarImagen(mensajeFoto.id, conversacionId, fotoUrl, config);
   }
 
   if (handoff) {
@@ -545,7 +443,7 @@ async function ejecutarAgente(conversacionId: string, mensajeId: string) {
       const { data } = await supabase.from("sucursales").select("id, nombre").eq("id", convHandoff.sucursal_id).maybeSingle();
       sucursalElegida = data;
     }
-    // El bot pasa la charla y todavía no tiene vendedor (no se habló de un auto del stock ni de consignación): va a la
+    // El bot pasa la charla y todavía no tiene vendedor : va a la
     // ronda de la sucursal que eligió el cliente o, si no eligió, a la ronda general (lib/panel/asignacionWhatsapp.ts).
     if (!vendedorAsignado) {
       vendedorAsignado = await asignarCharlaWhatsapp(supabase, {
@@ -564,21 +462,6 @@ async function ejecutarAgente(conversacionId: string, mensajeId: string) {
       notificarEncargados(supabase, mensajeNoti, linkNoti, "whatsapp_handoff", null, "media", { categoriaNotif: "leads", modulo: "leads" }).catch((err) => console.error("[webhook-v2] error notificando handoff:", err));
     }
 
-    // Quiere dejar su auto en consignación: se carga sola en Consignaciones → Pendientes (lib/panel/consignacionDesdeChat.ts).
-    const contactoHandoff = convHandoff?.whatsapp_contactos as { telefono?: string | null; nombre_perfil?: string | null } | null | undefined;
-    await cargarConsignacionDesdeChat(supabase, {
-      canal: "whatsapp", conversacionId, intencion: result.data.intencion, datos: datos_detectados,
-      nombre: datos_detectados?.nombre || contactoHandoff?.nombre_perfil || "Cliente de WhatsApp",
-      telefono: contactoHandoff?.telefono, email: datos_detectados?.email,
-      vendedorId: vendedorAsignado, sucursalId: sucursalElegida?.id,
-    });
-    await cargarPedidoDesdeChat(supabase, {
-      canal: "whatsapp", conversacionId, intencion: result.data.intencion, datos: datos_detectados,
-      nombre: datos_detectados?.nombre || contactoHandoff?.nombre_perfil || "Cliente de WhatsApp",
-      telefono: contactoHandoff?.telefono, email: datos_detectados?.email,
-      vendedorId: vendedorAsignado, sucursalNombre: sucursalElegida?.nombre,
-    });
-
     // Día/horario confirmado para acercarse: se agenda como visita real en
     // el módulo Visitas, no queda solo en el texto de la charla para que el
     // vendedor tenga que volver a preguntarlo.
@@ -595,14 +478,11 @@ async function ejecutarAgente(conversacionId: string, mensajeId: string) {
       // Si ya pidió visita ese día por otro lado (formulario de la web), no se repite: se completa esa (lib/panel/visitaRepetida.ts).
       const visitaYaCargada = await completarVisitaRepetida(supabase, {
         telefono: telefonoCliente, fecha: fechaVisita,
-        vehiculo_marca: datos_detectados?.vehiculo_propio?.marca || null, vehiculo_modelo: datos_detectados?.vehiculo_propio?.modelo || null,
       });
       const { data: ocupados } = visitaYaCargada ? { data: [] } : await supabase.rpc("visitas_horarios_ocupados", { p_sucursal: sucursalVisita, p_fecha: fechaVisita });
       const hayConflicto = (ocupados || []).some((o: { horario_visita: string }) => o.horario_visita === datos_detectados.horario_visita);
 
       const { error: errorVisita } = visitaYaCargada ? { error: null } : await supabase.from("visitas").insert({
-        vehiculo_marca: datos_detectados?.vehiculo_propio?.marca || null,
-        vehiculo_modelo: datos_detectados?.vehiculo_propio?.modelo || null,
         nombre_cliente: nombreCliente,
         telefono_cliente: telefonoCliente || "sin dato",
         fecha_visita: fechaVisita,
@@ -652,25 +532,6 @@ async function enviarYActualizarMensaje(mensajeId: string, conversacionId: strin
   }
 }
 
-// Best-effort: si falla el envío de la foto no rompe la conversación, ya se
-// mandó el texto antes. La URL de la foto ya es pública (mismo storage que
-// usa el catálogo web), Meta la descarga directo del link.
-async function enviarYActualizarImagen(mensajeId: string, conversacionId: string, imageUrl: string, config: any) {
-  if (!isWhatsappEnvioConfigurado(config)) return;
-
-  const { data: conversacion } = await supabase.from("whatsapp_conversaciones").select("contacto_id, whatsapp_contactos(telefono)").eq("id", conversacionId).single();
-  const telefono = (conversacion?.whatsapp_contactos as any)?.telefono;
-  if (!telefono) return;
-
-  try {
-    const tokenPlano = decrypt(config.token_cifrado, config.token_iv, config.token_tag);
-    const resultado = await sendImageMessage(config.phone_number_id, tokenPlano, telefono, imageUrl);
-    await supabase.from("whatsapp_mensajes").update({ status: "sent", wa_message_id: resultado.messages?.[0]?.id }).eq("id", mensajeId);
-  } catch (err) {
-    registrarError("webhook-v2:enviar-imagen", err, { conversacionId, mensajeId });
-    await supabase.from("whatsapp_mensajes").update({ status: "failed" }).eq("id", mensajeId);
-  }
-}
 
 async function actualizarEstadoMensaje(status: any) {
   const orden = ["pending", "sent", "delivered", "read"];

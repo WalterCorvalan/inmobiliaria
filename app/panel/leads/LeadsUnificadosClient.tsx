@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import AvatarVendedor from "@/components/panel/conversaciones/AvatarVendedor";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase2 } from "@/lib/supabase/client";
-import { List, Columns3, TrendingUp, Trophy, Filter, Search, Radar, MessageCircle, AtSign, Bot, User, Plus, Radio, Building2, ChevronDown, Flame, Trash2, Megaphone, PanelLeftClose, PanelLeftOpen, ArrowDownWideNarrow, Clock3, Zap, ClipboardList, LayoutGrid, CalendarDays, History, PieChart } from "lucide-react";
+import { List, Columns3, TrendingUp, Trophy, Filter, Search, Radar, Bot, User, Plus, Radio, Building2, ChevronDown, Flame, Trash2, Megaphone, PanelLeftClose, PanelLeftOpen, ArrowDownWideNarrow, Clock3, Zap, ClipboardList, LayoutGrid, CalendarDays, History, PieChart } from "lucide-react";
 import { IconoWhatsapp, IconoInstagram, IconoMessenger } from "@/components/ui/IconosCanales";
 import LeadDetailModal, { CANALES_ORIGEN } from "@/components/panel/conversaciones/LeadDetailModal";
 import NuevoLeadManualModal from "./NuevoLeadManualModal";
@@ -134,7 +134,7 @@ function VendedorLeadSelector({
   );
 }
 
-export default function LeadsUnificadosClient({ leadsIniciales, vendedores, sucursales, miId, tareas, topeAlcanzado = false, ventasCerradas = [], avisosCarga = [] }: { leadsIniciales: LeadNormalizado[]; vendedores: Perfil[]; sucursales: Sucursal[]; miId: string; tareas: DatosTareasLead; topeAlcanzado?: boolean; ventasCerradas?: { vendedor_id: string | null; fecha_cierre: string | null }[]; avisosCarga?: string[] }) {
+export default function LeadsUnificadosClient({ leadsIniciales, vendedores, sucursales, miId, tareas, topeAlcanzado = false, avisosCarga = [] }: { leadsIniciales: LeadNormalizado[]; vendedores: Perfil[]; sucursales: Sucursal[]; miId: string; tareas: DatosTareasLead; topeAlcanzado?: boolean; avisosCarga?: string[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const misRoles = vendedores.find((v) => v.id === miId)?.roles || [];
@@ -321,7 +321,7 @@ export default function LeadsUnificadosClient({ leadsIniciales, vendedores, sucu
       <Crossfade id={esModoTareas(modo) ? "tareas" : modo} className="flex-1 min-h-0 flex flex-col" classNameInterno="flex-1 min-h-0 flex flex-col w-full">
       {modo === "pipeline" && <PipelineLeads leads={clasificados} vendedores={vendedores} miId={miId} onAbrir={abrirDesdeVista} onMovido={actualizarUno} />}
       {modo === "ingresos" && <IngresosLeads leads={clasificados} vendedores={vendedores} />}
-      {modo === "ranking" && puedeVerRanking && <RankingLeads leads={clasificados} vendedores={vendedores} ventasCerradas={ventasCerradas} />}
+      {modo === "ranking" && puedeVerRanking && <RankingLeads leads={clasificados} vendedores={vendedores} />}
       {esModoTareas(modo) && <TareasLeadBoard vista={modo.replace("tareas_", "") as VistaTareas} {...tareas} />}
 
       {modo === "lista" && (

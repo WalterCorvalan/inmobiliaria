@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Camera, Copy, Check, Loader2, ExternalLink, CheckCircle2, MessageSquareReply, Plus, Trash2, UserSearch } from "lucide-react";
+import { Copy, Check, Loader2, ExternalLink, CheckCircle2, MessageSquareReply, Plus, Trash2, UserSearch } from "lucide-react";
 import { supabase2 } from "@/lib/supabase/client";
 import ConfirmDialog from "@/components/panel/ConfirmDialog";
 import TokenCargado from "../TokenCargado";

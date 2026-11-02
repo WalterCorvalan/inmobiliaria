@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { supabaseEmpresa as supabaseAdmin, empresaActual } from "@/lib/empresa/db";
+import { supabaseEmpresa as supabaseAdmin } from "@/lib/empresa/db";
 import { crearPlantilla, eliminarPlantilla, TemplateError } from "@/lib/panel/whatsappTemplates";
 import { z } from "zod";
 import { conEmpresaDeSesion } from "@/lib/empresa/sesion";

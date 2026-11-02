@@ -211,14 +211,6 @@ export default function LeadsTab({ conversacionesIniciales, conversacionesInstag
             <p className="text-[10px] font-bold uppercase text-slate-400 mb-3">Rendimiento por vendedor</p>
             <div className="space-y-2">{Object.entries(reportes.porVendedor).map(([n, v]) => <Bar key={n} label={n} valor={v} max={reportes.maxVend} color="#6366f1" />)}</div>
           </div>
-          <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 col-span-2">
-            <p className="text-[10px] font-bold uppercase text-slate-400 mb-3">Top vehículos de interés</p>
-            <div className="space-y-1.5">
-              {Object.entries(conversaciones.reduce((acc: Record<string, number>, c) => { if (c.vehiculo_id) acc[c.vehiculo_id] = (acc[c.vehiculo_id] || 0) + 1; return acc; }, {})).length === 0
-                ? <p className="text-xs text-slate-400 italic">Sin vehículos vinculados todavía.</p>
-                : <p className="text-xs text-slate-400 italic">Ver detalle en cada lead.</p>}
-            </div>
-          </div>
         </div>
       )}
 

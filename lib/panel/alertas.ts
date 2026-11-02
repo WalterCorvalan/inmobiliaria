@@ -37,8 +37,9 @@ export async function crearAlerta(
   titulo: string,
   opciones?: { mensaje?: string; link?: string; tipo?: string; prioridad?: PrioridadAlerta; modulo?: string; categoriaNotif?: CategoriaNotif }
 ) {
-  if (opciones?.modulo && !(await puedeVerModulo(supabase, destinatarioId, opciones.modulo))) {
-    return;
+  if (opciones?.modulo) {
+    const { data: perfil } = await supabase.from("perfiles").select("roles").eq("id", destinatarioId).maybeSingle();
+    if (!puedeVerModulo((perfil as { roles?: string[] } | null)?.roles)) return;
   }
   // La categoría que se pasa o, si no, la que sale del tipo (27/10/2026: antes solo se miraba la que se pasaba y apagar
   // una categoría no frenaba las alertas que solo traían el tipo).

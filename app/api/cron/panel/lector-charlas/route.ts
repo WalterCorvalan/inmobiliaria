@@ -1,19 +1,16 @@
 import { zonaActual, supabaseEmpresa as supabase, paraCadaEmpresa } from "@/lib/empresa/db";
 import { chatJsonV2, isAiConfiguredV2 } from "@/lib/ai/indexV2";
 import { registrarError } from "@/lib/panel/logger";
-import { asignacionPorAuto } from "@/lib/panel/asignacionPorAuto";
-import { estaVacia } from "@/lib/panel/prospeccionLead";
 import { asignarCharlaWhatsapp, charlaQuieta, textoClienteDejoDeContestar } from "@/lib/panel/asignacionWhatsapp";
 import { estaEnHorario, horarioDeConfig } from "@/lib/panel/horarioBots";
 import { notificarEncargados, notificarPersona } from "@/lib/panel/notificaciones";
 import {
-  CANALES_LECTOR, DIAS_HACIA_ATRAS, MINUTOS_QUIETA, RespuestaLectorSchema, armarPedidoLector, autoPorTexto, fusionarProspeccion,
-  necesitaLectura, prospeccionDeRespuesta, telefonoDelCliente, type AutoStock,
+  CANALES_LECTOR, DIAS_HACIA_ATRAS, MINUTOS_QUIETA, RespuestaLectorSchema, armarPedidoLector, necesitaLectura, telefonoDelCliente,
 } from "@/lib/panel/lectorCharlas";
 
 // Lector de charlas (17/10/2026). Corre cada 2 minutos (desde el 21/10/2026; antes cada 10) (pg_cron, migraciones/sql_lector_charlas.sql). Busca las charlas
 // en las que contestó una persona (bot apagado) y que llevan 5 minutos quietas con mensajes que todavía no leyó, y
-// completa el lead: resumen, auto vinculado y "Cómo compra" (con la permuta). Reglas en lib/panel/lectorCharlas.ts.
+// completa el lead: resumen y teléfono. Reglas en lib/panel/lectorCharlas.ts.
 // También recorre, de a poco, las charlas de los últimos 5 días que nunca leyó.
 // Y en WhatsApp le pasa a un vendedor las charlas con el bot en las que el cliente dejó de contestar (asignarCharlasQuietas).
 
@@ -25,7 +22,7 @@ const POR_VUELTA = 8;
 const ORIGEN_IA = "panel-v2/lector-charlas";
 
 type Conversacion = {
-  id: string; vendedor_id: string | null; vehiculo_id: string | null; prospeccion: unknown; lector_leido_hasta: string | null;
+  id: string; vendedor_id: string | null; lector_leido_hasta: string | null;
   contacto_id?: string | null; telefono_contacto?: string | null;
 };
 type Canal = (typeof CANALES_LECTOR)[number];
@@ -36,7 +33,7 @@ async function ultimoMensaje(c: Canal, id: string): Promise<string | null> {
 }
 
 async function candidatos(c: Canal, ahora: Date, diasAtras: number): Promise<{ conv: Conversacion; ultimo: string }[]> {
-  const campos = "id, vendedor_id, vehiculo_id, prospeccion, lector_leido_hasta"
+  const campos = "id, vendedor_id, lector_leido_hasta"
     + (c.telefono === "contacto" ? ", contacto_id" : c.telefono === "conversacion" ? ", telefono_contacto" : "");
   // Con actividad reciente (dos días), y las viejas que nunca se leyeron.
   const desdeReciente = new Date(ahora.getTime() - 2 * 864e5).toISOString();
@@ -66,7 +63,7 @@ async function candidatos(c: Canal, ahora: Date, diasAtras: number): Promise<{ c
   return lista;
 }
 
-async function leer(c: Canal, conv: Conversacion, ultimo: string, stock: AutoStock[]): Promise<boolean> {
+async function leer(c: Canal, conv: Conversacion, ultimo: string): Promise<boolean> {
   const { data: desc } = await supabase.from(c.mensajes).select("direccion, texto").eq("conversacion_id", conv.id).order("created_at", { ascending: false }).limit(60);
   const historial = [...(desc || [])].reverse().filter((m) => m.texto) as { direccion: string; texto: string }[];
   if (!historial.some((m) => m.direccion === "in")) {
@@ -74,7 +71,7 @@ async function leer(c: Canal, conv: Conversacion, ultimo: string, stock: AutoSto
     return false;
   }
 
-  const r = await chatJsonV2(RespuestaLectorSchema, armarPedidoLector(historial, stock), { origen: ORIGEN_IA, maxRetries: 1 });
+  const r = await chatJsonV2(RespuestaLectorSchema, armarPedidoLector(historial), { origen: ORIGEN_IA, maxRetries: 1 });
   if (!r.ok) {
     registrarError("lector-charlas:ia", r.error, { canal: c.canal, conversacionId: conv.id });
     return false;
@@ -85,11 +82,6 @@ async function leer(c: Canal, conv: Conversacion, ultimo: string, stock: AutoSto
   if (r.data.resumen.trim()) {
     patch.handoff_resumen = r.data.resumen.trim();
     cambios.push("resumen");
-  }
-  const prospeccion = fusionarProspeccion(conv.prospeccion, prospeccionDeRespuesta(r.data));
-  if (!estaVacia(prospeccion) && JSON.stringify(prospeccion) !== JSON.stringify(conv.prospeccion)) {
-    patch.prospeccion = prospeccion;
-    cambios.push(prospeccion.usado ? "cómo compra (con permuta)" : "cómo compra");
   }
 
   const textosCliente = historial.filter((m) => m.direccion === "in").map((m) => m.texto);
@@ -106,26 +98,6 @@ async function leer(c: Canal, conv: Conversacion, ultimo: string, stock: AutoSto
       const { error: errTel } = await supabase.from(c.contactos).update({ telefono }).eq("id", conv.contacto_id);
       if (errTel) registrarError("lector-charlas:telefono", errTel, { canal: c.canal, conversacionId: conv.id });
       else cambios.push(`teléfono ${telefono}`);
-    }
-  }
-
-  // Si el cliente solo vende o consigna su auto, no se vincula ninguno del stock: el texto del cliente nombra SU auto
-  // ("Corolla Cross") y autoPorTexto lo confundía con el Corolla del stock (chat de Jorge Rodríguez, 10/10/2026).
-  if (!conv.vehiculo_id && !r.data.solo_vende_su_auto) {
-    const deIa = r.data.vehiculo_id && stock.some((v) => v.id === r.data.vehiculo_id) ? r.data.vehiculo_id : null;
-    const vehiculoId = autoPorTexto(textosCliente, stock) ?? deIa;
-    if (vehiculoId) {
-      patch.vehiculo_id = vehiculoId;
-      const v = stock.find((x) => x.id === vehiculoId)!;
-      cambios.push(`auto vinculado: ${v.marca} ${v.modelo}${v.anio ? ` ${v.anio}` : ""}`);
-      // Con el auto, el lead va a quien lo tiene, salvo que lo hayan pasado a mano (Walter, 21/10/2026: el lead de
-      // Nacho por la Karry de Don Torcuato quedó en Gabriel porque el lector vinculaba el auto pero no asignaba).
-      const porAuto = await asignacionPorAuto(supabase, { fk: c.fk, conversacionId: conv.id, vehiculoId, vendedorActual: conv.vendedor_id });
-      if (porAuto) {
-        patch.vendedor_id = porAuto.vendedorId;
-        patch.estado_lead = "asignado";
-        await supabase.from("eventos_lead").insert({ [c.fk]: conv.id, tipo: "asignacion", descripcion: porAuto.descripcion });
-      }
     }
   }
 
@@ -185,9 +157,6 @@ async function trabajoDeLaEmpresa(req: Request): Promise<Response> {
   // ?dias=10 para una pasada puntual más hacia atrás (Walter, 17/10/2026: una vez a 10 días); la tarea programada usa 5.
   const pedido = Number(new URL(req.url).searchParams.get("dias"));
   const diasAtras = Number.isFinite(pedido) && pedido > 0 ? Math.min(pedido, 15) : DIAS_HACIA_ATRAS;
-  const { data: autos } = await supabase.from("vehiculos").select("id, marca, modelo, anio, km, color").in("estado", ["disponible", "reservado", "señado", "en_preparacion"]);
-  const stock = (autos || []) as AutoStock[];
-
   // El techo cuenta intentos, no éxitos: una charla que falla no puede hacer que una vuelta llame a la IA sin fin.
   let intentos = 0, leidas = 0;
   const porCanal: Record<string, number> = {};
@@ -197,7 +166,7 @@ async function trabajoDeLaEmpresa(req: Request): Promise<Response> {
       for (const { conv, ultimo } of await candidatos(c, ahora, diasAtras)) {
         if (intentos >= POR_VUELTA) break;
         intentos++;
-        if (await leer(c, conv, ultimo, stock)) {
+        if (await leer(c, conv, ultimo)) {
           leidas++;
           porCanal[c.canal] = (porCanal[c.canal] || 0) + 1;
         }

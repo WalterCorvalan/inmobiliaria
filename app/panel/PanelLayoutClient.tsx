@@ -1,13 +1,12 @@
 "use client";
 
-import MensajesBubble from "@/components/panel/MensajesBubble";
 import MobileNavProgress from "@/components/panel/MobileNavProgress";
 import AtrasCierraModales from "@/components/panel/AtrasCierraModales";
 import { useTecladoAbierto } from "@/components/panel/useTecladoAbierto";
 import NotificationBell from "@/components/panel/NotificationBell";
 import AvisoNotificacionesPush from "@/components/panel/AvisoNotificacionesPush";
 import ToastHost from "@/components/panel/ToastHost";
-import { ROL_A_SECTOR } from "@/lib/panel/permisosModulos";
+import { puedeVerModulo } from "@/lib/panel/permisosModulos";
 import { supabase2 } from "@/lib/supabase/client";
 import {
   LogOut,
@@ -76,8 +75,6 @@ export type PanelInicial = {
   nombre: string;
   roles: string[];
   activo: boolean;
-  modulosActivos: Record<string, boolean>;
-  visibilidadPorModulo: Record<string, Record<string, boolean>>;
   comisionesActivas: boolean;
   branding: { nombre: string | null; logoUrl: string | null; color: string | null };
   /** Color del modo oscuro elegido en Mi Perfil (lib/panel/temasOscuros.ts). */
@@ -205,56 +202,8 @@ export default function PanelLayoutClient({
     return () => sub.subscription.unsubscribe();
   }, [router]);
 
-  // Módulos apagados por Empresa → Módulos, y visibilidad por sector —
-  // el admin no se filtra nunca, así que solo hace falta traer esto para
-  // el resto de los roles.
-  const [modulosActivos, setModulosActivos] = useState<Record<string, boolean>>(
-    inicial?.modulosActivos ?? {},
-  );
-  const [visibilidadPorModulo, setVisibilidadPorModulo] = useState<
-    Record<string, Record<string, boolean>>
-  >(inicial?.visibilidadPorModulo ?? {});
-  useEffect(() => {
-    if (inicial) return; // ya vino del servidor
-    if (roles.some((r: string) => r === "admin" || r === "director")) return;
-    Promise.all([
-      supabase2.from("modulos_config").select("modulo, activo"),
-      supabase2.from("visibilidad_sector").select("modulo, sector, visible"),
-    ]).then(([{ data: modulos }, { data: visibilidad }]) => {
-      setModulosActivos(
-        Object.fromEntries((modulos || []).map((m) => [m.modulo, m.activo])),
-      );
-      const porModulo: Record<string, Record<string, boolean>> = {};
-      (visibilidad || []).forEach((v) => {
-        porModulo[v.modulo] = porModulo[v.modulo] || {};
-        porModulo[v.modulo][v.sector] = v.visible;
-      });
-      setVisibilidadPorModulo(porModulo);
-    });
-  }, [roles.join(",")]);
-
-  const esAdmin = roles.some((r: string) => r === "admin" || r === "director");
-  const moduloVisible = (modulo?: string) => {
-    if (esAdmin || !modulo) return true;
-    if (modulosActivos[modulo] === false) return false;
-    // Rol taller solo: Stock y Taller (lib/panel/permisosModulos.ts, misma regla que puedeVerModulo en el servidor).
-
-    // Clientes siempre visible para todos los roles salvo taller, sin
-    // depender de que "Visibilidad por sector" esté bien configurado --
-    // pedido explícito para no dejar a ventas/encargado/finanzas/gestoría
-    // sin acceso si alguien lo apaga sin querer desde Configuración →
-    // Empresa → Módulos. Taller queda afuera a propósito.
-    if (modulo === "clientes" && roles.some((r) => ["ventas", "encargado", "finanzas", "gestoria"].includes(r))) return true;
-
-    const sectores = roles.map((r) => ROL_A_SECTOR[r]).filter(Boolean);
-    if (sectores.length === 0) return true;
-
-    // Sin fila en visibilidad_sector para ese módulo+sector, el módulo
-    // queda VISIBLE por default -- solo se apaga con una fila explícita en
-    // false (ver sql_panel_v2_permisos_sector_ventas.sql/_encargado.sql).
-    // Multi-rol suma permisos: alcanza que UN sector del usuario lo vea.
-    return sectores.some((s) => visibilidadPorModulo[modulo]?.[s] ?? true);
-  };
+  // Qué ve cada rol: lib/panel/permisosModulos.ts (misma regla que en el servidor).
+  const moduloVisible = (modulo?: string) => !modulo || puedeVerModulo(roles);
 
   // "Mis Comisiones" se esconde para todos (admin incluido, como en el
   // resto de la agencia) cuando Empresa → Comisiones está en modo "ninguna".
@@ -281,8 +230,6 @@ export default function PanelLayoutClient({
     setMiId(inicial.miId);
     setNombre(inicial.nombre);
     setRoles(inicial.roles);
-    setModulosActivos(inicial.modulosActivos);
-    setVisibilidadPorModulo(inicial.visibilidadPorModulo);
     setComisionesActivas(inicial.comisionesActivas);
     setBranding(inicial.branding);
   }, [inicial]);
@@ -659,7 +606,6 @@ export default function PanelLayoutClient({
         </div>
       )}
 
-      <MensajesBubble />
       {/* Cartel de auto nuevo en stock: para el equipo comercial (no taller solo). */}
       <MobileNavProgress />
       <AtrasCierraModales />

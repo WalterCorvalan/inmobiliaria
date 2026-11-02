@@ -8,6 +8,6 @@ describe("asistente del sitio", () => {
     const chat = readFileSync(new URL("../components/FloatingChatbot.tsx", import.meta.url), "utf8");
     expect(chat).not.toMatch(/Soy Rodi|Rodi · /);
     const ruta = readFileSync(new URL("../app/api/panel/rodi/mensaje/route.ts", import.meta.url), "utf8");
-    expect(ruta).toContain('generarRespuestaAgenteV2(historial, "panel-v2/rodi", NOMBRE_ASISTENTE_WEB');
+    expect(ruta).toContain('generarRespuestaAgenteV2(historial, "panel-v2/rodi", { nombreBot: NOMBRE_ASISTENTE_WEB');
   });
 });

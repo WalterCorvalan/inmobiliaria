@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { filtrarPorVendedorAsignado, filtrarVendedoresAsignables } from "./permisosModulos";
+import { filtrarPorVendedorAsignado, filtrarVendedoresAsignables, puedeVerModulo } from "./permisosModulos";
 
 // Regresión del pedido del 1/10: un vendedor solo ve los leads que le
 // tocaron; encargado y admin ven todo. Antes los 5 módulos mandaban la
@@ -65,14 +65,13 @@ describe("filtrarVendedoresAsignables", () => {
   });
 });
 
-describe("rol taller", () => {
-  it("solo taller = taller sin ningún rol de oficina", async () => {
-    const { esSoloTaller, MODULOS_ROL_TALLER } = await import("./permisosModulos");
-    expect(esSoloTaller(["taller"])).toBe(true);
-    expect(esSoloTaller(["taller", "ventas"])).toBe(false);
-    expect(esSoloTaller(["admin", "taller"])).toBe(false);
-    expect(esSoloTaller(["ventas"])).toBe(false);
-    expect(esSoloTaller(null)).toBe(false);
-    expect(MODULOS_ROL_TALLER).toEqual(["stock", "taller", "calendario"]);
+describe("puedeVerModulo", () => {
+  it("dueño, encargado y asesor ven los módulos; sin rol conocido, ninguno", () => {
+    expect(puedeVerModulo(["admin"])).toBe(true);
+    expect(puedeVerModulo(["encargado"])).toBe(true);
+    expect(puedeVerModulo(["ventas"])).toBe(true);
+    expect(puedeVerModulo([])).toBe(false);
+    expect(puedeVerModulo(null)).toBe(false);
+    expect(puedeVerModulo(["taller"])).toBe(false);
   });
 });

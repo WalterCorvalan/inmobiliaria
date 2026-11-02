@@ -15,7 +15,7 @@ export default async function MessengerPage() {
       .from("messenger_conversaciones")
       .select(`
         id, last_message_at, unread_count, handoff_at, handoff_reason, ai_habilitada, calificacion, origen_ads, notas, estado_pipeline, estado_lead, archivada,
-        messenger_contactos ( id, psid, nombre_perfil ), cliente_id, vehiculo_id,
+        messenger_contactos ( id, psid, nombre_perfil ), cliente_id,
         vendedor_id, vendedor:perfiles!messenger_conversaciones_vendedor_id_fkey ( id, nombre )
       `)
       .order("last_message_at", { ascending: false })

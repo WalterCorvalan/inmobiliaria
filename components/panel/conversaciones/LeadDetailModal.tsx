@@ -1,15 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
-import Link from "next/link";
+import { useState, useEffect, useMemo } from "react";
 import { supabase2 } from "@/lib/supabase/client";
 import { etiquetaOrigen, ORIGENES_CLIENTE } from "@/lib/panel/origenesCliente";
-import {
-  X, User, Phone, CarFront, Calendar, Plus, CheckCircle2, Circle, FileText,
-  Ban, Clock, AlertTriangle, MapPin, StickyNote, Radio, Car, LifeBuoy, History,
-  Edit2, Flame, Snowflake, Minus, Receipt, Wallet, ClipboardCheck, Loader2, MessageCircle, Building2,
-  Trash2, RotateCcw, Sparkles, UserRound,
-} from "lucide-react";
+import { X, User, Phone, Calendar, Plus, CheckCircle2, Circle, Ban, Clock, AlertTriangle, MapPin, StickyNote, Radio, LifeBuoy, History, Edit2, Flame, Snowflake, Minus, Loader2, Building2, Trash2, RotateCcw, Sparkles, UserRound } from "lucide-react";
 import { IconoWhatsapp, IconoInstagram, IconoMessenger } from "@/components/ui/IconosCanales";
 import { Compartido } from "@/components/ui/movimiento";
 import { avisar } from "@/components/panel/Dialogos";
@@ -17,9 +11,6 @@ import FichaLeads from "./FichaLeads";
 import SelectorWeb from "@/components/ui/SelectorWeb";
 import ResumenResaltado from "./ResumenResaltado";
 import { telefonoEnTexto } from "@/lib/panel/resaltarResumen";
-import AvisoSucursalLead from "./AvisoSucursalLead";
-import { estaVacia, resumenProspeccion, type ProspeccionLead } from "@/lib/panel/prospeccionLead";
-import PeritajeLeadModal, { type OrigenPeritajeLead } from "./PeritajeLeadModal";
 
 const ESTADOS_LEAD = [
   { value: "nuevo", label: "Nuevo" },
@@ -39,7 +30,6 @@ const ESTADO_COLOR: Record<string, string> = {
 // Historial: los últimos 50 al abrir; "Ver más" trae el resto.
 const LIMITE_EVENTOS = 50;
 const TIPOS_TAREA = ["Llamar", "Enviar Email", "Enviar SMS", "Enviar WhatsApp", "Visitar al Cliente", "Cliente visita salón"];
-const ESTADOS_TEST_DRIVE = ["Programado", "Realizado", "Cancelado"];
 // El origen del lead se elige de la misma lista cerrada que el de cliente (Walter, 29/10/2026): antes tenía "Cliente
 // anterior", que no existe, y le faltaban Facebook, Web y Otro. No armar otra lista acá.
 export const CANALES_ORIGEN: readonly string[] = ORIGENES_CLIENTE;
@@ -69,18 +59,8 @@ function IconoSeccion({ icono: Icono }: { icono: any; color: string }) {
 
 interface Perfil { id: string; nombre: string; roles: string[] }
 
-function Dato({ label, valor }: { label: string; valor?: string | null }) {
-  return (
-    <div>
-      <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase tracking-widest font-bold mb-0.5">{label}</span>
-      <span className="text-[13px] font-bold text-slate-800 dark:text-white">{valor || "—"}</span>
-    </div>
-  );
-}
 
 interface Sucursal { id: string; nombre: string }
-
-const CAMPOS_AUTO_LEAD = "id, marca, modelo, anio, patente, km, fotos, estado, propio_agencia, precio_publicado_ars, precio_publicado_usd, sucursal_id, sucursal:sucursal_id ( nombre ), vendedor_asignado_id, vendedor_asignado:vendedor_asignado_id ( nombre )";
 
 const TABLA_POR_ORIGEN: Record<string, string> = {
   whatsapp: "whatsapp_conversaciones", instagram: "instagram_conversaciones", messenger: "messenger_conversaciones", rodi: "rodi_conversaciones", manual: "leads_manuales",
@@ -109,38 +89,23 @@ export default function LeadDetailModal({
   const contactoTabla = CONTACTO_TABLA_POR_ORIGEN[origen];
   // rodi/manual no tienen tabla de contacto separada -- nombre/telefono/email
   // viven directo en la fila del lead (nombre_contacto en rodi, nombre en manual).
-  // Desde el 17/10/2026 el peritaje se inicia con crear_peritaje (PeritajeLeadModal), que acepta los cinco orígenes.
-  const soportaPeritaje = true;
 
   const [cargando, setCargando] = useState(true);
   const [lead, setLead] = useState<any>(null);
   const [contacto, setContacto] = useState<any>(null);
-  const [vehiculo, setVehiculo] = useState<any>(null);
-  const [vehiculosStock, setVehiculosStock] = useState<any[]>([]);
   const [tareas, setTareas] = useState<any[]>([]);
   const [eventos, setEventos] = useState<any[]>([]);
-  const [testDrives, setTestDrives] = useState<any[]>([]);
-  const [peritajes, setPeritajes] = useState<any[]>([]);
-  const [senas, setSenas] = useState<any[]>([]);
-  const [presupuestos, setPresupuestos] = useState<any[]>([]);
-  const [ventas, setVentas] = useState<any[]>([]);
   const [motivos, setMotivos] = useState<any[]>([]);
   // Carga en dos partes (Walter, 20/10/2026: "tarda muchísimo"): la ficha se muestra apenas llegan el lead, el contacto y
   // el auto; tareas, historial, test drives, peritajes y lo hecho con el cliente llegan después (cargandoDetalle).
   const [cargandoDetalle, setCargandoDetalle] = useState(true);
   // El stock en venta ya no se baja al abrir: recién al tocar el buscador, "Cambiar" o el test drive, o si el lead no
   // tiene auto (para sugerir los que nombra el resumen).
-  const [stockCargado, setStockCargado] = useState(false);
-  const pidioStock = useRef(false);
-  const [autosTestDrive, setAutosTestDrive] = useState<any[]>([]);
   const [hayMasEventos, setHayMasEventos] = useState(false);
 
   const [guardandoEstado, setGuardandoEstado] = useState(false);
   const [guardandoCalificacion, setGuardandoCalificacion] = useState(false);
   const [guardandoVendedor, setGuardandoVendedor] = useState(false);
-  const [guardandoVehiculo, setGuardandoVehiculo] = useState(false);
-  const [creandoPeritaje] = useState(false);
-  const [showPeritaje, setShowPeritaje] = useState<{ conAuto: boolean } | null>(null);
   const [guardandoBasura, setGuardandoBasura] = useState(false);
 
   const [showCierreModal, setShowCierreModal] = useState(false);
@@ -153,8 +118,6 @@ export default function LeadDetailModal({
   const [editandoTelefono, setEditandoTelefono] = useState(false);
   const [telefonoForm, setTelefonoForm] = useState("");
   const [guardandoTelefono, setGuardandoTelefono] = useState(false);
-  const [busquedaVehiculo, setBusquedaVehiculo] = useState("");
-  const [mostrarListaVehiculos, setMostrarListaVehiculos] = useState(false);
   const [guardandoCanalOrigen, setGuardandoCanalOrigen] = useState(false);
   const [guardandoSucursal, setGuardandoSucursal] = useState(false);
   const [editandoNotas, setEditandoNotas] = useState(false);
@@ -169,23 +132,11 @@ export default function LeadDetailModal({
   const [resultadoTarea, setResultadoTarea] = useState("");
   const [guardandoResultado, setGuardandoResultado] = useState(false);
 
-  const [showTestDriveModal, setShowTestDriveModal] = useState(false);
-  const [fechaTestDrive, setFechaTestDrive] = useState("");
-  const [vehiculoTestDriveId, setVehiculoTestDriveId] = useState("");
-  const [guardandoTestDrive, setGuardandoTestDrive] = useState(false);
 
   const [showAsistenciaModal, setShowAsistenciaModal] = useState(false);
   const [notaAsistencia, setNotaAsistencia] = useState("");
   const [asistenciaParaId, setAsistenciaParaId] = useState("");
   const [guardandoAsistencia, setGuardandoAsistencia] = useState(false);
-
-  const cargarStock = async () => {
-    if (pidioStock.current) return;
-    pidioStock.current = true;
-    const { data } = await supabase2.from("vehiculos").select("id, marca, modelo, patente, sucursal_id, sucursal:sucursal_id ( nombre ), vendedor_asignado_id, vendedor_asignado:vendedor_asignado_id ( nombre )").in("estado", ["disponible", "reservado"]).order("marca");
-    setVehiculosStock(data || []);
-    setStockCargado(true);
-  };
 
   const leerEventos = (todos = false) => {
     const q = supabase2.from("eventos_lead").select("*, autor:perfiles(nombre)").eq(campoFk, leadId).order("created_at", { ascending: false });
@@ -206,46 +157,24 @@ export default function LeadDetailModal({
     setLead(l);
     setDomicilio(l.domicilio || "");
     setNotas(l.notas || "");
-    setVehiculoTestDriveId(l.vehiculo_id || "");
 
-    const [{ data: c }, { data: v }] = await Promise.all([
-      contactoTabla ? supabase2.from(contactoTabla).select("*").eq("id", l.contacto_id).maybeSingle() : Promise.resolve({ data: { nombre_perfil: l.nombre_contacto || l.nombre, telefono: l.telefono_contacto || l.telefono, email: l.email_contacto || l.email } }),
-      l.vehiculo_id ? supabase2.from("vehiculos").select(CAMPOS_AUTO_LEAD).eq("id", l.vehiculo_id).maybeSingle() : Promise.resolve({ data: null }),
-    ]);
+    const { data: c } = contactoTabla
+      ? await supabase2.from(contactoTabla).select("*").eq("id", l.contacto_id).maybeSingle()
+      : { data: { nombre_perfil: l.nombre_contacto || l.nombre, telefono: l.telefono_contacto || l.telefono, email: l.email_contacto || l.email } };
     if (!vigente()) return;
     setContacto(c);
-    setVehiculo(v);
     setCargando(false);
-    if (!l.vehiculo_id) cargarStock();
 
-    const sinCliente = Promise.resolve({ data: [] as any[] });
-    const [{ data: t }, { data: e }, { data: td }, { data: p }, { data: mot }, { data: s }, { data: pr }, { data: vt }] = await Promise.all([
+    const [{ data: t }, { data: e }, { data: mot }] = await Promise.all([
       supabase2.from("tareas_lead").select("*").eq(campoFk, leadId).order("fecha_vencimiento"),
       leerEventos(),
-      supabase2.from("test_drives").select("*").eq(campoFk, leadId).order("fecha_hora", { ascending: false }),
-      supabase2.from("peritajes_lead").select("id, estado, puntaje, created_at").eq(campoFk, leadId),
       supabase2.from("motivos_cierre").select("*").order("nombre"),
-      l.cliente_id ? supabase2.from("senas").select("id, numero, estado, fecha, venta_ars, venta_usd").eq("cliente_id", l.cliente_id).order("fecha", { ascending: false }) : sinCliente,
-      l.cliente_id ? supabase2.from("presupuestos").select("id, numero, fecha, precio_ars, precio_usd").eq("cliente_id", l.cliente_id).order("fecha", { ascending: false }) : sinCliente,
-      l.cliente_id ? supabase2.from("ventas").select("id, created_at, precio_venta, moneda_venta").eq("cliente_id", l.cliente_id).order("created_at", { ascending: false }) : sinCliente,
     ]);
     if (!vigente()) return;
     setTareas(t || []);
     guardarEventos(e);
-    setTestDrives(td || []);
-    setPeritajes(p || []);
     setMotivos(mot || []);
-    setSenas(s || []);
-    setPresupuestos(pr || []);
-    setVentas(vt || []);
     setCargandoDetalle(false);
-
-    // Nombre de los autos de los test drives sin bajar todo el stock.
-    const idsTd = [...new Set((td || []).map((x: any) => x.vehiculo_id).filter(Boolean))];
-    if (idsTd.length) {
-      const { data: autos } = await supabase2.from("vehiculos").select("id, marca, modelo").in("id", idsTd);
-      if (vigente()) setAutosTestDrive(autos || []);
-    }
   };
 
   useEffect(() => {
@@ -253,10 +182,6 @@ export default function LeadDetailModal({
     cargar(() => vivo);
     return () => { vivo = false; };
   }, [leadId]);
-
-  useEffect(() => { if (showTestDriveModal) cargarStock(); }, [showTestDriveModal]);
-
-  const autoDeTestDrive = (id: string | null) => vehiculosStock.find((x) => x.id === id) || autosTestDrive.find((x) => x.id === id);
 
   const registrarEvento = async (tipo: string, descripcion: string) => {
     await supabase2.from("eventos_lead").insert({ [campoFk]: leadId, tipo, descripcion, creado_por: miId });
@@ -350,27 +275,7 @@ export default function LeadDetailModal({
     }
   };
 
-  const cambiarVehiculo = async (vehiculoId: string) => {
-    setGuardandoVehiculo(true);
-    try {
-      await patch({ vehiculo_id: vehiculoId || null });
-      const v = vehiculosStock.find((x) => x.id === vehiculoId);
-      // La lista del buscador trae pocos campos; la tarjeta del auto necesita foto, km y precio.
-      const { data: completo } = vehiculoId ? await supabase2.from("vehiculos").select(CAMPOS_AUTO_LEAD).eq("id", vehiculoId).maybeSingle() : { data: null };
-      setVehiculo(completo || (v ? { ...v } : null));
-      const auto = completo || v;
-      await registrarEvento("vehiculo", vehiculoId ? `Vinculado a ${auto?.marca} ${auto?.modelo}` : "Vehículo desvinculado");
-    } catch { avisar("No se pudo vincular el vehículo."); } finally { setGuardandoVehiculo(false); }
-  };
-
   const guardarDomicilio = async () => { await patch({ domicilio }); setEditandoDomicilio(false); };
-  const guardarProspeccion = async (p: ProspeccionLead) => {
-    try {
-      await patch({ prospeccion: estaVacia(p) ? null : p });
-      await registrarEvento("prospeccion", `Cómo compra: ${resumenProspeccion(p)}`);
-    } catch { avisar("No se pudo guardar cómo compra."); throw new Error("prospeccion"); }
-  };
-
   // whatsapp/instagram guardan el teléfono en su tabla de contacto aparte
   // (whatsapp_contactos/instagram_contactos, vía contacto_id); rodi/manual
   // no tienen tabla de contacto separada -- el teléfono vive directo en la
@@ -451,29 +356,6 @@ export default function LeadDetailModal({
     } catch { avisar("No se pudo completar la tarea."); } finally { setGuardandoResultado(false); }
   };
 
-  const agendarTestDrive = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fechaTestDrive) return void avisar("Elegí fecha y hora.");
-    setGuardandoTestDrive(true);
-    try {
-      const { data, error } = await supabase2.from("test_drives").insert({
-        [campoFk]: leadId, vehiculo_id: vehiculoTestDriveId || null, fecha_hora: new Date(fechaTestDrive).toISOString(),
-      }).select("*").single();
-      if (error) throw error;
-      setTestDrives((prev) => [data, ...prev]);
-      await registrarEvento("test_drive", "Test drive agendado");
-      // Aviso a los encargados (los coordina Gaby); si falla, el test drive ya quedó agendado igual.
-      fetch("/api/panel/test-drives/avisar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ testDriveId: data.id }) }).catch(() => {});
-      setShowTestDriveModal(false); setFechaTestDrive("");
-    } catch { avisar("Error al agendar el test drive."); } finally { setGuardandoTestDrive(false); }
-  };
-
-  const cambiarEstadoTestDrive = async (td: any, nuevo: string) => {
-    setTestDrives((prev) => prev.map((t) => (t.id === td.id ? { ...t, estado: nuevo } : t)));
-    await supabase2.from("test_drives").update({ estado: nuevo }).eq("id", td.id);
-    await registrarEvento("test_drive", `Test drive marcado como "${nuevo}"`);
-  };
-
   const LINK_ORIGEN: Record<string, string> = { whatsapp: "/panel/whatsapp", instagram: "/panel/instagram", messenger: "/panel/messenger", rodi: "/panel/rodi", manual: "/panel/clientes" };
 
   const pedirAsistencia = async () => {
@@ -501,15 +383,6 @@ export default function LeadDetailModal({
     await registrarEvento("asistencia", "Asistencia atendida");
   };
 
-  // PeritajeLeadModal: desde "Avanzar la venta" abre con la lista del stock; desde "Auto que le interesa", con ese auto.
-  const iniciarPeritaje = () => setShowPeritaje({ conAuto: false });
-  const iniciarPeritajeDelAuto = () => setShowPeritaje({ conAuto: true });
-  const peritajeCreado = async (id: string) => {
-    setShowPeritaje(null);
-    window.open(`/panel/peritajes/${id}`, "_blank");
-    await cargar();
-  };
-
   const { vencidas, hoy, proximas } = useMemo(() => {
     const ahora = new Date();
     const finHoy = new Date(ahora); finHoy.setHours(23, 59, 59, 999);
@@ -533,7 +406,6 @@ export default function LeadDetailModal({
   const telefonoDelResumen = lead?.handoff_resumen ? telefonoEnTexto(lead.handoff_resumen) : null;
   const numeroLimpio = String(telefono).replace(/\D/g, "");
   const linkWhatsApp = numeroLimpio ? `https://wa.me/${numeroLimpio}?text=${encodeURIComponent(`¡Hola ${nombre}! Te escribimos desde la inmobiliaria.`)}` : null;
-  const puedeEditar = true;
 
   const TareasGrupo = ({ titulo, icono, tareas }: { titulo: string; icono: React.ReactNode; tareas: any[] }) =>
     tareas.length === 0 ? null : (
@@ -553,10 +425,6 @@ export default function LeadDetailModal({
 
   const modales = (
     <>
-        {showPeritaje && lead && (
-          <PeritajeLeadModal origen={origen as OrigenPeritajeLead} leadId={leadId} prospeccion={lead.prospeccion}
-            autoInicial={showPeritaje.conAuto ? vehiculo : null} onCreado={peritajeCreado} onClose={() => setShowPeritaje(null)} />
-        )}
         {showTareaModal && (
           <div className="fixed inset-0 bg-black/40 z-[110] flex items-center justify-center p-4" onClick={() => setShowTareaModal(false)}>
             <form onSubmit={crearTarea} onClick={(e) => e.stopPropagation()} className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-5 w-full max-w-sm space-y-3">
@@ -576,18 +444,6 @@ export default function LeadDetailModal({
               <textarea value={resultadoTarea} onChange={(e) => setResultadoTarea(e.target.value)} rows={3} placeholder="Resultado (opcional)" className={inputClass} />
               <div className="flex justify-end gap-2"><button onClick={() => setTareaACompletar(null)} className="px-3 py-1.5 text-xs font-semibold text-slate-500">Cancelar</button><button onClick={confirmarCompletarTarea} disabled={guardandoResultado} className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold disabled:opacity-50">Completar</button></div>
             </div>
-          </div>
-        )}
-
-        {showTestDriveModal && (
-          <div className="fixed inset-0 bg-black/40 z-[110] flex items-center justify-center p-4" onClick={() => setShowTestDriveModal(false)}>
-            <form onSubmit={agendarTestDrive} onClick={(e) => e.stopPropagation()} className="bg-white dark:bg-[#1A1A1A] rounded-2xl p-5 w-full max-w-sm space-y-3">
-              <h3 className="font-bold text-sm">Agendar test drive</h3>
-              <SelectorWeb ariaLabel="Auto del test drive" valor={vehiculoTestDriveId} onCambio={setVehiculoTestDriveId} claseBoton={inputClass}
-                opciones={[{ valor: "", etiqueta: "Sin auto" }, ...vehiculosStock.map((v: any) => ({ valor: v.id, etiqueta: `${v.marca} ${v.modelo}` }))]} />
-              <input type="datetime-local" value={fechaTestDrive} onChange={(e) => setFechaTestDrive(e.target.value)} className={inputClass} required />
-              <div className="flex justify-end gap-2"><button type="button" onClick={() => setShowTestDriveModal(false)} className="px-3 py-1.5 text-xs font-semibold text-slate-500">Cancelar</button><button type="submit" disabled={guardandoTestDrive} className="px-3 py-1.5 rounded-lg bg-[#0145F2] hover:bg-[#0138c9] text-white text-xs font-bold disabled:opacity-50">Agendar</button></div>
-            </form>
           </div>
         )}
 
@@ -622,19 +478,14 @@ export default function LeadDetailModal({
       <FichaLeads
         modales={modales}
         f={{
-          lead, leadId, origen, nombre, telefono, linkWhatsApp, vehiculo, vendedores, sucursales, motivos, eventos, testDrives, peritajes,
-          presupuestos, senas, ventas, vehiculosStock, soportaPeritaje, onClose,
-          cargandoDetalle, stockCargado, cargarStock, autoDeTestDrive, hayMasEventos, cargarMasEventos,
+          lead, leadId, origen, nombre, telefono, linkWhatsApp, vendedores, sucursales, motivos, eventos, onClose,
+          cargandoDetalle, hayMasEventos, cargarMasEventos,
           email: contacto?.email || lead.email_contacto || lead.email || "",
           miNombre: vendedores.find((v) => v.id === miId)?.nombre || "",
           tareasAbiertas: [...vencidas, ...hoy, ...proximas],
-          ESTADOS_LEAD, ETIQUETA_ORIGEN, ICONO_ORIGEN, COLOR_ICONO_ORIGEN, CANALES_ORIGEN, ESTADOS_TEST_DRIVE,
-          guardandoEstado, guardandoCalificacion, guardandoVendedor, guardandoVehiculo, guardandoBasura, guardandoCanalOrigen, guardandoSucursal, guardandoTelefono, creandoPeritaje,
-          cambiarEstado, cambiarCalificacion, cambiarVendedor, cambiarVehiculo, cambiarCanalOrigen, cambiarSucursal, toggleBasura, guardarTelefono, guardarDomicilio, guardarNotas, guardarProspeccion,
-          marcarAsistenciaAtendida, iniciarPeritaje, iniciarPeritajeDelAuto, toggleCompletada, cambiarEstadoTestDrive,
-          editandoTelefono, setEditandoTelefono, telefonoForm, setTelefonoForm, editandoDomicilio, setEditandoDomicilio, domicilio, setDomicilio,
-          editandoNotas, setEditandoNotas, notas, setNotas, busquedaVehiculo, setBusquedaVehiculo, mostrarListaVehiculos, setMostrarListaVehiculos,
-          setShowTareaModal, setShowTestDriveModal, setShowAsistenciaModal, abrirTareaRapida,
+          ESTADOS_LEAD, ETIQUETA_ORIGEN, ICONO_ORIGEN, COLOR_ICONO_ORIGEN, CANALES_ORIGEN,
+          guardandoEstado, guardandoCalificacion, guardandoVendedor, guardandoBasura, guardandoCanalOrigen, guardandoSucursal, guardandoTelefono, cambiarEstado, cambiarCalificacion, cambiarVendedor, cambiarCanalOrigen, cambiarSucursal, toggleBasura, guardarTelefono, guardarDomicilio, guardarNotas, marcarAsistenciaAtendida, toggleCompletada, editandoTelefono, setEditandoTelefono, telefonoForm, setTelefonoForm, editandoDomicilio, setEditandoDomicilio, domicilio, setDomicilio,
+          editandoNotas, setEditandoNotas, notas, setNotas, setShowTareaModal, setShowAsistenciaModal, abrirTareaRapida,
         }}
       />
     );
@@ -732,61 +583,6 @@ export default function LeadDetailModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-4">
-              <div className={`border rounded-2xl p-4 ${SECCION_COLOR.vehiculo.card}`}>
-                <h2 className={labelClass}><IconoSeccion icono={CarFront} color="vehiculo" /> Vehículo de interés</h2>
-                <div className="relative">
-                  {vehiculo && !mostrarListaVehiculos ? (
-                    <button type="button" disabled={guardandoVehiculo} onClick={() => { setBusquedaVehiculo(""); setMostrarListaVehiculos(true); }}
-                      className={`${inputClass} text-left flex items-center justify-between gap-2 disabled:opacity-50`}>
-                      <span className="truncate">{vehiculo.marca} {vehiculo.modelo} {vehiculo.patente ? `— ${vehiculo.patente}` : ""}</span>
-                      <Edit2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    </button>
-                  ) : (
-                    <input
-                      autoFocus={mostrarListaVehiculos} value={busquedaVehiculo} disabled={guardandoVehiculo}
-                      onChange={(e) => setBusquedaVehiculo(e.target.value)}
-                      onFocus={() => { setMostrarListaVehiculos(true); cargarStock(); }}
-                      onBlur={() => setTimeout(() => setMostrarListaVehiculos(false), 150)}
-                      placeholder="Buscar por marca, modelo o patente..." className={`${inputClass} disabled:opacity-50`}
-                    />
-                  )}
-                  {mostrarListaVehiculos && (
-                    <div className="absolute z-20 mt-1 w-full max-h-48 overflow-y-auto bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 rounded-lg shadow-lg divide-y divide-slate-100 dark:divide-white/10">
-                      <button type="button" onMouseDown={(e) => { e.preventDefault(); cambiarVehiculo(""); setMostrarListaVehiculos(false); setBusquedaVehiculo(""); }}
-                        className="w-full text-left px-3 py-2 text-sm text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5">Sin vincular</button>
-                      {vehiculosStock
-                        .filter((v: any) => {
-                          const q = busquedaVehiculo.trim().toLowerCase();
-                          if (!q) return true;
-                          return `${v.marca} ${v.modelo} ${v.patente || ""}`.toLowerCase().includes(q);
-                        })
-                        .slice(0, 30)
-                        .map((v: any) => (
-                          <button key={v.id} type="button" onMouseDown={(e) => { e.preventDefault(); cambiarVehiculo(v.id); setMostrarListaVehiculos(false); setBusquedaVehiculo(""); }}
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-white/5 flex items-center justify-between gap-2">
-                            <span className="truncate text-slate-800 dark:text-white">{v.marca} {v.modelo}</span>
-                            <span className="text-[11px] text-slate-400 shrink-0">{v.patente || "S/P"}</span>
-                          </button>
-                        ))}
-                      {vehiculosStock.filter((v: any) => {
-                        const q = busquedaVehiculo.trim().toLowerCase();
-                        if (!q) return true;
-                        return `${v.marca} ${v.modelo} ${v.patente || ""}`.toLowerCase().includes(q);
-                      }).length === 0 && <p className="px-3 py-2 text-[13px] text-slate-400 italic">Sin resultados.</p>}
-                    </div>
-                  )}
-                </div>
-                {vehiculo?.vendedor_asignado_id && vehiculo.vendedor_asignado_id !== (lead.vendedor_id || null) && (
-                  <p className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg px-2.5 py-2">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> Este auto lo tiene asignado {vehiculo.vendedor_asignado?.nombre || "otro vendedor"} en Stock.
-                  </p>
-                )}
-                {vehiculo && (
-                  <AvisoSucursalLead sucursalAutoId={vehiculo.sucursal_id} sucursalAutoNombre={vehiculo.sucursal?.nombre} vendedorActualId={lead.vendedor_id}
-                    guardando={guardandoVendedor} onAsignar={cambiarVendedor} />
-                )}
-              </div>
-
               <div className={`border rounded-2xl p-4 ${SECCION_COLOR.vendedor.card}`}>
                 <h2 className={labelClass}><IconoSeccion icono={User} color="vendedor" /> Vendedor asignado</h2>
                 <select value={lead.vendedor_id || ""} disabled={guardandoVendedor} onChange={(e) => cambiarVendedor(e.target.value)} className={inputClass}>
@@ -844,7 +640,7 @@ export default function LeadDetailModal({
                         onChange={(e) => cambiarSucursal(e.target.value)}
                         className={`${inputClass} appearance-none pr-8 disabled:opacity-50`}
                       >
-                        <option value="">{vehiculo?.sucursal?.nombre ? `Sin especificar (auto: ${vehiculo.sucursal.nombre})` : "Sin especificar"}</option>
+                        <option value="">Sin especificar</option>
                         {sucursales.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                       </select>
                       {guardandoSucursal && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />}
@@ -896,99 +692,6 @@ export default function LeadDetailModal({
                 <TareasGrupo titulo="Próximas" icono={<Calendar className="w-3.5 h-3.5 text-slate-400" />} tareas={proximas} />
                 {vencidas.length === 0 && hoy.length === 0 && proximas.length === 0 && <p className="text-xs text-slate-400 italic">Sin tareas pendientes.</p>}
               </div>
-            </div>
-          </div>
-
-          <div className={`border rounded-2xl p-4 space-y-3 ${SECCION_COLOR.historial.card}`}>
-            <h2 className={labelClass}><IconoSeccion icono={FileText} color="historial" /> Historial comercial</h2>
-            {presupuestos.length === 0 && senas.length === 0 && ventas.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">Todavía no se generó ninguna cotización, seña ni venta para este lead.</p>
-            ) : (
-              <div className="space-y-1.5">
-                {presupuestos.map((p: any) => (
-                  <Link key={`p-${p.id}`} href={`/panel/cotizaciones/imprimir/${p.id}`} className="flex items-center justify-between bg-white dark:bg-white/5 rounded-lg px-3 py-2 text-xs hover:border-rose-300 border border-transparent">
-                    <span className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Cotización N° {p.numero}</span>
-                    <span className="font-bold">{p.precio_ars ? `$ ${Number(p.precio_ars).toLocaleString("es-AR")}` : p.precio_usd ? `US$ ${Number(p.precio_usd).toLocaleString("es-AR")}` : ""}</span>
-                  </Link>
-                ))}
-                {senas.map((s: any) => (
-                  <Link key={`s-${s.id}`} href={`/panel/senas/imprimir/${s.id}`} className="flex items-center justify-between bg-white dark:bg-white/5 rounded-lg px-3 py-2 text-xs hover:border-rose-300 border border-transparent">
-                    <span className="flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5" /> Seña N° {s.numero}</span>
-                    <span className="font-bold">{s.venta_ars ? `$ ${Number(s.venta_ars).toLocaleString("es-AR")}` : s.venta_usd ? `US$ ${Number(s.venta_usd).toLocaleString("es-AR")}` : ""}</span>
-                  </Link>
-                ))}
-                {ventas.map((b: any) => (
-                  <div key={`b-${b.id}`} className="flex items-center justify-between bg-white dark:bg-white/5 rounded-lg px-3 py-2 text-xs">
-                    <span className="flex items-center gap-1.5"><Receipt className="w-3.5 h-3.5" /> Venta — {new Date(b.created_at).toLocaleDateString("es-AR")}</span>
-                    <span className="font-bold">{b.moneda_venta} {Number(b.precio_venta).toLocaleString("es-AR")}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-white/10">
-              <Link href={`/panel/cotizaciones?nuevo=1&lead_origen=${origen}&lead_id=${leadId}`} className="flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl text-[11px] uppercase tracking-widest">
-                <Plus className="w-3.5 h-3.5" /> Cotización
-              </Link>
-              <Link href={`/panel/senas?nuevo=1&lead_origen=${origen}&lead_id=${leadId}`} className="flex items-center justify-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-xl text-[11px] uppercase tracking-widest">
-                <Plus className="w-3.5 h-3.5" /> Seña
-              </Link>
-              {/* Esta iba a "ventas?nuevo=1" pero VentasClient.tsx solo
-                 escucha "nueva" -- nunca abría el modal, el botón no hacía
-                 nada. */}
-              <Link href={`/panel/ventas?nueva=1&lead_origen=${origen}&lead_id=${leadId}`} className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl text-[11px] uppercase tracking-widest">
-                <Plus className="w-3.5 h-3.5" /> Venta
-              </Link>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className={`border rounded-2xl p-4 space-y-3 ${SECCION_COLOR.peritaje.card}`}>
-              <div className="flex items-center justify-between">
-                <h2 className={labelClass + " mb-0"}><IconoSeccion icono={ClipboardCheck} color="peritaje" /> Peritaje</h2>
-                {soportaPeritaje && (
-                  <button onClick={iniciarPeritaje} disabled={creandoPeritaje} className="flex items-center gap-1 text-[11px] font-bold text-[#0145F2] hover:text-[#0138c9] disabled:opacity-50">
-                    <Plus className="w-3.5 h-3.5" /> {creandoPeritaje ? "Iniciando..." : "Iniciar peritaje"}
-                  </button>
-                )}
-              </div>
-              {peritajes.length === 0 ? <p className="text-xs text-slate-400 italic">Todavía no se hizo un peritaje de este vehículo.</p> : (
-                <div className="space-y-2">
-                  {peritajes.map((p: any) => (
-                    <Link key={p.id} href={`/panel/peritajes/${p.id}`} className="flex items-center justify-between gap-3 bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl p-3 hover:border-rose-300">
-                      <span className="text-xs font-medium text-slate-700 dark:text-slate-200">{new Date(p.created_at).toLocaleDateString("es-AR")}</span>
-                      <span className="flex items-center gap-2 text-[11px] font-bold">
-                        {p.puntaje != null && <span className={p.puntaje >= 70 ? "text-emerald-600" : p.puntaje >= 40 ? "text-amber-600" : "text-rose-600"}>{p.puntaje}%</span>}
-                        <span className="text-slate-400 uppercase">{p.estado}</span>
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className={`border rounded-2xl p-4 ${SECCION_COLOR.testdrive.card}`}>
-              <div className="flex items-center justify-between mb-2">
-                <h2 className={labelClass + " mb-0"}><IconoSeccion icono={Car} color="testdrive" /> Test Drive</h2>
-                <button onClick={() => setShowTestDriveModal(true)} className="flex items-center gap-1 text-[11px] font-bold text-[#0145F2] hover:text-[#0138c9]"><Plus className="w-3.5 h-3.5" /> Agendar</button>
-              </div>
-              {testDrives.length === 0 ? <p className="text-xs text-slate-400 italic">Sin test drives agendados.</p> : (
-                <div className="space-y-1.5">
-                  {testDrives.map((td: any) => {
-                    const v = autoDeTestDrive(td.vehiculo_id);
-                    return (
-                      <div key={td.id} className="flex items-center justify-between gap-2 bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-lg px-3 py-2">
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-slate-800 dark:text-white">{v ? `${v.marca} ${v.modelo}` : "Sin auto"}</p>
-                          <span className="text-[10px] text-slate-400">{new Date(td.fecha_hora).toLocaleString("es-AR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
-                        </div>
-                        <select value={td.estado} onChange={(e) => cambiarEstadoTestDrive(td, e.target.value)} className="text-[10px] font-bold uppercase px-2 py-1 rounded border outline-none bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 shrink-0">
-                          {ESTADOS_TEST_DRIVE.map((e) => (<option key={e} value={e}>{e}</option>))}
-                        </select>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
           </div>
         </div>

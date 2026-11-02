@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MessageCircle, AtSign, Bot, User, Flame } from "lucide-react";
+import { Bot, User, Flame } from "lucide-react";
 import { IconoWhatsapp, IconoInstagram, IconoMessenger } from "@/components/ui/IconosCanales";
 import { supabase2 } from "@/lib/supabase/client";
 import { m } from "framer-motion";
@@ -234,21 +234,12 @@ export function IngresosLeads({ leads, vendedores }: { leads: LeadVista[]; vende
 }
 
 // ============================== RANKING ==============================
-export function RankingLeads({ leads, vendedores, ventasCerradas }: { leads: LeadVista[]; vendedores: Perfil[]; ventasCerradas: { vendedor_id: string | null; fecha_cierre: string | null }[] }) {
-  // Cierre = ventas cerradas / leads recibidos, los dos desde el día del PRIMER lead cargado (así el período es el mismo y no se infla
-  // con ventas anteriores a que existieran los leads) y sobre todo el historial, no solo el mes. Una venta no está atada a un lead
-  // (puede venir de un cliente de salón), por eso se cuenta por vendedor de la venta.
-  const primerLead = useMemo(() => leads.reduce<string | null>((min, l) => { const d = diaAR(new Date(l.created_at).getTime()); return !min || d < min ? d : min; }, null), [leads]);
-  const ventasPorVendedor = useMemo(() => {
-    const m: Record<string, number> = {};
-    ventasCerradas.forEach((v) => { if (v.vendedor_id && v.fecha_cierre && (!primerLead || v.fecha_cierre >= primerLead)) m[v.vendedor_id] = (m[v.vendedor_id] || 0) + 1; });
-    return m;
-  }, [ventasCerradas, primerLead]);
+export function RankingLeads({ leads, vendedores }: { leads: LeadVista[]; vendedores: Perfil[] }) {
   const filas = useMemo(() => {
-    const m = new Map<string, { id: string | null; nombre: string; total: number; sinContactar: number; contactados: number; interesados: number; clientes: number; perdidos: number; sinRespuesta: number; ventas: number }>();
+    const m = new Map<string, { id: string | null; nombre: string; total: number; sinContactar: number; contactados: number; interesados: number; clientes: number; perdidos: number; sinRespuesta: number}>();
     const get = (id: string | null) => {
       const k = id || "sin";
-      if (!m.has(k)) m.set(k, { id, nombre: id ? vendedores.find((v) => v.id === id)?.nombre || "—" : "Sin asignar", total: 0, sinContactar: 0, contactados: 0, interesados: 0, clientes: 0, perdidos: 0, sinRespuesta: 0, ventas: id ? ventasPorVendedor[id] || 0 : 0 });
+      if (!m.has(k)) m.set(k, { id, nombre: id ? vendedores.find((v) => v.id === id)?.nombre || "—" : "Sin asignar", total: 0, sinContactar: 0, contactados: 0, interesados: 0, clientes: 0, perdidos: 0, sinRespuesta: 0 });
       return m.get(k)!;
     };
     leads.filter((l) => !l.esBasuraFinal).forEach((l) => {
@@ -261,14 +252,12 @@ export function RankingLeads({ leads, vendedores, ventasCerradas }: { leads: Lea
       else if (l.estado_lead === "perdido") f.perdidos += 1;
       if (l.sinRespuesta) f.sinRespuesta += 1;
     });
-    // Un vendedor con ventas pero sin leads asignados también tiene que aparecer.
-    Object.entries(ventasPorVendedor).forEach(([id]) => { get(id); });
-    return [...m.values()].sort((a, b) => b.ventas - a.ventas || b.total - a.total);
-  }, [leads, vendedores, ventasPorVendedor]);
+    return [...m.values()].sort((a, b) => b.total - a.total);
+  }, [leads, vendedores]);
 
   return (
     <Cascada className="flex-1 min-h-0 overflow-auto p-3 sm:p-4 max-w-5xl space-y-3">
-      <p className="text-[11px] text-slate-400">Por vendedor, sobre todos los leads cargados (sin los marcados como basura). &quot;Ventas&quot; son las ventas cerradas del vendedor{primerLead ? ` desde el ${fechaCorta(primerLead)}, el día del primer lead cargado` : ""}, de todo el historial y no solo de este mes. &quot;Cierre&quot; es esas ventas sobre los leads recibidos: incluye ventas de clientes que no vinieron por un lead, así que puede superar el 100%. &quot;Sin resp.&quot; son leads calientes que escribieron hace 2 días o más y nadie contestó.</p>
+      <p className="text-[11px] text-slate-400">Por vendedor, sobre todos los leads cargados (sin los marcados como basura).</p>
       <div className="bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden">
         <table className="w-full text-left text-xs">
           <thead>
@@ -276,20 +265,16 @@ export function RankingLeads({ leads, vendedores, ventasCerradas }: { leads: Lea
               <th className="px-2 sm:px-3 py-2 font-bold">Vendedor</th>
               <th className="px-1 sm:px-3 py-2 font-bold text-right">Leads</th>
               <th className="px-1 sm:px-3 py-2 font-bold text-right">Sin contac.</th>
-              <th className="px-1 sm:px-3 py-2 font-bold text-right">Ventas</th>
-              <th className="px-1 sm:px-3 py-2 font-bold text-right">Cierre</th>
               <th className="px-1 sm:px-3 py-2 font-bold text-right hidden sm:table-cell">Perdidos</th>
               <th className="px-1 sm:px-3 py-2 font-bold text-right">Sin resp.</th>
             </tr>
           </thead>
           <tbody>
-            {filas.map((f, i) => (
+            {filas.map((f) => (
               <tr key={f.id || "sin"} className="border-t border-slate-100 dark:border-white/5">
-                <td className="px-2 sm:px-3 py-2 font-bold text-slate-700 dark:text-slate-200">{i === 0 && f.ventas > 0 ? "🥇 " : ""}{f.nombre}</td>
+                <td className="px-2 sm:px-3 py-2 font-bold text-slate-700 dark:text-slate-200">{f.nombre}</td>
                 <td className="px-1 sm:px-3 py-2 text-right font-mono">{f.total}</td>
                 <td className={`px-1 sm:px-3 py-2 text-right font-mono ${f.sinContactar > 0 ? "text-amber-600 font-bold" : ""}`}>{f.sinContactar}</td>
-                <td className="px-1 sm:px-3 py-2 text-right font-mono text-emerald-600 font-bold">{f.ventas}</td>
-                <td className="px-1 sm:px-3 py-2 text-right font-mono">{f.id && f.total > 0 ? `${Math.round((f.ventas / f.total) * 100)}%` : "—"}</td>
                 <td className="px-1 sm:px-3 py-2 text-right font-mono hidden sm:table-cell">{f.perdidos}</td>
                 <td className={`px-1 sm:px-3 py-2 text-right font-mono ${f.sinRespuesta > 0 ? "text-rose-600 font-bold" : ""}`}>{f.sinRespuesta}</td>
               </tr>

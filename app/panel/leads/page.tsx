@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import LeadsUnificadosClient from "./LeadsUnificadosClient";
 import { filtrarVendedoresAsignables, filtrarPorVendedorAsignado } from "@/lib/panel/permisosModulos";
 import { ocultarCharlasDelBotSinAsignar } from "@/lib/panel/asignacionWhatsapp";
-import { fetchPaginado } from "@/lib/panel/fetchPaginado";
 import { cargarTareasLead } from "./tareasLead";
 
 // Para las pestañas "Sin respuesta" y "Lead basura" hace falta saber si el
@@ -97,11 +96,6 @@ export default async function LeadsPage() {
   const soyEncargado = miPerfil?.roles?.includes("encargado") ?? false;
   const miSucursalId = miPerfil?.sucursal_id ?? null;
   const vendedoresLista = filtrarVendedoresAsignables(vendedores || [], { soyAdmin, soyEncargado, miSucursalId });
-  // El Ranking de Leads (con las ventas por vendedor) es solo para admin y encargado: a un vendedor no se le piden ni se le mandan esos datos.
-  // Ventas cerradas de TODO el historial: alimentan el "Cierre". Una venta no está atada a un lead (puede venir del salón), por eso se cuenta por vendedor.
-  const ventasCerradas = soyAdmin || soyEncargado
-    ? await fetchPaginado<{ vendedor_id: string | null; fecha_cierre: string | null }>(() => supabase.from("ventas").select("id, vendedor_id, fecha_cierre").eq("estado", "cerrada").order("id"))
-    : [];
   // WhatsApp: mientras habla solo el bot, ningún vendedor ve el lead (Walter, 31/10/2026; lib/panel/asignacionWhatsapp.ts).
   const leadsVisibles = ocultarCharlasDelBotSinAsignar(
     filtrarPorVendedorAsignado(normalizados, { soyAdmin, soyEncargado, miId: user?.id || "", miSucursalId, perfiles: vendedores || [] }),
@@ -111,7 +105,6 @@ export default async function LeadsPage() {
   return (
     <LeadsUnificadosClient
       leadsIniciales={leadsVisibles}
-      ventasCerradas={(ventasCerradas || []).map((v) => ({ vendedor_id: v.vendedor_id, fecha_cierre: v.fecha_cierre }))}
       avisosCarga={[avisoWA, avisoIG, avisoMSG, avisoRodi].filter((a): a is string => !!a)}
       topeAlcanzado={[whatsapp, instagram, messenger, rodi, manuales].some((c) => (c || []).length >= 1000)}
       vendedores={vendedoresLista}

@@ -1,5 +1,4 @@
 import { supabaseEmpresa as supabaseAdmin } from "@/lib/empresa/db";
-import { createClient } from "@supabase/supabase-js";
 import { decrypt } from "@/lib/crypto";
 import { createMessageTemplate, deleteMessageTemplate, listMessageTemplates, sendTemplateMessage, MetaApiError } from "@/lib/meta/client";
 import { countVariables, esPlantillaDeEjemploMeta, renderBody, validateBodyVariables } from "@/lib/panel/variablesPlantilla";

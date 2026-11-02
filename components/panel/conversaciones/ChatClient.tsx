@@ -9,11 +9,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { supabase2 } from "@/lib/supabase/client";
 import ConfirmDialog from "@/components/panel/ConfirmDialog";
 import { traducirErrorMeta } from "@/lib/meta/erroresWhatsapp";
-import {
-  Search, Send, Bot, Check, CheckCheck, Info, ChevronRight, PanelRight,
-  Loader2, Megaphone, X, MessageSquareText, AtSign, Archive, ArchiveRestore, FileCheck2,
-  MessageCircle, ShoppingBag, Link2, Flame, Car, Clock, FileText, Play,
-} from "lucide-react";
+import { Search, Send, Bot, Check, CheckCheck, Info, ChevronRight, PanelRight, Loader2, Megaphone, X, MessageSquareText, Archive, ArchiveRestore, FileCheck2, ShoppingBag, Link2, Flame, Clock, FileText, Play } from "lucide-react";
 import dynamic from "next/dynamic";
 import VisorVideoModal from "./VisorVideoModal";
 
@@ -28,7 +24,6 @@ import { IconoWhatsapp, IconoInstagram, IconoMessenger } from "@/components/ui/I
 import { normalizarOrigenCliente } from "@/lib/panel/origenesCliente";
 import { ordenarPorLlegada } from "@/lib/panel/ordenBandeja";
 import { avisar } from "@/components/panel/Dialogos";
-import { useStockParaElegir } from "@/components/panel/useStockParaElegir";
 import { escucharTablas } from "@/lib/panel/escucharTablas";
 import { marcarChatVisto } from "@/lib/panel/chatsVistos";
 
@@ -373,35 +368,12 @@ export default function ChatClient({
   const [showVincular, setShowVincular] = useState(false);
   const [buscarCliente, setBuscarCliente] = useState("");
   const [clientesResult, setClientesResult] = useState<any[]>([]);
-  const [buscarVehiculo, setBuscarVehiculo] = useState("");
-  const [vehiculoVinculado, setVehiculoVinculado] = useState<any>(null);
-  const [buscandoVehiculoInline, setBuscandoVehiculoInline] = useState(false);
-  // Al abrir "Vincular auto" ya se ve el stock en venta, sin escribir (Walter, 14/10/2026).
-  const vehiculosResult = useStockParaElegir(buscarVehiculo, { activo: buscandoVehiculoInline, limite: 30 }).filas;
-
-  // Tarjeta de "vehículo vinculado" en el panel de detalle (pedido 27/9) --
-  // antes se podía vincular un auto (vincularVehiculo, ya existía para el
-  // modal de Cliente/Vehículo) pero una vez vinculado no se mostraba en
-  // ningún lado cuál quedó asociado. conversaciones no trae el join de
-  // vehiculos (whatsapp/instagram page.tsx solo trae vehiculo_id), así que
-  // se busca acá cuando cambia la conversación activa.
-  useEffect(() => {
-    const vehiculoId = conversacionActiva?.vehiculo_id;
-    if (!vehiculoId) { setVehiculoVinculado(null); return; }
-    let cancelado = false;
-    supabase2.from("vehiculos").select("id, marca, modelo, anio, km, precio_venta, moneda_venta, estado, fotos, slug").eq("id", vehiculoId).maybeSingle()
-      .then(({ data }) => { if (!cancelado) setVehiculoVinculado(data); });
-    return () => { cancelado = true; };
-  }, [conversacionActiva?.vehiculo_id]);
-
   const buscarClientesFn = async (q: string) => {
     setBuscarCliente(q);
     if (q.length < 2) return setClientesResult([]);
     const { data } = await supabase2.from("clientes").select("id, nombre, telefono, dni_cuit").or(`nombre.ilike.%${q}%,telefono.ilike.%${q}%,dni_cuit.ilike.%${q}%`).limit(5);
     setClientesResult(data || []);
   };
-
-  const buscarVehiculosFn = (q: string) => setBuscarVehiculo(q);
 
   const abrirFormularioCliente = () => {
     setNuevoCliente({ nombre: contactoActivo?.nombre_perfil || "", telefono: contactoActivo?.telefono || "", email: "", dni_cuit: "" });
@@ -458,13 +430,6 @@ export default function ChatClient({
     if (!seleccionada) return;
     await supabase2.from(tablaConversaciones).update({ cliente_id: clienteId }).eq("id", seleccionada);
     setConversaciones((prev) => prev.map((c) => (c.id === seleccionada ? { ...c, cliente_id: clienteId } : c)));
-    setShowVincular(false);
-  };
-
-  const vincularVehiculo = async (vehiculoId: string | null) => {
-    if (!seleccionada) return;
-    await supabase2.from(tablaConversaciones).update({ vehiculo_id: vehiculoId }).eq("id", seleccionada);
-    setConversaciones((prev) => prev.map((c) => (c.id === seleccionada ? { ...c, vehiculo_id: vehiculoId } : c)));
     setShowVincular(false);
   };
 
@@ -538,7 +503,6 @@ export default function ChatClient({
 
   const renderConversacion = (c: any) => {
     const contacto = resolverContacto(canal, c[CAMPO_CONTACTO[canal]]);
-    const iniciales = (contacto?.nombre_perfil || contacto?.telefono || "?").substring(0, 2).toUpperCase();
     const isActive = seleccionada === c.id;
     const esCaliente = c.calificacion === "caliente";
 
@@ -907,40 +871,6 @@ export default function ChatClient({
                 <option value="">Sin asignar</option>
                 {vendedores.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
               </select>
-            </div>
-
-            <div className="p-4 border-b border-slate-200 dark:border-white/10">
-              <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Vehículo vinculado</h4>
-              {vehiculoVinculado ? (
-                <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg p-2">
-                  <div className="w-11 h-11 rounded-md bg-slate-200 dark:bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
-                    {vehiculoVinculado.fotos?.[0] ? <img src={vehiculoVinculado.fotos[0]} alt="" className="w-full h-full object-cover" /> : <Car className="w-5 h-5 text-slate-400" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{vehiculoVinculado.marca} {vehiculoVinculado.modelo}</p>
-                    <p className="text-[11px] text-slate-400">
-                      {vehiculoVinculado.anio} · {vehiculoVinculado.precio_venta ? `${vehiculoVinculado.moneda_venta === "ARS" ? "$" : "US$"} ${Number(vehiculoVinculado.precio_venta).toLocaleString("es-AR")}` : "Consultar precio"}
-                    </p>
-                  </div>
-                  <button onClick={() => vincularVehiculo(null)} title="Quitar vínculo" className="text-slate-400 hover:text-rose-500 shrink-0 p-1"><X className="w-3.5 h-3.5" /></button>
-                </div>
-              ) : buscandoVehiculoInline ? (
-                <div className="space-y-1">
-                  <input autoFocus value={buscarVehiculo} onChange={(e) => buscarVehiculosFn(e.target.value)} placeholder="Marca, modelo o patente..." className="w-full border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm" />
-                  <div className="max-h-56 overflow-y-auto">
-                  {vehiculosResult.map((v) => (
-                    <button key={v.id} onClick={() => { vincularVehiculo(v.id); setBuscandoVehiculoInline(false); setBuscarVehiculo(""); }} className="block w-full text-left text-sm text-slate-700 dark:text-slate-200 px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-white/10 rounded">
-                      {v.marca} {v.modelo} {v.patente ? `(${v.patente})` : ""}
-                    </button>
-                  ))}
-                  </div>
-                  <button onClick={() => { setBuscandoVehiculoInline(false); setBuscarVehiculo(""); }} className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">Cancelar</button>
-                </div>
-              ) : (
-                <button onClick={() => setBuscandoVehiculoInline(true)} className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-xs font-bold px-4 py-2 rounded-lg">
-                  + Vincular auto
-                </button>
-              )}
             </div>
 
             <div className="p-4 pb-0 space-y-2">

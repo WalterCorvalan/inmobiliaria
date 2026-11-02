@@ -47,29 +47,12 @@ async function cargarInicial(): Promise<PanelInicial | null> {
     if (!perfil) return null;
 
     const roles: string[] = perfil.roles || [];
-    // El administrador no se filtra nunca: no hace falta traer módulos ni visibilidad.
-    let modulosActivos: Record<string, boolean> = {};
-    const visibilidadPorModulo: Record<string, Record<string, boolean>> = {};
-    if (!roles.some((r: string) => r === "admin" || r === "director")) {
-      const [{ data: modulos }, { data: visibilidad }] = await Promise.all([
-        supabase.from("modulos_config").select("modulo, activo"),
-        supabase.from("visibilidad_sector").select("modulo, sector, visible"),
-      ]);
-      modulosActivos = Object.fromEntries((modulos || []).map((m: any) => [m.modulo, m.activo]));
-      (visibilidad || []).forEach((v: any) => {
-        visibilidadPorModulo[v.modulo] = visibilidadPorModulo[v.modulo] || {};
-        visibilidadPorModulo[v.modulo][v.sector] = v.visible;
-      });
-    }
-
     const c: any = config.data;
     return {
       miId: user.id,
       nombre: perfil.nombre || "Usuario",
       roles,
       activo: perfil.activo !== false,
-      modulosActivos,
-      visibilidadPorModulo,
       comisionesActivas: c ? c.modo_comision !== "ninguna" : true,
       branding: { nombre: c?.branding_nombre || null, logoUrl: c?.branding_logo_url || null, color: c?.branding_color_primario || null },
       temaOscuro: tema.error ? null : ((tema.data as { tema_oscuro?: string } | null)?.tema_oscuro ?? null),

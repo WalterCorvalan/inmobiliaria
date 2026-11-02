@@ -1,4 +1,3 @@
-import { asignacionPorAuto, autoDeLaCharla } from "@/lib/panel/asignacionPorAuto";
 import { randomUUID } from "crypto";
 import { extensionDeArchivo, resolverAdjuntoMeta } from "@/lib/panel/adjuntosMeta";
 import { isAiConfiguredV2 } from "@/lib/ai/indexV2";
@@ -7,9 +6,8 @@ import { sendMessengerMessage, sendMessengerImageMessage, getMessengerUserProfil
 import { decrypt } from "@/lib/crypto";
 import { rateLimit, ipDesdeRequest } from "@/lib/rateLimit";
 import { registrarError } from "@/lib/panel/logger";
-import { notificarPersona } from "@/lib/panel/notificaciones";
-import { buscarRespuestaFueraHorario, buscarRespuestaMemoria, textoPendienteDelCliente, REGEX_CONSULTA_AUTO } from "@/lib/panel/whatsappMemoria";
-import { guardarDatosDeContacto, registrarPedidoSinStock, procesarDerivacion } from "@/lib/panel/botDespuesDelAgente";
+import { buscarRespuestaFueraHorario, buscarRespuestaMemoria, textoPendienteDelCliente } from "@/lib/panel/whatsappMemoria";
+import { guardarDatosDeContacto, procesarDerivacion } from "@/lib/panel/botDespuesDelAgente";
 import { horarioDeConfig, estaEnHorario, debeAvisarFueraDeHorario, textoFueraDeHorarioPorDefecto } from "@/lib/panel/horarioBots";
 import { enviarTextoBot } from "@/lib/panel/enviarMensajeBot";
 import { subirArchivoR2, r2Configurado } from "@/lib/storage/r2";
@@ -42,7 +40,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
   const { token } = await params;
   const empresa = await empresaPorTokenDeWebhook("messenger", token);
   if (!empresa) return new Response("Not found", { status: 404 });
-  const empresaId = empresa.id;
 
   const url = new URL(req.url);
   const mode = url.searchParams.get("hub.mode");
@@ -303,7 +300,7 @@ async function ejecutarAgente(conversacionId: string, psid: string, mensajeId: s
   // "Memoria del bot" primero (respuestas fijas por palabra clave, sin gastar IA), igual que WhatsApp: solo si lo
   // que escribió el cliente no pregunta por un auto. Se edita en Configuración → WhatsApp → Memoria del bot.
   const textoPendiente = textoPendienteDelCliente(historial);
-  if (textoPendiente && !REGEX_CONSULTA_AUTO.test(textoPendiente)) {
+  if (textoPendiente) {
     const respuestaMemoria = await buscarRespuestaMemoria(supabase, textoPendiente);
     if (respuestaMemoria) {
       await enviarTextoBot(supabase, "messenger", conversacionId, respuestaMemoria, config);
@@ -316,7 +313,7 @@ async function ejecutarAgente(conversacionId: string, psid: string, mensajeId: s
   // "panel-v2/webhooks/messenger" -- mismo criterio de prefijo que Instagram
   // (uso_ia_anthropic.origen), para que Marketing pueda filtrar el costo de
   // IA de este canal por separado el día que se prenda.
-  const result = await generarRespuestaAgenteV2(historial, "panel-v2/webhooks/messenger", undefined, conversacionActual?.vehiculo_id ?? null, tonoMessenger, true);
+  const result = await generarRespuestaAgenteV2(historial, "panel-v2/webhooks/messenger", { tono: tonoMessenger, esInstagram: true });
 
   // Mismo freno que WhatsApp/Instagram: llegó otro mensaje mientras el
   // agente pensaba, esta respuesta quedó vieja y contesta la invocación nueva.
@@ -330,57 +327,22 @@ async function ejecutarAgente(conversacionId: string, psid: string, mensajeId: s
   }
 
   const { reply, handoff, pausar_sin_notificar, calificacion, resumen_handoff, datos_detectados } = result.data;
-  const { fotosParaEnviar, vehiculoFocoId, pedidoStock } = result;
-  const autoCharla = autoDeLaCharla(vehiculoFocoId, result.data.intencion);
 
   const estadoSegunCalificacion = calificacion === "caliente" ? "calificando" : undefined;
   const patchConversacion: Record<string, unknown> = { calificacion };
   if (estadoSegunCalificacion) patchConversacion.estado_lead = estadoSegunCalificacion;
-  if (autoCharla !== undefined) patchConversacion.vehiculo_id = autoCharla;
-
-  // Pedido del 29/9: mismo criterio que WhatsApp/Instagram -- todo 0km en
-  // foco va siempre a Gabriel (Casa Central), y si el auto en foco tiene
-  // vendedor responsable en Stock distinto del que ya tiene la charla, se
-  // reasigna (Messenger no tiene round-robin propio todavía, así que acá
-  // esto suele ser la única asignación real que recibe la charla). Cada
-  // reasignación queda anotada en Eventos del lead y avisa al vendedor.
-  const registrarEventoAsignacionMsg = (descripcion: string) =>
-    supabase.from("eventos_lead").insert({ messenger_conversacion_id: conversacionId, tipo: "asignacion", descripcion }).then(({ error }) => {
-      if (error) registrarError("webhook-v2:evento-asignacion", error, { conversacionId });
-    });
-
-  // A quién va el lead: a quien tiene el auto (o a Gabriel si es consignación), salvo que lo hayan pasado a mano
-  // (Walter, 21/10/2026; reglas en lib/panel/asignacionPorAuto.ts). Reemplaza "todo 0 km a Gabriel".
-  const porAuto = await asignacionPorAuto(supabase, { fk: "messenger_conversacion_id", conversacionId, vehiculoId: autoCharla ?? null, intencion: result.data.intencion, vendedorActual: conversacionActual?.vendedor_id ?? null });
-  if (porAuto) {
-    patchConversacion.vendedor_id = porAuto.vendedorId;
-    patchConversacion.estado_lead = "asignado";
-    registrarEventoAsignacionMsg(porAuto.descripcion);
-  }
-
   await supabase.from("messenger_conversaciones").update(patchConversacion).eq("id", conversacionId);
-
-  if (patchConversacion.vendedor_id && patchConversacion.vendedor_id !== conversacionActual?.vendedor_id) {
-    notificarPersona(supabase, patchConversacion.vendedor_id as string, "whatsapp_venta_zona", "Un cliente te escribió por Messenger por un auto que tenés asignado — se te asignó automáticamente.", `/panel/messenger?conversacion=${conversacionId}`, { categoriaNotif: "leads", modulo: "leads" }).catch((err) => console.error("[webhook-v2] error notificando asignación:", err));
-  }
 
   // Nombre, mail, teléfono y CUIL apenas los da (como WhatsApp); el teléfono es el que pide el bot para pasar a WhatsApp.
   await guardarDatosDeContacto(supabase, "messenger", conversacionActual?.contacto_id, datos_detectados);
-  // Sin stock que coincida: queda en Pedidos (si el cliente dio un teléfono para avisarle).
-  await registrarPedidoSinStock(supabase, "messenger", conversacionId, pedidoStock, datos_detectados);
 
   for (const parte of dividirRespuestaEnMensajes(reply)) {
     const { data: mensajeSaliente } = await supabase.from("messenger_mensajes").insert({ conversacion_id: conversacionId, direccion: "out", tipo: "text", texto: parte, status: "pending", ai_generado: true }).select("id").single();
     if (mensajeSaliente) await enviarYActualizarMensaje(mensajeSaliente.id, psid, parte, config);
   }
 
-  for (const fotoUrl of fotosParaEnviar) {
-    const { data: mensajeFoto } = await supabase.from("messenger_mensajes").insert({ conversacion_id: conversacionId, direccion: "out", tipo: "image", media_url: fotoUrl, status: "pending", ai_generado: true }).select("id").single();
-    if (mensajeFoto) await enviarYActualizarImagen(mensajeFoto.id, psid, fotoUrl, config);
-  }
-
   // Derivación igual que WhatsApp: cliente ofensivo, ronda de la sucursal elegida, aviso y visita agendada.
-  if (handoff) await procesarDerivacion(supabase, "messenger", conversacionId, { pausar_sin_notificar, resumen_handoff, datos_detectados, intencion: result.data.intencion });
+  if (handoff) await procesarDerivacion(supabase, "messenger", conversacionId, { pausar_sin_notificar, resumen_handoff, datos_detectados });
 }
 
 async function enviarYActualizarMensaje(mensajeId: string, psid: string, texto: string, config: any) {
@@ -399,18 +361,6 @@ async function enviarYActualizarMensaje(mensajeId: string, psid: string, texto: 
   }
 }
 
-async function enviarYActualizarImagen(mensajeId: string, psid: string, imageUrl: string, config: any) {
-  if (!isMessengerEnvioConfigurado(config)) return;
-
-  try {
-    const tokenPlano = decrypt(config.token_cifrado, config.token_iv, config.token_tag);
-    await sendMessengerImageMessage(config.page_id, tokenPlano, psid, imageUrl);
-    await supabase.from("messenger_mensajes").update({ status: "sent" }).eq("id", mensajeId);
-  } catch (err) {
-    registrarError("webhook-messenger:enviar-imagen", err, { mensajeId, psid });
-    await supabase.from("messenger_mensajes").update({ status: "failed" }).eq("id", mensajeId);
-  }
-}
 
 // Echo de cualquier mensaje saliente de la página -- del bot (ya guardado,
 // tiene messenger_message_id) o de un empleado contestando a mano. Se

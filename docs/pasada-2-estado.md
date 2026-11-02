@@ -66,7 +66,7 @@ Correr en Supabase, en orden: `sql_schema_migraciones`, `sql_001` a `sql_007`, y
 
 ## Lo que sigue pendiente
 
-1. **Catálogo en los chats** (decidido el 2/11: no es del núcleo). El código aún consulta tablas que la base nueva no tiene (`vehiculos`, `pedidos`, `consignaciones`, `test_drives`, `ventas`, `senas`, `presupuestos`, `peritajes_lead`, `leads_tasacion`, `modulos_config`, `visibilidad_sector`, mensajes internos). Esas pantallas (detalle del lead, sugerencias de vehículo) y partes del bot fallan hasta sacarlas. **Es lo que más pesa antes del piloto.**
+1. ~~**Catálogo en los chats**~~ **Hecho (2/11/2026).** Ya no queda ninguna consulta a tablas que la base nueva no tenga (se comparó cada `.from("…")` del código contra las migraciones). Se sacó: vehículos, pedidos, consignaciones, ventas, test drives, señas, presupuestos, peritajes, tasaciones, mensajes internos y los módulos configurables por sector (ahora lo que ve cada rol sale de `lib/panel/permisosModulos.ts`, función pura con test). Sigue sin probarse contra un Supabase real: es lo próximo.
 2. **Nunca se corrió contra un Supabase real**: la base se probó en memoria. Tampoco se probó `programar_tareas` (pg_cron no existe en la base en memoria).
 3. **Firma de Instagram**: si Meta firma con un secreto distinto al cargado, el webhook rechaza y deja el error en "Errores del sistema". Cargar entonces el otro secreto (hay dos campos).
 4. **Datos iniciales**: falta la memoria del bot por empresa (respuestas fijas); las empresas nuevas arrancan con las genéricas de fuera de horario y apertura.

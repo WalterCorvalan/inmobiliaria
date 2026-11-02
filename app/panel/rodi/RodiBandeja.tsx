@@ -176,7 +176,6 @@ export default function RodiBandeja({ conversacionesIniciales, vendedores, miId 
           {filtradas.length === 0 && <p className="text-center text-xs text-slate-400 py-8">Sin conversaciones.</p>}
           {ordenarPorLlegada(filtradas).map((c) => {
             const isActive = seleccionada === c.id;
-            const iniciales = (c.nombre_contacto || "Visitante").substring(0, 2).toUpperCase();
             return (
               <button key={c.id} onClick={() => setSeleccionada(c.id)} className={`w-full text-left p-3.5 border-b border-slate-100 dark:border-white/5 flex gap-3 ${isActive ? "bg-emerald-50 dark:bg-emerald-500/10 border-l-2 border-l-emerald-700" : "hover:bg-slate-50 dark:hover:bg-white/5 border-l-2 border-l-transparent"}`}>
                 <div className="relative shrink-0 self-start">

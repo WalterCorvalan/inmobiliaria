@@ -7,10 +7,7 @@ import type { AgentReplyV2 } from "@/lib/ai/agenteV2";
 import { registrarError } from "@/lib/panel/logger";
 import { notificarPersona, notificarEncargados } from "@/lib/panel/notificaciones";
 import { resolverFechaVisitaConControl } from "@/lib/fechas";
-import { cargarConsignacionDesdeChat } from "@/lib/panel/consignacionDesdeChat";
-import { cargarPedidoDesdeChat } from "@/lib/panel/pedidoDesdeChat";
 import { completarVisitaRepetida } from "@/lib/panel/visitaRepetida";
-import { guardarPedidoDelBot } from "@/lib/panel/pedidoDelBot";
 
 export type CanalDM = "instagram" | "messenger";
 
@@ -24,30 +21,9 @@ export async function guardarDatosDeContacto(supabase: SupabaseClient, canal: Ca
   if (datos.nombre) patch.nombre_perfil = datos.nombre;
   if (datos.email) patch.email = datos.email;
   if (datos.telefono) patch.telefono = datos.telefono;
-  if (datos.cuil) patch.cuil = datos.cuil;
   if (Object.keys(patch).length === 0) return;
   const { error } = await supabase.from(`${canal}_contactos`).update(patch).eq("id", contactoId);
   if (error) registrarError(`bot:${canal}:datos-contacto`, error, { contactoId });
-}
-
-// Sin stock que coincida: el bot avisó que va a notificar cuando entre, así que queda en Pedidos (como WhatsApp).
-// Pedidos necesita un teléfono para avisarle al cliente: en Instagram/Messenger es el que el cliente haya dado.
-export async function registrarPedidoSinStock(supabase: SupabaseClient, canal: CanalDM, conversacionId: string, pedido: AgentReplyV2["pedido_stock"] | null | undefined, datos: DatosDetectados | null | undefined) {
-  if (!pedido?.marca) return;
-  const { data: conv } = await supabase.from(`${canal}_conversaciones`).select(`vendedor_id, contacto_id, ${canal}_contactos(*)`).eq("id", conversacionId).maybeSingle();
-  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-  const contacto = (conv as any)?.[`${canal}_contactos`] as { telefono?: string | null; nombre_perfil?: string | null; username?: string | null } | null;
-  const telefono = datos?.telefono || contacto?.telefono;
-  if (!telefono) return;
-  await guardarPedidoDelBot(supabase, {
-    telefono,
-    nombre_cliente: datos?.nombre || contacto?.nombre_perfil || (contacto?.username ? `@${contacto.username}` : `Cliente de ${NOMBRE_CANAL[canal]}`),
-    marca: pedido.marca, modelo: pedido.modelo,
-    presupuesto_max: pedido.presupuesto_max, moneda: pedido.moneda || "ARS",
-    puertas: pedido.puertas,
-    vendedor_id: conv?.vendedor_id ?? null,
-    origen: canal,
-  }, `bot:${canal}:crear-pedido`);
 }
 
 // Derivación a una persona. Igual que WhatsApp:
@@ -57,7 +33,7 @@ export async function registrarPedidoSinStock(supabase: SupabaseClient, canal: C
 //  - si dio día y horario, se agenda la visita en el módulo Visitas (y se avisa si choca con otra).
 // En Instagram el aviso general lo dispara el trigger de la base (instagram_notificar_handoff) al marcar handoff_at,
 // por eso acá se asigna el vendedor ANTES de marcarlo y no se manda un segundo aviso.
-export async function procesarDerivacion(supabase: SupabaseClient, canal: CanalDM, conversacionId: string, respuesta: Pick<AgentReplyV2, "pausar_sin_notificar" | "resumen_handoff" | "datos_detectados" | "intencion">) {
+export async function procesarDerivacion(supabase: SupabaseClient, canal: CanalDM, conversacionId: string, respuesta: Pick<AgentReplyV2, "pausar_sin_notificar" | "resumen_handoff" | "datos_detectados">) {
   const { pausar_sin_notificar, resumen_handoff, datos_detectados } = respuesta;
   const tablaConv = `${canal}_conversaciones`;
 
@@ -100,21 +76,6 @@ export async function procesarDerivacion(supabase: SupabaseClient, canal: CanalD
     avisar.catch((err) => registrarError(`bot:${canal}:aviso-derivacion`, err, { conversacionId }));
   }
 
-  // Quiere dejar su auto en consignación: se carga sola en Consignaciones → Pendientes.
-  await cargarConsignacionDesdeChat(supabase, {
-    canal, conversacionId, intencion: respuesta.intencion, datos: datos_detectados,
-    nombre: datos_detectados?.nombre || contacto?.nombre_perfil || (contacto?.username ? `@${contacto.username}` : `Cliente de ${NOMBRE_CANAL[canal]}`),
-    telefono: datos_detectados?.telefono || contacto?.telefono, email: datos_detectados?.email,
-    vendedorId: vendedorAsignado, sucursalId: sucursalElegida?.id,
-  });
-  // Quiere vendernos su auto o permutarlo: se carga solo en Cotizaciones → Compra / Permuta (lib/panel/pedidoDesdeChat.ts).
-  await cargarPedidoDesdeChat(supabase, {
-    canal, conversacionId, intencion: respuesta.intencion, datos: datos_detectados,
-    nombre: datos_detectados?.nombre || contacto?.nombre_perfil || (contacto?.username ? `@${contacto.username}` : `Cliente de ${NOMBRE_CANAL[canal]}`),
-    telefono: datos_detectados?.telefono || contacto?.telefono, email: datos_detectados?.email,
-    vendedorId: vendedorAsignado, sucursalNombre: sucursalElegida?.nombre,
-  });
-
   if (datos_detectados?.dia_visita && datos_detectados?.horario_visita) {
     const nombreCliente = datos_detectados.nombre || contacto?.nombre_perfil || (contacto?.username ? `@${contacto.username}` : `Cliente de ${NOMBRE_CANAL[canal]}`);
     const { fecha: fechaVisita, dudosa: fechaDudosa } = resolverFechaVisitaConControl(datos_detectados.dia_visita);
@@ -122,13 +83,11 @@ export async function procesarDerivacion(supabase: SupabaseClient, canal: CanalD
     // Si ya pidió visita ese día por otro lado, no se repite: se completa esa (lib/panel/visitaRepetida.ts).
     const visitaYaCargada = await completarVisitaRepetida(supabase, {
       telefono: datos_detectados.telefono || contacto?.telefono, fecha: fechaVisita,
-      vehiculo_marca: datos_detectados.vehiculo_propio?.marca || null, vehiculo_modelo: datos_detectados.vehiculo_propio?.modelo || null,
+      
     });
     const { data: ocupados } = visitaYaCargada ? { data: [] } : await supabase.rpc("visitas_horarios_ocupados", { p_sucursal: sucursalVisita, p_fecha: fechaVisita });
     const hayConflicto = (ocupados || []).some((o: { horario_visita: string }) => o.horario_visita === datos_detectados.horario_visita);
     const { error } = visitaYaCargada ? { error: null } : await supabase.from("visitas").insert({
-      vehiculo_marca: datos_detectados.vehiculo_propio?.marca || null,
-      vehiculo_modelo: datos_detectados.vehiculo_propio?.modelo || null,
       nombre_cliente: nombreCliente,
       telefono_cliente: datos_detectados.telefono || contacto?.telefono || "sin dato",
       fecha_visita: fechaVisita,

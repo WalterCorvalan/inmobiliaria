@@ -416,6 +416,7 @@ create table if not exists rodi_conversaciones (
   calificacion text check (calificacion in ('caliente', 'tibio', 'frio')),
   estado_lead text not null default 'nuevo' check (estado_lead in ('nuevo', 'asignado', 'calificando', 'convertido', 'perdido')),
   ai_habilitada boolean not null default true,
+  ai_pausada_en timestamptz,
   handoff_at timestamptz,
   handoff_reason text,
   handoff_resumen text,

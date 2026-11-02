@@ -1,8 +1,7 @@
-import { asignacionPorAuto, autoDeLaCharla } from "@/lib/panel/asignacionPorAuto";
 import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { generarRespuestaAgenteV2, dividirRespuestaEnMensajes } from "@/lib/ai/agenteV2";
-import { menuBienvenidaV2 } from "@/lib/ai/promptsV2";
+import { SALUDO_POR_DEFECTO } from "@/lib/ai/promptsV2";
 import { isAiConfiguredV2 } from "@/lib/ai/indexV2";
 import { rateLimit, ipDesdeRequest } from "@/lib/rateLimit";
 import { registrarError } from "@/lib/panel/logger";
@@ -10,11 +9,8 @@ import { OrigenWebSchema, columnasDeOrigen, type OrigenWeb } from "@/lib/panel/o
 import { notificarEncargados, notificarPersona } from "@/lib/panel/notificaciones";
 import { resolverFechaVisitaConControl } from "@/lib/fechas";
 import { NOMBRE_ASISTENTE_WEB } from "@/lib/asistenteWeb";
-import { cargarConsignacionDesdeChat } from "@/lib/panel/consignacionDesdeChat";
-import { cargarPedidoDesdeChat } from "@/lib/panel/pedidoDesdeChat";
 import { completarVisitaRepetida } from "@/lib/panel/visitaRepetida";
 import { cookiesPixel, enviarEventoMeta, type ContextoPedido } from "@/lib/conversionesMeta";
-import { guardarPedidoDelBot } from "@/lib/panel/pedidoDelBot";
 import { RESPUESTA_FALLBACK } from "@/lib/panel/textosBot";
 import { supabaseEmpresa as supabase, dentroDeEmpresa, empresaPorSlug } from "@/lib/empresa/db";
 
@@ -141,7 +137,7 @@ async function procesarMensaje({ sessionId, texto, origenPagina, nombre, telefon
   // austeros con la IA (a diferencia de WhatsApp, el canal donde sí se
   // justifica el costo) -- un "hola" como primer mensaje de la charla no
   // necesita razonar nada, es el mismo menú fijo que ya devuelve el prompt
-  // (menuBienvenidaV2) para ese caso. Server-side, sin IA: no es "la IA
+  // (saludo de la empresa) para ese caso. Server-side, sin IA: no es "la IA
   // contestó rápido", es un mensaje predeterminado de chat como cualquier
   // otro. Solo aplica al PRIMER mensaje de la charla (historial.length===1,
   // esta misma línea que se acaba de insertar) -- un "hola" en medio de una
@@ -149,12 +145,14 @@ async function procesarMensaje({ sessionId, texto, origenPagina, nombre, telefon
   const esPrimerMensaje = historial.length === 1;
   const esSaludoSimple = /^(hola+|holis|buenas|hey|buen[oa]s?\s*(d[ií]as?|tardes|noches)?|qu[ée]\s*tal|hello|hi)[\s!¡.,?¿]*$/i.test(texto.trim());
   if (esPrimerMensaje && esSaludoSimple) {
-    const saludo = menuBienvenidaV2();
+    // El saludo lo define cada empresa en la memoria del bot (categoría "saludo"); si no cargó uno, uno genérico.
+    const { data: saludoCargado } = await supabase.from("whatsapp_memoria").select("respuesta").eq("categoria", "saludo").eq("activo", true).order("orden").limit(1).maybeSingle();
+    const saludo = saludoCargado?.respuesta?.trim() || SALUDO_POR_DEFECTO;
     await supabase.from("rodi_mensajes").insert({ conversacion_id: conversacion.id, direccion: "out", texto: saludo, ai_generado: false });
     return NextResponse.json({ replies: [saludo], handoff: false });
   }
 
-  const result = await generarRespuestaAgenteV2(historial, "panel-v2/rodi", NOMBRE_ASISTENTE_WEB, conversacion.vehiculo_id ?? null);
+  const result = await generarRespuestaAgenteV2(historial, "panel-v2/rodi", { nombreBot: NOMBRE_ASISTENTE_WEB, esWeb: true });
 
   if (!result.ok) {
     registrarError("api/panel/rodi/mensaje:agente", result.error, { conversacionId: conversacion.id });
@@ -162,88 +160,31 @@ async function procesarMensaje({ sessionId, texto, origenPagina, nombre, telefon
   }
 
   const { reply, handoff, pausar_sin_notificar, calificacion, resumen_handoff, datos_detectados } = result.data;
-  const { pedidoStock, vehiculoFocoId } = result;
-  const autoCharla = autoDeLaCharla(vehiculoFocoId, result.data.intencion);
   const partes = dividirRespuestaEnMensajes(reply);
 
   for (const parte of partes) {
     await supabase.from("rodi_mensajes").insert({ conversacion_id: conversacion.id, direccion: "out", texto: parte, ai_generado: true });
   }
   const patchCalificacion: Record<string, unknown> = { calificacion };
-  if (autoCharla !== undefined) patchCalificacion.vehiculo_id = autoCharla;
-
-  // Pedido del 29/9: mismo criterio que WhatsApp/Instagram/Messenger -- todo
-  // 0km en foco va siempre a Gabriel (Casa Central), y si el auto en foco
-  // tiene vendedor responsable en Stock distinto del que ya tiene la
-  // charla, se reasigna (pisa lo que hubiera resuelto la ronda por
-  // sucursal del handoff más abajo). Cada reasignación queda anotada en
-  // Eventos del lead y avisa al nuevo vendedor.
-  const registrarEventoAsignacionRodi = (descripcion: string) =>
-    supabase.from("eventos_lead").insert({ rodi_conversacion_id: conversacion.id, tipo: "asignacion", descripcion }).then(({ error }) => {
-      if (error) registrarError("rodi:evento-asignacion", error, { conversacionId: conversacion.id });
-    });
-  let vendedorAsignadoAhora: string | null = null;
-
-  // A quién va el lead: a quien tiene el auto (o a Gabriel si es consignación), salvo que lo hayan pasado a mano
-  // (Walter, 21/10/2026; reglas en lib/panel/asignacionPorAuto.ts). Reemplaza "todo 0 km a Gabriel".
-  const porAuto = await asignacionPorAuto(supabase, { fk: "rodi_conversacion_id", conversacionId: conversacion.id, vehiculoId: autoCharla ?? null, intencion: result.data.intencion, vendedorActual: conversacion.vendedor_id ?? null });
-  if (porAuto) {
-    patchCalificacion.vendedor_id = porAuto.vendedorId;
-    patchCalificacion.estado_lead = "asignado";
-    conversacion.vendedor_id = porAuto.vendedorId;
-    vendedorAsignadoAhora = porAuto.vendedorId;
-    registrarEventoAsignacionRodi(porAuto.descripcion);
-  }
 
   await supabase.from("rodi_conversaciones").update(patchCalificacion).eq("id", conversacion.id);
-
-  if (vendedorAsignadoAhora) {
-    notificarPersona(supabase, vendedorAsignadoAhora, "whatsapp_venta_zona", "Un cliente te consultó por el chat de la web por un auto que tenés asignado — se te asignó automáticamente.", `/panel/rodi?conversacion=${conversacion.id}`, { categoriaNotif: "leads", modulo: "leads" }).catch((err) => console.error("[rodi] error notificando asignación:", err));
-  }
 
   // Nombre/email/teléfono que el cliente vaya dando durante la charla se
   // guardan apenas se detectan, sin esperar al handoff — así quedan aunque
   // la charla se corte antes de derivar a un vendedor (antes solo se
   // guardaban si venían en el body inicial del widget, nunca lo que la IA
   // extraía del texto de la conversación).
-  if (datos_detectados?.nombre || datos_detectados?.email || datos_detectados?.telefono || datos_detectados?.cuil) {
+  if (datos_detectados?.nombre || datos_detectados?.email || datos_detectados?.telefono) {
     const patch: Record<string, unknown> = {};
     if (datos_detectados.nombre && !conversacion.nombre_contacto) patch.nombre_contacto = datos_detectados.nombre;
     if (datos_detectados.email && !conversacion.email_contacto) patch.email_contacto = datos_detectados.email;
     if (datos_detectados.telefono && !conversacion.telefono_contacto) patch.telefono_contacto = datos_detectados.telefono;
-    if (datos_detectados.cuil) patch.cuil = datos_detectados.cuil;
     if (Object.keys(patch).length > 0) {
       const { error: errorPatch } = await supabase.from("rodi_conversaciones").update(patch).eq("id", conversacion.id);
       if (errorPatch) registrarError("api/panel/rodi/mensaje:patch-contacto", errorPatch, { conversacionId: conversacion.id });
     }
   }
 
-  // Sin stock que coincida: mismo criterio que WhatsApp -- registrar el
-  // pedido con lo que se sabe, para avisar apenas entre algo que coincida.
-  if (pedidoStock?.marca) {
-    const telefonoOEmail = datos_detectados?.telefono || conversacion.telefono_contacto || datos_detectados?.email || conversacion.email_contacto;
-    if (telefonoOEmail) {
-      const { data: convVendedor } = await supabase.from("rodi_conversaciones").select("vendedor_id").eq("id", conversacion.id).single();
-      // "nombre_cliente" es NOT NULL en "pedidos" -- fallback para no perder
-      // el pedido si todavía no tenemos el nombre. "marca" también es NOT
-      // NULL, pero esa la exige el prompt antes de completar pedido_stock
-      // (ver regla SIN STOCK QUE COINCIDA) -- no se rellena con un fallback
-      // acá porque un pedido con marca inventada no sirve para nada.
-      await guardarPedidoDelBot(supabase, {
-        telefono: datos_detectados?.telefono || conversacion.telefono_contacto || null,
-        nombre_cliente: datos_detectados?.nombre || conversacion.nombre_contacto || "Visitante del chat web",
-        marca: pedidoStock.marca, modelo: pedidoStock.modelo,
-        presupuesto_max: pedidoStock.presupuesto_max, moneda: pedidoStock.moneda || "ARS",
-        puertas: pedidoStock.puertas,
-        vendedor_id: convVendedor?.vendedor_id ?? null,
-        // "pedidos.origen" tiene un check constraint que solo permite
-        // whatsapp/web/manual/instagram -- "Rodi" (el nombre del bot del
-        // sitio) no es un valor válido, rompía el insert. Rodi ES el chat de
-        // la web, así que el origen real es "web".
-        origen: "web",
-      }, "api/panel/rodi/mensaje:crear-pedido");
-    }
-  }
   // Conversión para Meta y Analytics: la primera vez que Rodi consigue un teléfono, o un pedido de hablar con una
   // persona cuando todavía no había teléfono. Una sola vez por conversación: si ya tenía teléfono o ya se había
   // derivado a un vendedor, ya se contó (docs/marketing/medicion.md).
@@ -268,7 +209,7 @@ async function procesarMensaje({ sessionId, texto, origenPagina, nombre, telefon
     if (pausar_sin_notificar) return NextResponse.json({ replies: partes, handoff });
 
     const linkNoti = `/panel/rodi?conversacion=${conversacion.id}`;
-    const mensajeNoti = resumen_handoff || "Cliente del chat web ofrece su propiedad";
+    const mensajeNoti = resumen_handoff || "El visitante del chat web pidió hablar con una persona.";
     let vendedorAsignado: string | null = conversacion.vendedor_id ?? null;
 
     // Venta/consignación/permuta: mismo criterio que WhatsApp -- si todavía
@@ -298,22 +239,6 @@ async function procesarMensaje({ sessionId, texto, origenPagina, nombre, telefon
       }
     }
 
-    // Quiere dejar su auto en consignación: se carga sola en Consignaciones → Pendientes (lib/panel/consignacionDesdeChat.ts).
-    await cargarConsignacionDesdeChat(supabase, {
-      canal: "rodi", conversacionId: conversacion.id, intencion: result.data.intencion, datos: datos_detectados,
-      nombre: datos_detectados?.nombre || conversacion.nombre_contacto || "Visitante del chat web",
-      telefono: datos_detectados?.telefono || conversacion.telefono_contacto,
-      email: datos_detectados?.email || conversacion.email_contacto,
-      vendedorId: vendedorAsignado, sucursalId: sucursalElegida?.id,
-    });
-    await cargarPedidoDesdeChat(supabase, {
-      canal: "rodi", conversacionId: conversacion.id, intencion: result.data.intencion, datos: datos_detectados,
-      nombre: datos_detectados?.nombre || conversacion.nombre_contacto || "Visitante del chat web",
-      telefono: datos_detectados?.telefono || conversacion.telefono_contacto,
-      email: datos_detectados?.email || conversacion.email_contacto,
-      vendedorId: vendedorAsignado, sucursalNombre: sucursalElegida?.nombre,
-    });
-
     // Día/horario confirmado: agenda visita real.
     if (datos_detectados?.dia_visita && datos_detectados?.horario_visita) {
       const nombreCliente = datos_detectados?.nombre || conversacion.nombre_contacto || "Visitante del chat web";
@@ -328,14 +253,11 @@ async function procesarMensaje({ sessionId, texto, origenPagina, nombre, telefon
       // Si ya pidió visita ese día por otro lado, no se repite: se completa esa (lib/panel/visitaRepetida.ts).
       const visitaYaCargada = await completarVisitaRepetida(supabase, {
         telefono: telefonoCliente, fecha: fechaVisita,
-        vehiculo_marca: datos_detectados?.vehiculo_propio?.marca || null, vehiculo_modelo: datos_detectados?.vehiculo_propio?.modelo || null,
       });
       const { data: ocupados } = visitaYaCargada ? { data: [] } : await supabase.rpc("visitas_horarios_ocupados", { p_sucursal: sucursalVisita, p_fecha: fechaVisita });
       const hayConflicto = (ocupados || []).some((o: { horario_visita: string }) => o.horario_visita === datos_detectados.horario_visita);
 
       const { error: errorVisita } = visitaYaCargada ? { error: null } : await supabase.from("visitas").insert({
-        vehiculo_marca: datos_detectados?.vehiculo_propio?.marca || null,
-        vehiculo_modelo: datos_detectados?.vehiculo_propio?.modelo || null,
         nombre_cliente: nombreCliente,
         telefono_cliente: telefonoCliente,
         fecha_visita: fechaVisita,

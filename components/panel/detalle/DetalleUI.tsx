@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { X, type LucideIcon } from "lucide-react";
-import { supabase2 } from "@/lib/supabase/client";
 
 // Piezas del diseño de las vistas de detalle del panel (pedido de Walter,
 // 6/10: "el mismo diseño que la cotización en todas las vistas"). Arriba un
@@ -86,23 +84,6 @@ export function DetalleEncabezado({ numero, etiquetas, foto, icono: Icono, titul
       </div>
     </div>
   );
-}
-
-// Primera foto de un auto del stock, para el encabezado. Si la vista ya
-// tiene fotos propias (fotosPropias), se usa la primera de esas.
-export function usePortadaVehiculo(vehiculoId: string | null | undefined, fotosPropias?: unknown) {
-  const propias = Array.isArray(fotosPropias) ? (fotosPropias as string[]) : [];
-  const [foto, setFoto] = useState<string | null>(null);
-  useEffect(() => {
-    if (propias.length > 0 || !vehiculoId) return;
-    let cancelado = false;
-    supabase2.from("vehiculos").select("fotos").eq("id", vehiculoId).maybeSingle().then(({ data }) => {
-      if (!cancelado && Array.isArray(data?.fotos) && data.fotos.length > 0) setFoto(data.fotos[0]);
-    });
-    return () => { cancelado = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vehiculoId]);
-  return propias[0] || foto;
 }
 
 export function TituloSeccion({ children, icono: Icono, accion }: { children: React.ReactNode; icono?: LucideIcon; accion?: React.ReactNode }) {

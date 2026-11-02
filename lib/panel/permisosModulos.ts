@@ -1,41 +1,12 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+// Qué módulos ve cada rol. En esta versión no hay "módulos apagados" ni "visibilidad por sector" configurables:
+// el dueño (admin) y el encargado ven todo y el asesor (ventas) ve todo lo suyo (los filtros por asesor/oficina
+// están más abajo). Sin ningún rol conocido, no ve nada. Función pura, usable en el servidor y en el navegador.
+const ROLES_CON_ACCESO = ["admin", "director", "encargado", "ventas"];
 
-// Única fuente de la verdad para "rol interno de perfiles -> sector de
-// visibilidad_sector" -- antes vivía duplicado a mano en app/panel/layout.tsx
-// (sidebar) y en ningún lado más, así que una alerta podía avisarle a un
-// destinatario sobre un módulo que su rol tiene apagado (ver moduloVisible()
-// en layout.tsx). Server-safe: sin hooks, usable desde API routes y desde
-// componentes cliente por igual.
-export const ROL_A_SECTOR: Record<string, string> = {
-  encargado: "encargado",
-  ventas: "ventas",
-  finanzas: "finanzas",
-  gestoria: "gestoria",
-  taller: "taller",
-  director: "director",
-};
+export function puedeVerModulo(roles: string[] | null | undefined): boolean {
+  return (roles || []).some((r) => ROLES_CON_ACCESO.includes(r));
+}
 
-// "director" (rol CEO/dueño, pedido del 30/9): a propósito NO se agregó al
-// array de la línea de abajo que fuerza "clientes" siempre visible -- ese
-// override es justo lo que hay que evitar para este rol (el dueño no quiere
-// ver Leads/Clientes/Visitas/Recontactos por default). Queda 100% controlado
-// por "Visibilidad por sector" en Configuración → Empresa → Módulos: sin
-// fila ahí, el módulo es visible por default (mismo criterio que cualquier
-// otro rol), así que para ocultarle Leads/Clientes/Visitas/Recontactos/
-// Pedidos/Peritajes/Infracciones/Mensajes/WhatsApp/Instagram/Messenger hay
-// que tildar "No" en la columna "Director" de esa pantalla -- no es algo que
-// el código decida solo. Acceso a Finanzas (TopTicker, tiles del Dashboard,
-// secciones de Reportes, "ver todas las sucursales" en Finanzas) sí está
-// forzado en código (ver PanelLayoutClient.tsx, panel/page.tsx,
-// reportes/page.tsx, finanzas/page.tsx, stock/page.tsx) porque "acceso
-// completo a Finanzas" fue el pedido explícito, a diferencia de Señas/Ventas
-// (que el dueño solo quiere "ver", sin gate especial -- hoy no hay una
-// distinción real de solo-lectura en esos módulos, ve lo mismo que
-// cualquier otro rol con el módulo visible).
-
-// Mismo criterio que moduloVisible() en layout.tsx: admin nunca se filtra;
-// sin fila en visibilidad_sector, el módulo es visible por default; con
-// varios roles alcanza que UNO de los sectores lo vea.
 // Quién puede asignar un lead/conversación a quién. Usado en
 // leads/page.tsx, whatsapp/page.tsx, instagram/page.tsx y rodi/page.tsx
 // para armar la lista de "vendedores" que llega al selector de asignación
@@ -85,47 +56,4 @@ export function filtrarPorVendedorAsignado<T extends { vendedor_id?: string | nu
   }
   if (soyAdmin || soyEncargado) return items;
   return items.filter((i) => !i.vendedor_id || i.vendedor_id === miId);
-}
-
-// Rol taller (pedido de Walter 9/10): quien es SOLO taller (sin otro rol de oficina) ve Stock, sin precios, y
-// Taller, sin la plata ni la configuración. Otro módulo solo si se le habilita a mano en Configuración →
-// Visibilidad por sector (fila con visible = true para el sector "taller"; ej. Clientes, para buscar por cliente).
-// Con cualquier otro rol además, se suman sus permisos.
-export const MODULOS_ROL_TALLER = ["stock", "taller", "calendario"];
-const ROLES_DE_OFICINA = ["admin", "director", "encargado", "ventas", "finanzas", "gestoria"];
-export function esSoloTaller(roles: string[] | null | undefined): boolean {
-  const r = roles || [];
-  return r.includes("taller") && !r.some((x) => ROLES_DE_OFICINA.includes(x));
-}
-
-export async function puedeVerModulo(supabase: SupabaseClient, perfilId: string, modulo: string): Promise<boolean> {
-  const { data: perfil } = await supabase.from("perfiles").select("roles").eq("id", perfilId).maybeSingle();
-  // Sin perfil (lookup falló o el id no existe) no podemos confirmar ningún
-  // rol -- antes esto caía a roles=[] y por el default de la línea de abajo
-  // ("sin sector mapeado, visible") terminaba dando acceso a Tesorería/
-  // Facturación/Finanzas/Reportes a un perfil que ni siquiera pudimos leer.
-  // Denegar acá, no dejar pasar.
-  if (!perfil) return false;
-  const roles: string[] = perfil.roles || [];
-  if (roles.some((r: string) => r === "admin" || r === "director")) return true;
-  if (esSoloTaller(roles)) {
-    if (MODULOS_ROL_TALLER.includes(modulo)) return true;
-    const { data: fila } = await supabase.from("visibilidad_sector").select("visible").eq("modulo", modulo).eq("sector", ROL_A_SECTOR.taller).maybeSingle();
-    return fila?.visible === true;
-  }
-
-  const { data: config } = await supabase.from("modulos_config").select("activo").eq("modulo", modulo).maybeSingle();
-  if (config?.activo === false) return false;
-
-  // Mismo override que moduloVisible() en layout.tsx -- Clientes siempre
-  // visible para todos los roles salvo taller, sin depender de
-  // "Visibilidad por sector".
-  if (modulo === "clientes" && roles.some((r) => ["ventas", "encargado", "finanzas", "gestoria"].includes(r))) return true;
-
-  const sectores = roles.map((r) => ROL_A_SECTOR[r]).filter(Boolean);
-  if (sectores.length === 0) return true;
-
-  const { data: filas } = await supabase.from("visibilidad_sector").select("sector, visible").eq("modulo", modulo).in("sector", sectores);
-  if (!filas || filas.length === 0) return true;
-  return sectores.some((s) => filas.find((f) => f.sector === s)?.visible ?? true);
 }

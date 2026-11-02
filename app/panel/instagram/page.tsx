@@ -11,7 +11,7 @@ export default async function InstagramPage() {
       .from("instagram_conversaciones")
       .select(`
         id, last_message_at, unread_count, handoff_at, handoff_reason, ai_habilitada, calificacion, origen_ads, notas, estado_pipeline, estado_lead, archivada,
-        instagram_contactos ( id, ig_user_id, username, nombre_perfil ), cliente_id, vehiculo_id,
+        instagram_contactos ( id, ig_user_id, username, nombre_perfil ), cliente_id,
         vendedor_id, vendedor:perfiles!instagram_conversaciones_vendedor_id_fkey ( id, nombre )
       `)
       .order("last_message_at", { ascending: false })

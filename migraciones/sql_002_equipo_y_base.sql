@@ -143,11 +143,8 @@ create table if not exists configuracion_empresa (
   ia_alerta_enviada_en timestamptz,
   ia_credito_comprado_usd numeric,
   ia_credito_comprado_el date,
-  -- Provisorias: las lee el bot de autos hasta que se reescriba (Fase 7).
-  financiacion_topes jsonb not null default '[]'::jsonb,
-  financiacion_tope_0km numeric not null default 70,
-  financiacion_tna jsonb not null default '[]'::jsonb,
-  financiacion_gastos_pct numeric not null default 11
+  -- Descripción del negocio que usa el bot para presentarse y responder (la completa cada empresa).
+  bot_descripcion text
 );
 alter table configuracion_empresa enable row level security;
 drop policy if exists "ver_configuracion" on configuracion_empresa;

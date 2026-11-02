@@ -10,27 +10,18 @@
 // 14/10/2026 (Walter: "mejor UX/UI, más fácil de ver y de usar"): contacto al costado del nombre, la etapa como pasos
 // que se tocan, "Próximo paso" primero, las acciones de venta arriba a la derecha, el auto compacto y, en el celular,
 // una barra fija con Llamar, WhatsApp y Cotizar.
-import { useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { etiquetaOrigen } from "@/lib/panel/origenesCliente";
-import {
-  ArrowLeft, MoreHorizontal, Phone, Mail, Flame, Clock, Snowflake, Minus, Sparkles, CalendarDays,
-  Square, History, LifeBuoy, FileText, Receipt, Wallet, ArrowRight, MapPin, StickyNote, Trash2,
-  RotateCcw, Edit2, Check, Plus, AlertTriangle, ClipboardCheck, Car, UserRound, MessageCircle, Search, Link2,
-} from "lucide-react";
+import { ArrowLeft, MoreHorizontal, Phone, Mail, Flame, Clock, Snowflake, Minus, Sparkles, CalendarDays, Square, History, LifeBuoy, MapPin, StickyNote, Trash2, RotateCcw, Edit2, Check, Plus, UserRound, MessageCircle } from "lucide-react";
 import { IconoWhatsapp } from "@/components/ui/IconosCanales";
 import { Compartido } from "@/components/ui/movimiento";
 import { BTN, Etiqueta, Seccion, BloqueDestacado, LineaTiempo } from "@/components/panel/detalle/DetalleUI";
-import { fotoPrincipal, textoKm } from "@/lib/vehiculos";
-import { sugerirVehiculosDelTexto } from "@/lib/panel/sugerenciaVehiculoLead";
 import SelectorWeb from "@/components/ui/SelectorWeb";
-import AvisoSucursalLead from "./AvisoSucursalLead";
-import ProspeccionLead, { type ProspeccionLeadRef } from "./ProspeccionLead";
 import ResumenResaltado from "./ResumenResaltado";
 import { telefonoEnTexto } from "@/lib/panel/resaltarResumen";
 import { nombreParaFicha } from "@/lib/panel/nombreLead";
 import { COLOR_BOTON_CANAL, linkConversacionDelLead, type CanalConversacion } from "@/lib/panel/botonesCanal";
-import { normalizarProspeccion } from "@/lib/panel/prospeccionLead";
 
 // Mismos datos sin tipar que LeadDetailModal.tsx (filas de 5 tablas distintas según el canal).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,10 +32,7 @@ const inputClass = "w-full bg-slate-50 dark:bg-white/5 border border-slate-200 d
 const etiquetaDato = "text-[10px] font-semibold uppercase tracking-wider text-slate-400";
 const pastilla = "inline-flex items-center gap-1.5 max-w-full rounded-full border border-slate-200 dark:border-white/10 px-2.5 py-1 text-slate-800 dark:text-slate-100 hover:border-[#0145F2]/50 cursor-pointer";
 const pastillaAlerta = "inline-flex items-center gap-1.5 max-w-full rounded-full border border-rose-200 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 px-2.5 py-1 text-rose-700 dark:text-rose-300 cursor-pointer";
-const accionChica = "flex flex-col items-center justify-center gap-1 rounded-lg border border-slate-200 dark:border-white/10 px-1 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:border-[#0145F2] hover:text-[#0145F2] dark:hover:text-sky-300";
 // Seña y Venta conservan su color de siempre (Walter, 20/10/2026: "no se trata de colores, sino de que había muchas cosas").
-const accionChicaSena = "flex flex-col items-center justify-center gap-1 rounded-lg border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 px-1 py-2 text-[11px] font-bold text-amber-800 dark:text-amber-300";
-const accionChicaVenta = "flex flex-col items-center justify-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-1 py-2 text-[11px] font-bold text-white";
 // Las listas usan SelectorWeb y no el <select> del navegador, que abría con el azul de Windows (Walter, 2/11/2026).
 const selectPastilla = "gap-1 text-xs font-semibold outline-none cursor-pointer";
 
@@ -55,7 +43,6 @@ const GRADOS: Record<string, { label: string; icono: typeof Flame; color: string
   frio: { label: "Frío", icono: Snowflake, color: "text-sky-500" },
 };
 const ICONO_TAREA: Record<string, typeof Phone> = { Llamar: Phone, "Enviar Email": Mail, "Enviar SMS": MessageCircle, "Enviar WhatsApp": MessageCircle };
-const ESTADO_AUTO: Record<string, string> = { disponible: "Disponible", reservado: "Reservado", "señado": "Señado", vendido: "Vendido", en_preparacion: "En preparación" };
 const HORA = { hour: "2-digit", minute: "2-digit", hour12: false } as const;
 
 function hace(fecha: string | null | undefined): string {
@@ -83,60 +70,38 @@ function iniciales(nombre: string) {
   return ((partes[0]?.[0] || "?") + (partes[1]?.[0] || partes[0]?.[1] || "")).toUpperCase();
 }
 
-function precioVehiculo(v: Fila): string | null {
-  if (Number(v?.precio_publicado_usd) > 0) return `US$ ${Number(v.precio_publicado_usd).toLocaleString("es-AR")}`;
-  if (Number(v?.precio_publicado_ars) > 0) return `$ ${Number(v.precio_publicado_ars).toLocaleString("es-AR")}`;
-  return null;
-}
 
 export default function FichaLeads({ f, modales }: { f: Fila; modales: React.ReactNode }) {
   const [verTodo, setVerTodo] = useState(false);
-  const [cambiandoAuto, setCambiandoAuto] = useState(false);
-  const [listaAutos, setListaAutos] = useState(false);
   const [editandoDatos, setEditandoDatos] = useState(false);
   const [guardandoDatos, setGuardandoDatos] = useState(false);
-  // Cambia al guardar o deshacer para que "Cómo compra" vuelva a leer lo guardado.
-  const [versionDatos, setVersionDatos] = useState(0);
-  const prospeccionRef = useRef<ProspeccionLeadRef | null>(null);
   const [menuAcciones, setMenuAcciones] = useState(false);
   // Hora de referencia para "vencida" y "próximos" (fija mientras la ficha está abierta).
   const [ahora] = useState(() => Date.now());
   const {
-    lead, leadId, origen, nombre, telefono, linkWhatsApp, email, vehiculo, vendedores, sucursales, motivos, eventos,
-    tareasAbiertas, testDrives, peritajes, presupuestos, senas, ventas, vehiculosStock,
-    ESTADOS_LEAD, ETIQUETA_ORIGEN, ICONO_ORIGEN, COLOR_ICONO_ORIGEN, CANALES_ORIGEN, ESTADOS_TEST_DRIVE, soportaPeritaje,
+    lead, leadId, origen, nombre, telefono, linkWhatsApp, email, vendedores, sucursales, motivos, eventos,
+    tareasAbiertas,
+    ESTADOS_LEAD, ETIQUETA_ORIGEN, ICONO_ORIGEN, COLOR_ICONO_ORIGEN, CANALES_ORIGEN,
   } = f;
 
   const grado = GRADOS[lead.calificacion || ""] || GRADOS[""];
   const IconoGrado = grado.icono;
   const IconoCanal = ICONO_ORIGEN[origen];
-  const qs = `lead_origen=${origen}&lead_id=${leadId}`;
   const linkChat = linkConversacionDelLead(origen, leadId);
   const telefonoDelResumen = lead.handoff_resumen ? telefonoEnTexto(lead.handoff_resumen) : null;
-  const sugeridos = vehiculo ? [] : sugerirVehiculosDelTexto([lead.handoff_resumen, lead.notas].filter(Boolean).join(" "), vehiculosStock);
-  // Al tocar el buscador se ve todo el stock en venta (Walter, 14/10 y 20/10/2026); escribiendo, cada palabra tiene que aparecer.
-  const palabrasAuto = f.busquedaVehiculo.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const buscados = vehiculosStock.filter((v: Fila) => {
-    const texto = `${v.marca} ${v.modelo} ${v.patente || ""}`.toLowerCase();
-    return palabrasAuto.every((p: string) => texto.includes(p));
-  });
-  const elegirAuto = (id: string) => { f.cambiarVehiculo(id); f.setBusquedaVehiculo(""); setCambiandoAuto(false); };
-  const mostrarBuscador = !vehiculo || cambiandoAuto;
   // Historial: los últimos 3 y "Ver todo" (Walter, 20/10/2026).
   const historial = verTodo ? eventos : eventos.slice(0, 3);
   const mostrado = nombreParaFicha(nombre, lead.handoff_resumen);
   // Datos del cliente (Walter, 21/10/2026: "como antes, todo a la vista; el botón Editar confunde"): los campos se ven
   // siempre y se editan ahí mismo; al tocar algo aparece "Guardar cambios". Se guarda solo lo que cambió.
-  const cancelarDatos = () => { f.setNotas(lead.notas || ""); f.setDomicilio(lead.domicilio || ""); setEditandoDatos(false); setVersionDatos((v) => v + 1); };
+  const cancelarDatos = () => { f.setNotas(lead.notas || ""); f.setDomicilio(lead.domicilio || ""); setEditandoDatos(false); };
   const guardarDatos = async () => {
     setGuardandoDatos(true);
     try {
-      const prospeccion = prospeccionRef.current?.valor();
-      if (prospeccion && JSON.stringify(prospeccion) !== JSON.stringify(normalizarProspeccion(lead.prospeccion))) await f.guardarProspeccion(prospeccion);
       if ((f.notas || "") !== (lead.notas || "")) await f.guardarNotas();
       if ((f.domicilio || "") !== (lead.domicilio || "")) await f.guardarDomicilio();
       setEditandoDatos(false);
-      setVersionDatos((v) => v + 1);
+     
     } catch {
       // El aviso ya lo mostró quien guarda (LeadDetailModal); queda abierto para reintentar.
     } finally {
@@ -298,7 +263,7 @@ export default function FichaLeads({ f, modales }: { f: Fila; modales: React.Rea
               <label className={pastilla} title="Sucursal">
                 <MapPin className="w-3.5 h-3.5 shrink-0 opacity-70" />
                 <SelectorWeb ariaLabel="Sucursal" valor={lead.sucursal_id || ""} deshabilitado={f.guardandoSucursal} onCambio={f.cambiarSucursal} claseBoton={selectPastilla} claseFlecha="w-3 h-3"
-                  opciones={[{ valor: "", etiqueta: vehiculo?.sucursal?.nombre ? `${vehiculo.sucursal.nombre} (del auto)` : "Asignar sucursal" }, ...sucursales.map((s: Fila) => ({ valor: s.id, etiqueta: s.nombre }))]} />
+                  opciones={[{ valor: "", etiqueta: "Asignar sucursal" }, ...sucursales.map((s: Fila) => ({ valor: s.id, etiqueta: s.nombre }))]} />
               </label>
             )}
             <label className={pastilla} title="Origen">
@@ -343,7 +308,6 @@ export default function FichaLeads({ f, modales }: { f: Fila; modales: React.Rea
             <div className={`${card} order-3 lg:order-none`}>
               <Seccion titulo="Datos del cliente" icono={UserRound}>
                 <div className="space-y-3">
-                  <ProspeccionLead key={`${lead.id}-${versionDatos}`} valor={lead.prospeccion} onGuardar={f.guardarProspeccion} soloCampos ref={prospeccionRef} onCambio={() => setEditandoDatos(true)} />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="rounded-xl border border-slate-200 dark:border-white/10 p-3">
                       <label className={`${etiquetaDato} flex items-center gap-1 mb-1`}><StickyNote className="w-3 h-3" /> Notas</label>
@@ -396,143 +360,6 @@ export default function FichaLeads({ f, modales }: { f: Fila; modales: React.Rea
             </div>
           </div>
 
-          {/* ================= COLUMNA DERECHA ================= */}
-          <div className="contents lg:block lg:space-y-4 lg:min-w-0 lg:sticky lg:top-4">
-            {/* Acciones de venta arriba: antes estaban al final y había que bajar para encontrarlas. */}
-            <div className={`${card} order-2 lg:order-none`}>
-              <Seccion titulo="Avanzar la venta" icono={ArrowRight}>
-                {/* Grande solo "Crear cotización"; el resto, chicos en una fila (Walter, 20/10/2026). */}
-                <Link href={`/panel/cotizaciones?nuevo=1&${qs}`} className={`${BTN.primario} w-full`}><FileText className="w-4 h-4" /> Crear cotización</Link>
-                <div className="grid grid-cols-4 gap-1.5 mt-2">
-                  <Link href={`/panel/senas?nuevo=1&${qs}`} className={accionChicaSena}><Wallet className="w-4 h-4" /> Seña</Link>
-                  <Link href={`/panel/ventas?nueva=1&${qs}`} className={accionChicaVenta}><Receipt className="w-4 h-4" /> Venta</Link>
-                  {peritajes.length > 0
-                    ? <Link href={`/panel/peritajes/${peritajes[0].id}`} className={accionChica}><ClipboardCheck className="w-4 h-4" /> Peritaje</Link>
-                    : <button onClick={f.iniciarPeritaje} className={accionChica}><ClipboardCheck className="w-4 h-4" /> Peritaje</button>}
-                  <button onClick={() => f.setShowTestDriveModal(true)} className={accionChica}><Car className="w-4 h-4" /> Test drive</button>
-                </div>
-                {(presupuestos.length > 0 || senas.length > 0 || ventas.length > 0) && (
-                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/10 space-y-1.5">
-                    <p className={etiquetaDato}>Ya hecho con este cliente</p>
-                    {presupuestos.map((p: Fila) => (
-                      <Link key={`p-${p.id}`} href={`/panel/cotizaciones/imprimir/${p.id}`} className="flex items-center justify-between rounded-lg border border-slate-100 dark:border-white/10 px-3 py-2 text-xs hover:border-[#0145F2]">
-                        <span className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Cotización N° {p.numero}</span>
-                        <span className="font-bold">{p.precio_ars ? `$ ${Number(p.precio_ars).toLocaleString("es-AR")}` : p.precio_usd ? `US$ ${Number(p.precio_usd).toLocaleString("es-AR")}` : ""}</span>
-                      </Link>
-                    ))}
-                    {senas.map((s: Fila) => (
-                      <Link key={`s-${s.id}`} href={`/panel/senas/imprimir/${s.id}`} className="flex items-center justify-between rounded-lg border border-slate-100 dark:border-white/10 px-3 py-2 text-xs hover:border-[#0145F2]">
-                        <span className="flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5" /> Seña N° {s.numero}</span>
-                        <span className="font-bold">{s.venta_ars ? `$ ${Number(s.venta_ars).toLocaleString("es-AR")}` : s.venta_usd ? `US$ ${Number(s.venta_usd).toLocaleString("es-AR")}` : ""}</span>
-                      </Link>
-                    ))}
-                    {ventas.map((b: Fila) => (
-                      <div key={`b-${b.id}`} className="flex items-center justify-between rounded-lg border border-slate-100 dark:border-white/10 px-3 py-2 text-xs">
-                        <span className="flex items-center gap-1.5"><Receipt className="w-3.5 h-3.5" /> Venta — {new Date(b.created_at).toLocaleDateString("es-AR")}</span>
-                        <span className="font-bold">{b.moneda_venta} {Number(b.precio_venta).toLocaleString("es-AR")}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </Seccion>
-            </div>
-
-            <div className={`${card} order-5 lg:order-none`}>
-              <Seccion titulo="Auto que le interesa" icono={Car} accion={vehiculo && !cambiandoAuto ? <button onClick={() => { setCambiandoAuto(true); f.cargarStock(); }} className="text-xs font-bold text-[#0145F2] dark:text-sky-400">Cambiar</button> : null}>
-                {vehiculo && !cambiandoAuto && (
-                  <>
-                    <Link href={`/panel/stock?vehiculo=${vehiculo.id}`} className="flex gap-3 group">
-                      <div className="w-24 h-16 shrink-0 rounded-lg overflow-hidden bg-slate-100 dark:bg-white/5">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={fotoPrincipal(vehiculo.fotos)} alt={`${vehiculo.marca} ${vehiculo.modelo}`} className="w-full h-full object-cover" loading="lazy" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#0145F2] truncate">{vehiculo.marca} {vehiculo.modelo}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{[vehiculo.anio, textoKm(vehiculo), vehiculo.patente].filter(Boolean).join(" · ")}</p>
-                        {precioVehiculo(vehiculo) && <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">{precioVehiculo(vehiculo)}</p>}
-                      </div>
-                    </Link>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {vehiculo.estado && <Etiqueta>{ESTADO_AUTO[vehiculo.estado] || vehiculo.estado}</Etiqueta>}
-                      {vehiculo.propio_agencia === false && <Etiqueta tono="info">En consignación</Etiqueta>}
-                      {vehiculo.sucursal?.nombre && <Etiqueta><MapPin className="w-3 h-3" /> {vehiculo.sucursal.nombre}</Etiqueta>}
-                    </div>
-                    {vehiculo.vendedor_asignado_id && vehiculo.vendedor_asignado_id !== (lead.vendedor_id || null) && (
-                      <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300"><AlertTriangle className="w-3.5 h-3.5 shrink-0" /> Lo tiene asignado {vehiculo.vendedor_asignado?.nombre || "otro vendedor"} en Stock.</p>
-                    )}
-                    <AvisoSucursalLead sucursalAutoId={vehiculo.sucursal_id} sucursalAutoNombre={vehiculo.sucursal?.nombre} vendedorActualId={lead.vendedor_id}
-                      guardando={f.guardandoVendedor} onAsignar={f.cambiarVendedor} />
-                  </>
-                )}
-                {mostrarBuscador && (
-                  <div className="space-y-2">
-                    {sugeridos.length > 0 && (
-                      <div className="space-y-1.5">
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Lo nombra el resumen o las notas:</p>
-                        {sugeridos.map((v: Fila) => (
-                          <button key={v.id} onClick={() => elegirAuto(v.id)} disabled={f.guardandoVehiculo} className="w-full flex items-center justify-between gap-2 rounded-lg border border-[#0145F2]/30 bg-[#0145F2]/5 px-3 py-2 text-left text-sm hover:bg-[#0145F2]/10 disabled:opacity-50">
-                            <span className="truncate text-slate-800 dark:text-white">{v.marca} {v.modelo}</span>
-                            <span className="flex items-center gap-1 text-xs font-bold text-[#0145F2] dark:text-sky-400 shrink-0"><Link2 className="w-3.5 h-3.5" /> Vincular</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    <div className="relative">
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input value={f.busquedaVehiculo} onChange={(e) => f.setBusquedaVehiculo(e.target.value)} onFocus={() => { setListaAutos(true); f.cargarStock(); }} disabled={f.guardandoVehiculo}
-                        placeholder="Buscar en el stock: marca, modelo o patente" className={`${inputClass} pl-8`} />
-                    </div>
-                    {/* La lista del stock aparece al tocar el buscador, no de entrada (Walter, 20/10/2026: abrumaba). */}
-                    {(listaAutos || f.busquedaVehiculo) && (
-                      <div className="max-h-56 overflow-y-auto rounded-lg border border-slate-200 dark:border-white/10 divide-y divide-slate-100 dark:divide-white/10">
-                        {!f.stockCargado ? <p className="px-3 py-2 text-xs text-slate-400">Cargando el stock…</p> : buscados.length === 0 ? <p className="px-3 py-2 text-xs text-slate-400">Sin resultados.</p> : buscados.slice(0, 60).map((v: Fila) => (
-                          <button key={v.id} onClick={() => elegirAuto(v.id)} disabled={f.guardandoVehiculo} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-white/5 flex items-center justify-between gap-2 disabled:opacity-50">
-                            <span className="truncate text-slate-800 dark:text-white">{v.marca} {v.modelo}</span><span className="text-[11px] text-slate-400 shrink-0">{v.patente || "S/P"}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {vehiculo && <div className="flex gap-2"><button onClick={() => { setCambiandoAuto(false); f.setBusquedaVehiculo(""); }} className={BTN.secundario}>Cancelar</button><button onClick={() => elegirAuto("")} className={BTN.peligro}>Desvincular</button></div>}
-                  </div>
-                )}
-              </Seccion>
-
-              {testDrives.length > 0 && (
-                <div className="mt-5 pt-4 border-t border-slate-100 dark:border-white/10">
-                  <Seccion titulo="Test drive" icono={CalendarDays}>
-                    <div className="space-y-1.5">
-                      {testDrives.map((td: Fila) => {
-                        const v = f.autoDeTestDrive(td.vehiculo_id);
-                        return (
-                          <div key={td.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 dark:border-white/10 px-3 py-2">
-                            <div className="min-w-0"><p className="text-xs font-bold text-slate-800 dark:text-white truncate">{v ? `${v.marca} ${v.modelo}` : "Sin auto"}</p><span className="text-[11px] text-slate-400">{cuando(td.fecha_hora)}</span></div>
-                            <div className="shrink-0">
-                              <SelectorWeb ariaLabel="Estado del test drive" valor={td.estado} onCambio={(v) => f.cambiarEstadoTestDrive(td, v)} claseFlecha="w-3 h-3"
-                                claseBoton="text-[10px] font-bold uppercase px-2 py-1 rounded-lg border outline-none bg-white dark:bg-white/5 border-slate-200 dark:border-white/10"
-                                opciones={ESTADOS_TEST_DRIVE.map((e: string) => ({ valor: e, etiqueta: e }))} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Seccion>
-                </div>
-              )}
-
-              {(soportaPeritaje || peritajes.length > 0) && (
-                <div className="mt-5 pt-4 border-t border-slate-100 dark:border-white/10">
-                  <Seccion titulo="Peritaje" icono={ClipboardCheck} accion={soportaPeritaje ? <button onClick={vehiculo ? f.iniciarPeritajeDelAuto : f.iniciarPeritaje} disabled={f.creandoPeritaje} className="flex items-center gap-1 text-xs font-bold text-[#0145F2] dark:text-sky-400 disabled:opacity-50"><Plus className="w-3.5 h-3.5" /> {f.creandoPeritaje ? "Iniciando..." : "Iniciar"}</button> : null}>
-                    {peritajes.length === 0 ? <p className="text-xs text-slate-400">Todavía no se hizo un peritaje.</p> : peritajes.map((p: Fila) => (
-                      <Link key={p.id} href={`/panel/peritajes/${p.id}`} className="flex items-center justify-between rounded-lg border border-slate-100 dark:border-white/10 px-3 py-2 text-xs hover:border-[#0145F2]">
-                        <span>{new Date(p.created_at).toLocaleDateString("es-AR")}</span>
-                        <span className="flex items-center gap-2 font-bold">{p.puntaje != null && <span className={p.puntaje >= 70 ? "text-emerald-600" : p.puntaje >= 40 ? "text-amber-600" : "text-rose-600"}>{p.puntaje}%</span>}<span className="text-slate-400 uppercase">{p.estado}</span></span>
-                      </Link>
-                    ))}
-                  </Seccion>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
 
@@ -544,7 +371,7 @@ export default function FichaLeads({ f, modales }: { f: Fila; modales: React.Rea
         {linkWhatsApp && !(linkChat && origen === "whatsapp") && <a href={linkWhatsApp} target="_blank" rel="noreferrer" className={BTN.whatsapp}><IconoWhatsapp className="w-4 h-4" /> WhatsApp</a>}
         {linkChat
           ? <Link href={linkChat} className={`flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap px-3 py-2.5 rounded-xl text-sm font-bold shadow-sm ${COLOR_BOTON_CANAL[origen as CanalConversacion]}`}><IconoCanal className="w-4 h-4 shrink-0" /> {telefono && linkWhatsApp && origen !== "whatsapp" ? "Ir al chat" : "Ir a la conversación"}</Link>
-          : <Link href={`/panel/cotizaciones?nuevo=1&${qs}`} className={BTN.primario}><FileText className="w-4 h-4" /> Cotizar</Link>}
+          : null}
       </div>
 
       {modales}

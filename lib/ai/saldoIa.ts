@@ -1,5 +1,4 @@
 import { supabaseEmpresa } from "@/lib/empresa/db";
-import { createClient } from "@supabase/supabase-js";
 import { crearAlerta } from "@/lib/panel/alertas";
 import { costoFilaIaUsd, type FilaUsoIa } from "./costoIa";
 import { factorAjusteIa, inicioDeMesUtc, proyeccionFinDeMes } from "./ajusteIa";
