@@ -23,7 +23,7 @@ interface Perfil { id: string; nombre: string }
 
 const TABLA_POR_ORIGEN: Record<Origen, string> = { whatsapp: "whatsapp_conversaciones", instagram: "instagram_conversaciones", messenger: "messenger_conversaciones", rodi: "rodi_conversaciones", manual: "leads_manuales" };
 const FK_POR_ORIGEN: Record<Origen, string> = { whatsapp: "whatsapp_conversacion_id", instagram: "instagram_conversacion_id", messenger: "messenger_conversacion_id", rodi: "rodi_conversacion_id", manual: "leads_manuales_id" };
-const ORIGEN_LABEL: Record<Origen, string> = { whatsapp: "WhatsApp", instagram: "Instagram", messenger: "Messenger", rodi: "Paffy", manual: "Manual" };
+const ORIGEN_LABEL: Record<Origen, string> = { whatsapp: "WhatsApp", instagram: "Instagram", messenger: "Messenger", rodi: "Chat web", manual: "Manual" };
 const ORIGEN_ICON: Record<Origen, any> = { whatsapp: IconoWhatsapp, instagram: IconoInstagram, messenger: IconoMessenger, rodi: Bot, manual: User };
 const ORIGEN_COLOR: Record<Origen, string> = { whatsapp: "text-[#25D366]", instagram: "text-[#E4405F]", messenger: "text-[#0084FF]", rodi: "text-indigo-500", manual: "text-slate-400" };
 const ORIGEN_BARRA: Record<Origen, string> = { whatsapp: "bg-emerald-500", instagram: "bg-pink-500", messenger: "bg-blue-500", rodi: "bg-indigo-500", manual: "bg-slate-400" };

@@ -14,6 +14,7 @@ import { guardarDatosDeContacto, registrarPedidoSinStock, procesarDerivacion } f
 import { horarioDeConfig, estaEnHorario, debeAvisarFueraDeHorario, textoFueraDeHorarioPorDefecto } from "@/lib/panel/horarioBots";
 import { enviarTextoBot } from "@/lib/panel/enviarMensajeBot";
 import { subirArchivoR2, r2Configurado } from "@/lib/storage/r2";
+import { RESPUESTA_FALLBACK } from "@/lib/panel/textosBot";
 
 // Webhook de Meta para el Facebook Messenger de la página -- mismo patrón
 // exacto que /api/panel/webhooks/instagram (Messenger y el Instagram DM
@@ -280,7 +281,7 @@ async function procesarMensajeDirecto(msg: any): Promise<{ conversacionId: strin
   return { conversacionId: refs.conversacionId, mensajeId: mensajeInsertado.id, psid };
 }
 
-const RESPUESTA_FALLBACK = "¡Hola! Gracias por escribirnos a Pfaffen Cars. En breve te contacta uno de nuestros asesores. 🚗";
+
 
 function isMessengerEnvioConfigurado(config: any): boolean {
   return !!config?.listo && !!config?.token_cifrado && !!config?.token_iv && !!config?.token_tag && !!config?.page_id;

@@ -19,6 +19,7 @@ import { cargarConsignacionDesdeChat } from "@/lib/panel/consignacionDesdeChat";
 import { cargarPedidoDesdeChat } from "@/lib/panel/pedidoDesdeChat";
 import { completarVisitaRepetida } from "@/lib/panel/visitaRepetida";
 import { guardarPedidoDelBot } from "@/lib/panel/pedidoDelBot";
+import { RESPUESTA_FALLBACK } from "@/lib/panel/textosBot";
 
 // Webhook de Meta para el WhatsApp de panel-v2 (Conversaciones → WhatsApp,
 // replica /panel/chat de v1: bandeja de mensajes reales de clientes con
@@ -345,7 +346,7 @@ async function guardarMensajeEntrante({ waId, nombrePerfil, msg }: { waId: strin
   return { conversacionId: conversacion.id, mensajeId: mensajeInsertado.id };
 }
 
-const RESPUESTA_FALLBACK = "¡Hola! Gracias por escribirnos a Pfaffen Cars. En breve te contacta uno de nuestros asesores. 🚗";
+
 
 function isWhatsappEnvioConfigurado(config: any): boolean {
   return !!config?.listo && !!config?.token_cifrado && !!config?.token_iv && !!config?.token_tag && !!config?.phone_number_id;

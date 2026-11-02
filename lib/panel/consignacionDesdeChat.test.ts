@@ -7,7 +7,7 @@ import { detallePedidoConsignacion } from "./consignacionPedido";
 
 const datos = (extra: Record<string, unknown> = {}) => ({
   timing: null, forma_pago: null, tiene_permuta: null, nombre: "Damián", email: null, telefono: null,
-  precio_pedido: "11.000 dólares limpios", zona: "casa-central" as const,
+  precio_pedido: "11.000 dólares limpios", zona: "oficina-1",
   vehiculo_propio: { marca: "Jeep", modelo: "Compass", anio: "2014", km: "120.000" },
   ...extra,
 });
@@ -42,8 +42,8 @@ describe("filaConsignacionDesdeChat", () => {
 
 describe("detallePedidoConsignacion", () => {
   it("precio, zona y chat de donde vino", () => {
-    expect(detallePedidoConsignacion({ precio_pedido: "11.000 dólares limpios", sucursal_nombre: "Casa Central", chat_link: "/panel/whatsapp?conversacion=abc", vehiculo_km: 120000 }))
-      .toBe("Pide 11.000 dólares limpios · Casa Central · por WhatsApp");
+    expect(detallePedidoConsignacion({ precio_pedido: "11.000 dólares limpios", sucursal_nombre: "Oficina 1", chat_link: "/panel/whatsapp?conversacion=abc", vehiculo_km: 120000 }))
+      .toBe("Pide 11.000 dólares limpios · Oficina 1 · por WhatsApp");
   });
   it("una charla vieja sin km lo avisa", () => {
     expect(detallePedidoConsignacion({ chat_link: "/panel/instagram?conversacion=abc", vehiculo_km: null })).toBe("por Instagram · faltan km");

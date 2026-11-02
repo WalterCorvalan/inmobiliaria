@@ -12,7 +12,7 @@ describe("armarEvento: cada acción de la web con su nombre en Analytics y en Me
   });
 
   it("tocar un teléfono es una consulta: contacto_llamada y Contact", () => {
-    const e = armarEvento({ tipo: "llamada", ubicacion: "/sucursales/casa-central" });
+    const e = armarEvento({ tipo: "llamada", ubicacion: "/oficinas/oficina-1" });
     expect(e.ga.nombre).toBe("contacto_llamada");
     expect(e.meta).toMatchObject({ nombre: "Contact", desde: "ambos" });
     expect(e.esConsulta).toBe(true);
@@ -77,14 +77,14 @@ describe("API de conversiones de Meta", () => {
 
   it("arma el evento con el mismo event_id que el Pixel, para que Meta lo cuente una sola vez", () => {
     const dato = armarEventoCapi({ tipo: "formulario", formulario: "cotizar_usado" }, {
-      eventId: "evt-123456", url: "https://www.pfaffencars.com/cotizador", ip: "1.2.3.4", userAgent: "Prueba", fbp: "fb.1.1.1", fbc: null, contacto: { telefono: "1121907000" }, ahora: 1760000000,
+      eventId: "evt-123456", url: "https://www.ejemplo.com/contacto", ip: "1.2.3.4", userAgent: "Prueba", fbp: "fb.1.1.1", fbc: null, contacto: { telefono: "1121907000" }, ahora: 1760000000,
     });
     expect(dato).toEqual({
       event_name: "Lead",
       event_time: 1760000000,
       event_id: "evt-123456",
       action_source: "website",
-      event_source_url: "https://www.pfaffencars.com/cotizador",
+      event_source_url: "https://www.ejemplo.com/contacto",
       user_data: { ph: [sha256("5491121907000")], client_ip_address: "1.2.3.4", client_user_agent: "Prueba", fbp: "fb.1.1.1" },
       custom_data: { content_name: "cotizar_usado" },
     });

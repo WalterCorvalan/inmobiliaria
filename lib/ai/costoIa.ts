@@ -47,7 +47,7 @@ export const NOMBRE_ORIGEN_IA: Record<string, string> = {
   "panel-v2/webhooks/whatsapp": "Bot de WhatsApp",
   "panel-v2/webhooks/instagram": "Bot de Instagram",
   "panel-v2/webhooks/messenger": "Bot de Messenger",
-  "panel-v2/rodi": "Paffy (chat de la web)",
+  "panel-v2/rodi": "Chat de la web",
   "api/buscar-ia": "Buscador del catálogo",
   "gerente_dashboard": "Gerente del Cockpit",
   "panel-v2/cotizacion-mercado": "Precio de mercado (cotizador web y tasador)",

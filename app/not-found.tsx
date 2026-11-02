@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CarFront, Search } from "lucide-react";
 
 export const metadata = {
-  title: "Página no encontrada | Pfaffen Cars",
+  title: "Página no encontrada | Inmobiliaria CRM",
   robots: { index: false, follow: true },
 };
 

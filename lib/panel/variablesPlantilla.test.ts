@@ -16,7 +16,7 @@ describe("datos de las plantillas de WhatsApp", () => {
     expect(validateBodyVariables("Hola {{1}}, tu {{2}} está listo.")).toBeNull();
   });
   it("las 10 sugeridas (7 de casos reales + cumpleaños, cumpleaños con renovación y fin de pago) son válidas y traen un ejemplo y una explicación por dato", () => {
-    expect(PLANTILLAS_SUGERIDAS).toHaveLength(10);
+    expect(PLANTILLAS_SUGERIDAS).toHaveLength(7);
     for (const p of PLANTILLAS_SUGERIDAS) {
       expect(validateBodyVariables(p.cuerpo)).toBeNull();
       expect(p.ejemplos).toHaveLength(countVariables(p.cuerpo));

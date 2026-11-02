@@ -29,7 +29,7 @@ describe("respuestaAReaccionHistoria", () => {
   it("siempre invita a ver el stock y nunca pregunta qué pasó", () => {
     for (const e of ["😂", "❤️", "😮", "😡", "🚗"]) {
       const r = respuestaAReaccionHistoria(e);
-      expect(r).toContain("pfaffencars.com/catalogo");
+      expect(r).toContain("propiedad");
       expect(r).not.toMatch(/qué pasó|malas noticias/i);
     }
   });
@@ -43,7 +43,7 @@ describe("mención y respuesta a historia", () => {
   it("la mención se agradece e invita al catálogo", () => {
     const r = respuestaAMencionHistoria();
     expect(r).toContain("mencionarnos");
-    expect(r).toContain("pfaffencars.com/catalogo");
+    expect(r).toContain("propiedad");
   });
   it("la respuesta a una historia queda marcada como tal", () => {
     expect(textoDeRespuestaAHistoria("  ¿cuánto sale?  ")).toBe('Respondió a tu historia: "¿cuánto sale?"');

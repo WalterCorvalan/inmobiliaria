@@ -6,7 +6,7 @@ vi.mock("@/lib/ai/estimarPrecioMercado", () => ({ estimarPrecioMercado: vi.fn() 
 import { filaPedidoDesdeChat } from "./pedidoDesdeChat";
 
 const datos = (extra: Record<string, unknown> = {}) => ({
-  timing: null, forma_pago: null, tiene_permuta: null, nombre: "Lucas", email: null, telefono: null,
+  timing: null, forma_pago: null, tiene_permuta: null, nombre: "Pedro", email: null, telefono: null,
   precio_pedido: "18 mil dólares",
   vehiculo_propio: { marca: "Volkswagen", modelo: "Gol Trend", anio: "2015", km: "120 mil" },
   ...extra,

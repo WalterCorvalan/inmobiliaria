@@ -22,7 +22,7 @@ export const CAMPOS_VEHICULO_DETALLE =
   "id, marca, modelo, anio, km, tipo, categoria, segmento, estado, slug, precio_publicado_ars, precio_publicado_usd, traccion, potencia_cv, cantidad_plazas, transmision, combustible, destacado, fotos, sucursales!vehiculos_sucursal_id_fkey ( nombre, direccion, telefono:telefono_encargado )" as const;
 // Imagen para un auto sin fotos cargadas (pedido de Walter, 9/10/2026): el logo de Pfaffen Automotores en vez de un
 // recuadro vacío, "Sin imagen" o el logo chico. Toda tarjeta, ficha o lista del sitio público usa fotoPrincipal().
-export const FOTO_SIN_IMAGEN = "/pfaffen-automotores-icono.webp";
+export const FOTO_SIN_IMAGEN = "/sin-imagen.svg";
 
 /** Primera foto del auto, o la imagen de Pfaffen si no tiene ninguna (también si la lista trae vacíos). */
 export function fotoPrincipal(fotos: unknown): string {

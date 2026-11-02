@@ -1,5 +1,4 @@
-// A quién conviene pasarle un lead según la sucursal donde está el auto (14/10/2026, Walter): un auto de Casa Central
-// lo atienden Julián o Fede; uno de Don Torcuato (Panamericana), Lucas. No reasigna solo: la ficha del lead muestra el
+// A quién conviene pasarle un lead según la oficina donde está la propiedad. No reasigna solo: la ficha del lead muestra el
 // aviso y un botón para pasárselo. Pura, para poder probarla.
 
 export type PerfilSucursal = { id: string; nombre: string; roles: string[] | null; sucursal_id: string | null };

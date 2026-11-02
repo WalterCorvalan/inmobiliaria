@@ -16,6 +16,7 @@ import { cargarPedidoDesdeChat } from "@/lib/panel/pedidoDesdeChat";
 import { completarVisitaRepetida } from "@/lib/panel/visitaRepetida";
 import { cookiesPixel, enviarEventoMeta, type ContextoPedido } from "@/lib/conversionesMeta";
 import { guardarPedidoDelBot } from "@/lib/panel/pedidoDelBot";
+import { RESPUESTA_FALLBACK } from "@/lib/panel/textosBot";
 
 // Endpoint público (sin sesión — lo llama el widget del sitio, un visitante
 // anónimo) que procesa un mensaje de Rodi. Identidad = sessionId generado
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
     return await procesarMensaje({ sessionId, texto, origenPagina, nombre, telefono, email, origenWeb, contextoMeta });
   } catch (err) {
     registrarError("api/panel/rodi/mensaje", err, { sessionId });
-    return NextResponse.json({ replies: ["¡Hola! Gracias por escribirnos a Pfaffen Cars. En breve te contacta uno de nuestros asesores. 🚗"], handoff: false });
+    return NextResponse.json({ replies: [RESPUESTA_FALLBACK], handoff: false });
   }
 }
 
@@ -158,7 +159,7 @@ async function procesarMensaje({ sessionId, texto, origenPagina, nombre, telefon
 
   if (!result.ok) {
     registrarError("api/panel/rodi/mensaje:agente", result.error, { conversacionId: conversacion.id });
-    return NextResponse.json({ replies: ["¡Hola! Gracias por escribirnos a Pfaffen Cars. En breve te contacta uno de nuestros asesores. 🚗"], handoff: false });
+    return NextResponse.json({ replies: [RESPUESTA_FALLBACK], handoff: false });
   }
 
   const { reply, handoff, pausar_sin_notificar, calificacion, resumen_handoff, datos_detectados } = result.data;
@@ -198,7 +199,7 @@ async function procesarMensaje({ sessionId, texto, origenPagina, nombre, telefon
   await supabase.from("rodi_conversaciones").update(patchCalificacion).eq("id", conversacion.id);
 
   if (vendedorAsignadoAhora) {
-    notificarPersona(supabase, vendedorAsignadoAhora, "whatsapp_venta_zona", "Un cliente te consultó por Paffy (chat del sitio) por un auto que tenés asignado — se te asignó automáticamente.", `/panel/rodi?conversacion=${conversacion.id}`, { categoriaNotif: "leads", modulo: "leads" }).catch((err) => console.error("[rodi] error notificando asignación:", err));
+    notificarPersona(supabase, vendedorAsignadoAhora, "whatsapp_venta_zona", "Un cliente te consultó por el chat de la web por un auto que tenés asignado — se te asignó automáticamente.", `/panel/rodi?conversacion=${conversacion.id}`, { categoriaNotif: "leads", modulo: "leads" }).catch((err) => console.error("[rodi] error notificando asignación:", err));
   }
 
   // Nombre/email/teléfono que el cliente vaya dando durante la charla se
@@ -231,7 +232,7 @@ async function procesarMensaje({ sessionId, texto, origenPagina, nombre, telefon
       // acá porque un pedido con marca inventada no sirve para nada.
       await guardarPedidoDelBot(supabase, {
         telefono: datos_detectados?.telefono || conversacion.telefono_contacto || null,
-        nombre_cliente: datos_detectados?.nombre || conversacion.nombre_contacto || "Visitante de Paffy",
+        nombre_cliente: datos_detectados?.nombre || conversacion.nombre_contacto || "Visitante del chat web",
         marca: pedidoStock.marca, modelo: pedidoStock.modelo,
         presupuesto_max: pedidoStock.presupuesto_max, moneda: pedidoStock.moneda || "ARS",
         puertas: pedidoStock.puertas,
@@ -268,7 +269,7 @@ async function procesarMensaje({ sessionId, texto, origenPagina, nombre, telefon
     if (pausar_sin_notificar) return NextResponse.json({ replies: partes, handoff });
 
     const linkNoti = `/panel/rodi?conversacion=${conversacion.id}`;
-    const mensajeNoti = resumen_handoff || "Cliente de Paffy ofrece su auto";
+    const mensajeNoti = resumen_handoff || "Cliente del chat web ofrece su propiedad";
     let vendedorAsignado: string | null = conversacion.vendedor_id ?? null;
 
     // Venta/consignación/permuta: mismo criterio que WhatsApp -- si todavía
@@ -301,14 +302,14 @@ async function procesarMensaje({ sessionId, texto, origenPagina, nombre, telefon
     // Quiere dejar su auto en consignación: se carga sola en Consignaciones → Pendientes (lib/panel/consignacionDesdeChat.ts).
     await cargarConsignacionDesdeChat(supabase, {
       canal: "rodi", conversacionId: conversacion.id, intencion: result.data.intencion, datos: datos_detectados,
-      nombre: datos_detectados?.nombre || conversacion.nombre_contacto || "Visitante de Paffy",
+      nombre: datos_detectados?.nombre || conversacion.nombre_contacto || "Visitante del chat web",
       telefono: datos_detectados?.telefono || conversacion.telefono_contacto,
       email: datos_detectados?.email || conversacion.email_contacto,
       vendedorId: vendedorAsignado, sucursalId: sucursalElegida?.id,
     });
     await cargarPedidoDesdeChat(supabase, {
       canal: "rodi", conversacionId: conversacion.id, intencion: result.data.intencion, datos: datos_detectados,
-      nombre: datos_detectados?.nombre || conversacion.nombre_contacto || "Visitante de Paffy",
+      nombre: datos_detectados?.nombre || conversacion.nombre_contacto || "Visitante del chat web",
       telefono: datos_detectados?.telefono || conversacion.telefono_contacto,
       email: datos_detectados?.email || conversacion.email_contacto,
       vendedorId: vendedorAsignado, sucursalNombre: sucursalElegida?.nombre,
@@ -316,7 +317,7 @@ async function procesarMensaje({ sessionId, texto, origenPagina, nombre, telefon
 
     // Día/horario confirmado: agenda visita real.
     if (datos_detectados?.dia_visita && datos_detectados?.horario_visita) {
-      const nombreCliente = datos_detectados?.nombre || conversacion.nombre_contacto || "Visitante de Paffy";
+      const nombreCliente = datos_detectados?.nombre || conversacion.nombre_contacto || "Visitante del chat web";
       const telefonoCliente = datos_detectados?.telefono || conversacion.telefono_contacto || "sin dato";
       const { fecha: fechaVisita, dudosa: fechaDudosa } = resolverFechaVisitaConControl(datos_detectados.dia_visita);
       const sucursalVisita = sucursalElegida?.nombre || "Sin especificar";
@@ -351,7 +352,7 @@ async function procesarMensaje({ sessionId, texto, origenPagina, nombre, telefon
         else notificarEncargados(supabase, mensajeFecha, "/panel/visitas", "rodi_venta_zona", sucursalElegida?.id, "alta", { modulo: "visitas" }).catch((err) => console.error("[rodi] error avisando fecha dudosa:", err));
       }
       if (!errorVisita && hayConflicto) {
-        const mensajeConflicto = `⚠️ ${nombreCliente} agendó por Paffy a las ${datos_detectados.horario_visita} el ${fechaVisita} en ${sucursalVisita}, pero ese horario ya estaba ocupado. Reagendar una de las dos.`;
+        const mensajeConflicto = `⚠️ ${nombreCliente} agendó por el chat web a las ${datos_detectados.horario_visita} el ${fechaVisita} en ${sucursalVisita}, pero ese horario ya estaba ocupado. Reagendar una de las dos.`;
         if (vendedorAsignado) notificarPersona(supabase, vendedorAsignado, "rodi_venta_zona", mensajeConflicto, "/panel/visitas", { modulo: "visitas" }).catch((err) => console.error("[rodi] error notificando conflicto de visita:", err));
         else notificarEncargados(supabase, mensajeConflicto, "/panel/visitas", "rodi_venta_zona", sucursalElegida?.id, "alta", { modulo: "visitas" }).catch((err) => console.error("[rodi] error notificando conflicto de visita:", err));
       }

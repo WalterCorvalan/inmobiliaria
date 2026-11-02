@@ -41,4 +41,4 @@ export function clasesModoOscuro(tema: TemaOscuro): string {
 }
 
 /** Aviso entre Mi Perfil y el panel para cambiar el color al instante, sin recargar. */
-export const EVENTO_TEMA_OSCURO = "pfaffen:tema-oscuro";
+export const EVENTO_TEMA_OSCURO = "crm:tema-oscuro";

@@ -6,31 +6,31 @@ import { filtrarPorVendedorAsignado, filtrarVendedoresAsignables } from "./permi
 // bandeja entera de la agencia a cualquier vendedor.
 describe("filtrarPorVendedorAsignado", () => {
   const leads = [
-    { id: "a", vendedor_id: "fede" },
-    { id: "b", vendedor_id: "julian" },
-    { id: "c", vendedor_id: "lucas" },
+    { id: "a", vendedor_id: "asesor-1" },
+    { id: "b", vendedor_id: "asesor-2" },
+    { id: "c", vendedor_id: "encargado-2" },
     { id: "d", vendedor_id: null },
   ];
 
   it("un vendedor ve los suyos y los que todavía no tienen vendedor, no los de otros", () => {
-    const ids = filtrarPorVendedorAsignado(leads, { soyAdmin: false, soyEncargado: false, miId: "julian" }).map((l) => l.id);
+    const ids = filtrarPorVendedorAsignado(leads, { soyAdmin: false, soyEncargado: false, miId: "asesor-2" }).map((l) => l.id);
     expect(ids).toEqual(["b", "d"]);
   });
 
   it("el encargado ve todos", () => {
-    expect(filtrarPorVendedorAsignado(leads, { soyAdmin: false, soyEncargado: true, miId: "lucas" })).toHaveLength(4);
+    expect(filtrarPorVendedorAsignado(leads, { soyAdmin: false, soyEncargado: true, miId: "encargado-2" })).toHaveLength(4);
   });
 
   const perfiles = [
-    { id: "gabriel", sucursal_id: "central" }, { id: "fede", sucursal_id: "central" },
-    { id: "julian", sucursal_id: "central" }, { id: "lucas", sucursal_id: "torcuato" },
+    { id: "encargado-1", sucursal_id: "oficina-1" }, { id: "asesor-1", sucursal_id: "oficina-1" },
+    { id: "asesor-2", sucursal_id: "oficina-1" }, { id: "encargado-2", sucursal_id: "oficina-2" },
   ];
 
   it("el encargado ve lo de su sucursal, aunque sea admin (21/10/2026)", () => {
-    const deGabriel = filtrarPorVendedorAsignado(leads, { soyAdmin: true, soyEncargado: true, miId: "gabriel", miSucursalId: "central", perfiles }).map((l) => l.id);
-    expect(deGabriel).toEqual(["a", "b", "d"]);
-    const deLucas = filtrarPorVendedorAsignado(leads, { soyAdmin: false, soyEncargado: true, miId: "lucas", miSucursalId: "torcuato", perfiles }).map((l) => l.id);
-    expect(deLucas).toEqual(["c", "d"]);
+    const deEncargado1 = filtrarPorVendedorAsignado(leads, { soyAdmin: true, soyEncargado: true, miId: "encargado-1", miSucursalId: "oficina-1", perfiles }).map((l) => l.id);
+    expect(deEncargado1).toEqual(["a", "b", "d"]);
+    const deEncargado2 = filtrarPorVendedorAsignado(leads, { soyAdmin: false, soyEncargado: true, miId: "encargado-2", miSucursalId: "oficina-2", perfiles }).map((l) => l.id);
+    expect(deEncargado2).toEqual(["c", "d"]);
   });
 
   it("el admin ve todos", () => {

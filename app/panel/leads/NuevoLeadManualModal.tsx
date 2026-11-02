@@ -17,7 +17,7 @@ export default function NuevoLeadManualModal({ vendedores, sucursales, miId, onC
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
-  const [canalOrigen, setCanalOrigen] = useState<string>("Salón");
+  const [canalOrigen, setCanalOrigen] = useState<string>("Oficina");
   const [sucursalId, setSucursalId] = useState("");
   const [vendedorId, setVendedorId] = useState("");
   const [notas, setNotas] = useState("");
@@ -53,7 +53,7 @@ export default function NuevoLeadManualModal({ vendedores, sucursales, miId, onC
           <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><Radar className="w-5 h-5 text-[#0145F2]" /> Nuevo lead</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10"><X className="w-4 h-4" /></button>
         </div>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Para leads que no llegan por WhatsApp/Instagram/Paffy — walk-in, MercadoLibre, cliente anterior, etc.</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Para leads que no llegan por WhatsApp/Instagram/chat web — walk-in, MercadoLibre, cliente anterior, etc.</p>
 
         <form onSubmit={guardar} className="space-y-3">
           <div>

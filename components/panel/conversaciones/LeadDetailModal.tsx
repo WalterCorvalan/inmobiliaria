@@ -91,7 +91,7 @@ const CAMPO_FK_POR_ORIGEN: Record<string, string> = {
 const CONTACTO_TABLA_POR_ORIGEN: Record<string, string | null> = {
   whatsapp: "whatsapp_contactos", instagram: "instagram_contactos", messenger: "messenger_contactos", rodi: null, manual: null,
 };
-const ETIQUETA_ORIGEN: Record<string, string> = { whatsapp: "WhatsApp", instagram: "Instagram", messenger: "Messenger", rodi: "Paffy", manual: "carga manual" };
+const ETIQUETA_ORIGEN: Record<string, string> = { whatsapp: "WhatsApp", instagram: "Instagram", messenger: "Messenger", rodi: "Chat web", manual: "carga manual" };
 const ICONO_ORIGEN: Record<string, React.ComponentType<{ className?: string }>> = {
   whatsapp: IconoWhatsapp, instagram: IconoInstagram, messenger: IconoMessenger, rodi: Sparkles, manual: UserRound,
 };
@@ -532,7 +532,7 @@ export default function LeadDetailModal({
   const telefono = contacto?.telefono || "";
   const telefonoDelResumen = lead?.handoff_resumen ? telefonoEnTexto(lead.handoff_resumen) : null;
   const numeroLimpio = String(telefono).replace(/\D/g, "");
-  const linkWhatsApp = numeroLimpio ? `https://wa.me/${numeroLimpio}?text=${encodeURIComponent(`¡Hola ${nombre}! Te escribimos de Pfaffen Cars.`)}` : null;
+  const linkWhatsApp = numeroLimpio ? `https://wa.me/${numeroLimpio}?text=${encodeURIComponent(`¡Hola ${nombre}! Te escribimos desde la inmobiliaria.`)}` : null;
   const puedeEditar = true;
 
   const TareasGrupo = ({ titulo, icono, tareas }: { titulo: string; icono: React.ReactNode; tareas: any[] }) =>

@@ -10,11 +10,11 @@ describe("fotoPrincipal", () => {
     expect(fotoPrincipal(["", "  ", null, "https://x/3.jpg"])).toBe("https://x/3.jpg");
   });
 
-  it("sin fotos usa la imagen de Pfaffen Automotores", () => {
+  it("sin fotos usa la imagen genérica", () => {
     expect(fotoPrincipal([])).toBe(FOTO_SIN_IMAGEN);
     expect(fotoPrincipal(null)).toBe(FOTO_SIN_IMAGEN);
     expect(fotoPrincipal(undefined)).toBe(FOTO_SIN_IMAGEN);
-    expect(FOTO_SIN_IMAGEN).toBe("/pfaffen-automotores-icono.webp");
+    expect(FOTO_SIN_IMAGEN).toBe("/sin-imagen.svg");
   });
 });
 

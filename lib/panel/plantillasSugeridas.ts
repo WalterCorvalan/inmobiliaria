@@ -1,41 +1,11 @@
-// Plantillas de WhatsApp para los casos reales (Walter, 19/10/2026): se usan cuando pasaron 24 hs desde el último
+// Plantillas de WhatsApp para los casos reales : se usan cuando pasaron 24 hs desde el último
 // mensaje del cliente. Cada dato entre {{ }} lo completa el vendedor al mandarla; "datos" dice qué va en cada uno y
 // "ejemplos" es lo que se le muestra a Meta para aprobarla. Todas como Utilidad: avisan de una consulta en curso.
 // "actualizacion_precio" reemplaza a "bajó de precio" (Meta la cobraría como publicidad).
-// Las tres de los mensajes automáticos (cumpleaños, cumpleaños con renovación y fin de pago, 20/10/2026) van como Marketing: las manda el sistema
-// solo y cada envío se paga (lib/panel/mensajesAutomaticos.ts).
-
-import {
-  PLANTILLA_CUMPLEANOS, PLANTILLA_CUMPLEANOS_RENOVACION, PLANTILLA_FIN_DE_PAGO, TEXTO_CUMPLEANOS, TEXTO_CUMPLEANOS_RENOVACION, TEXTO_FIN_DE_PAGO,
-} from "@/lib/panel/mensajesAutomaticos";
 
 export type PlantillaSugerida = { nombre: string; titulo: string; cuerpo: string; datos: string[]; ejemplos: string[]; categoria?: "UTILITY" | "MARKETING" };
 
 export const PLANTILLAS_SUGERIDAS: PlantillaSugerida[] = [
-  {
-    nombre: PLANTILLA_CUMPLEANOS,
-    titulo: "Feliz cumpleaños (automático)",
-    cuerpo: TEXTO_CUMPLEANOS,
-    datos: ["Nombre del cliente"],
-    ejemplos: ["Laura"],
-    categoria: "MARKETING",
-  },
-  {
-    nombre: PLANTILLA_CUMPLEANOS_RENOVACION,
-    titulo: "Cumpleaños con oferta de renovar (automático)",
-    cuerpo: TEXTO_CUMPLEANOS_RENOVACION,
-    datos: ["Nombre del cliente", "Años desde la compra", "Auto"],
-    ejemplos: ["Laura", "3", "Ford Ka"],
-    categoria: "MARKETING",
-  },
-  {
-    nombre: PLANTILLA_FIN_DE_PAGO,
-    titulo: "Terminó de pagar (automático)",
-    cuerpo: TEXTO_FIN_DE_PAGO,
-    datos: ["Nombre del cliente", "Auto"],
-    ejemplos: ["Martín", "Toyota Hilux"],
-    categoria: "MARKETING",
-  },
   {
     nombre: "respuesta_financiacion",
     titulo: "Financiación",
@@ -67,7 +37,7 @@ export const PLANTILLAS_SUGERIDAS: PlantillaSugerida[] = [
   {
     nombre: "confirmar_visita",
     titulo: "Confirmar visita",
-    cuerpo: "Hola {{1}}, te escribimos de Pfaffen Cars para confirmar tu visita del {{2}}. ¿Seguís pudiendo venir? Respondé este mensaje.",
+    cuerpo: "Hola {{1}}, te escribimos de nuestra inmobiliaria para confirmar tu visita del {{2}}. ¿Seguís pudiendo venir? Respondé este mensaje.",
     datos: ["Nombre del cliente", "Día y hora"],
     ejemplos: ["Diego", "lunes 20 a las 11"],
   },
@@ -81,9 +51,9 @@ export const PLANTILLAS_SUGERIDAS: PlantillaSugerida[] = [
   {
     nombre: "retomar_consulta",
     titulo: "Retomar la charla",
-    cuerpo: "Hola {{1}}, te escribe {{2}} de Pfaffen Cars por tu consulta. ¿Seguimos? Respondé este mensaje y te ayudamos.",
+    cuerpo: "Hola {{1}}, te escribe {{2}} de nuestra inmobiliaria por tu consulta. ¿Seguimos? Respondé este mensaje y te ayudamos.",
     datos: ["Nombre del cliente", "Tu nombre"],
-    ejemplos: ["Juan", "Gabriel"],
+    ejemplos: ["Juan", "Sofía"],
   },
 ];
 

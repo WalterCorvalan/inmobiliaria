@@ -70,8 +70,8 @@ export default function RodiLeadsTab({ conversacionesIniciales, vendedores, miId
       {filtrados.length === 0 ? (
         <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl py-16 flex flex-col items-center justify-center text-center shadow-sm">
           <Bot className="w-10 h-10 text-slate-300 dark:text-slate-600 mb-3" />
-          <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Sin leads de Paffy{filtro !== "todos" ? "" : " todavía"}.</p>
-          {filtro === "todos" && <p className="text-xs text-slate-400 mt-1 max-w-sm">Cuando un visitante del sitio le escriba a Paffy, va a aparecer acá. El round-robin asigna inicialmente al vendedor; desde acá podés reasignar.</p>}
+          <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Sin leads del chat web{filtro !== "todos" ? "" : " todavía"}.</p>
+          {filtro === "todos" && <p className="text-xs text-slate-400 mt-1 max-w-sm">Cuando un visitante del sitio le escriba al chat, va a aparecer acá. El round-robin asigna inicialmente al vendedor; desde acá podés reasignar.</p>}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

@@ -47,7 +47,7 @@ export interface OrigenEntrada {
 // El origen se guarda al ENTRAR al sitio (UtmTracker en el layout público) y los formularios lo leen al enviar.
 // Antes se leía de la dirección en el momento del envío: quien entraba por un anuncio, miraba autos y después cotizaba
 // ya no tenía los utm_* en la dirección y el lead quedaba sin origen (Pautas y Embudo no lo contaban).
-const CLAVE_ORIGEN = "pfaffen_origen_entrada";
+const CLAVE_ORIGEN = "crm_origen_entrada";
 // Pasado este tiempo sin volver a entrar por un link con origen, se deja de atribuir (ventana usual de una campaña).
 const VIGENCIA_ORIGEN_MS = 30 * 24 * 60 * 60 * 1000;
 

@@ -27,11 +27,11 @@ function iconoDe(url) {
   const modulo = (String(url || "").match(/^\/panel\/([^/?#]+)/) || [])[1];
   if (modulo && ICONOS_MODULO.has(modulo)) return `/icons/panel/${modulo}.png`;
   if (modulo && ICONO_ALIAS[modulo]) return `/icons/panel/${ICONO_ALIAS[modulo]}.png`;
-  return "/icons/notificacion-pfaffen.png";
+  return "/logo-placeholder.svg";
 }
 
 self.addEventListener("push", (event) => {
-  let data = { title: "Pfaffen Autos", body: "", url: "/panel" };
+  let data = { title: "Inmobiliaria CRM", body: "", url: "/panel" };
   try {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch {
@@ -39,7 +39,7 @@ self.addEventListener("push", (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title || "Pfaffen Autos", {
+    self.registration.showNotification(data.title || "Inmobiliaria CRM", {
       body: data.body || "",
       icon: iconoDe(data.url),
       badge: "/logo.png",

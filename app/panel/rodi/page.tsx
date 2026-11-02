@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import RodiShell from "./RodiShell";
 import { filtrarVendedoresAsignables, filtrarPorVendedorAsignado } from "@/lib/panel/permisosModulos";
 
-export const metadata = { title: "Paffy | Pfaffen Cars" };
+export const metadata = { title: "Chat de la web | Inmobiliaria CRM" };
 
 export default async function RodiPage() {
   const supabase = await createClient();

@@ -69,7 +69,7 @@ const ESTADO_LABEL: Record<string, string> = { nuevo: "Nuevo", asignado: "Contac
 const CALIFICACION_DOT: Record<string, string> = { caliente: "bg-rose-500", tibio: "bg-amber-500", frio: "bg-slate-300" };
 
 const ORIGEN_ICON: Record<Origen, any> = { whatsapp: IconoWhatsapp, instagram: IconoInstagram, messenger: IconoMessenger, rodi: Bot, manual: User };
-const ORIGEN_LABEL: Record<Origen, string> = { whatsapp: "WhatsApp", instagram: "Instagram", messenger: "Messenger", rodi: "Paffy", manual: "Manual" };
+const ORIGEN_LABEL: Record<Origen, string> = { whatsapp: "WhatsApp", instagram: "Instagram", messenger: "Messenger", rodi: "Chat web", manual: "Manual" };
 // Vuelve el color de marca por canal (se había sacado del todo), pero en un
 // tono más suave (400 en vez de 600) que el original -- alcanza para
 // reconocer el canal de un vistazo sin que la bandeja parezca un semáforo.

@@ -5,7 +5,7 @@ vi.mock("@/lib/panel/logger", () => ({ registrarError: vi.fn() }));
 import { datosQueFaltan, mismoTelefono, telefonoComparable } from "./visitaRepetida";
 
 describe("visitas repetidas", () => {
-  it("el mismo teléfono escrito distinto es la misma persona (caso Lucas, 29/10/2026)", () => {
+  it("el mismo teléfono escrito distinto es la misma persona (caso real, 29/10/2026)", () => {
     expect(mismoTelefono("3781609287", "5493781609287")).toBe(true);
     expect(mismoTelefono("+54 9 11 5555-0000", "011 5555-0000")).toBe(true);
     expect(mismoTelefono("1155550000", "1155550001")).toBe(false);

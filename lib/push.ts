@@ -11,7 +11,7 @@ function asegurarConfigurado() {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   if (!publicKey || !privateKey) throw new Error("Faltan las VAPID keys (NEXT_PUBLIC_VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY)");
-  webpush.setVapidDetails("mailto:sistemas@pfaffenautos.com.ar", publicKey, privateKey);
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:soporte@inmobiliaria-crm.invalid", publicKey, privateKey);
   configurado = true;
 }
 

@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, nocache: true },
   // Instalable en la pantalla de inicio (13/10/2026): en iPhone es la única forma de recibir notificaciones push.
   manifest: "/panel.webmanifest",
-  appleWebApp: { capable: true, title: "Pfaffen", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "Inmobiliaria CRM", statusBarStyle: "black-translucent" },
   icons: { apple: "/icons/panel-app-180.png" },
 };
 

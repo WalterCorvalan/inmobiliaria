@@ -11,7 +11,7 @@ export type NivelesAlertas = Partial<Record<CategoriaNotif, NivelAlerta>>;
 
 export const CATEGORIAS_NOTIF: { key: CategoriaNotif; icono: string; label: string; desc: string }[] = [
   { key: "leads", icono: "🆕", label: "Leads nuevos, reasignados y sin responder", desc: "Lead nuevo, mensaje o derivación de un canal, lead reasignado o que lleva demasiadas horas sin respuesta, y visitas." },
-  { key: "mensajes", icono: "💬", label: "Mensajes nuevos de clientes", desc: "Cada mensaje que entra por WhatsApp, Instagram, Messenger o Paffy en una charla tuya." },
+  { key: "mensajes", icono: "💬", label: "Mensajes nuevos de clientes", desc: "Cada mensaje que entra por WhatsApp, Instagram, Messenger o el chat de la web en una charla tuya." },
   { key: "nps", icono: "📊", label: "Encuestas NPS (nota baja)", desc: "Cuando un cliente responde la encuesta de atención con una nota baja (0-6)." },
   { key: "clientes", icono: "👤", label: "Clientes (nuevos, sin contactar, VIP)", desc: "Alta de clientes, clientes sin contactar a tiempo y VIP sin seguimiento." },
   { key: "reclamos", icono: "📣", label: "Reclamos", desc: "Asignaciones, comentarios, pedidos de atención y reclamos estancados." },

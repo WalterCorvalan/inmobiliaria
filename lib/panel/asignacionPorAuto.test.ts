@@ -2,31 +2,31 @@ import { describe, expect, it } from "vitest";
 import { autoDeLaCharla, destinoDelLead, vendedorDelAuto } from "./asignacionPorAuto";
 
 const perfiles = [
-  { id: "gabriel", roles: ["encargado", "ventas"], sucursal_id: "central" },
-  { id: "fede", roles: ["ventas"], sucursal_id: "central" },
-  { id: "julian", roles: ["ventas"], sucursal_id: "central" },
-  { id: "lucas", roles: ["encargado", "ventas"], sucursal_id: "torcuato" },
-  { id: "walter", roles: ["admin"], sucursal_id: null },
-  { id: "baja", roles: ["ventas"], sucursal_id: "torcuato", activo: false },
+  { id: "encargada-1", roles: ["encargado", "ventas"], sucursal_id: "oficina-1" },
+  { id: "asesor-1", roles: ["ventas"], sucursal_id: "oficina-1" },
+  { id: "asesor-2", roles: ["ventas"], sucursal_id: "oficina-1" },
+  { id: "encargado-2", roles: ["encargado", "ventas"], sucursal_id: "oficina-2" },
+  { id: "dueno", roles: ["admin"], sucursal_id: null },
+  { id: "baja", roles: ["ventas"], sucursal_id: "oficina-2", activo: false },
 ];
 
-describe("a quién va el lead según el auto (21/10/2026)", () => {
+describe("a quién va el lead según la propiedad", () => {
   it("manda el vendedor asignado al auto", () => {
-    expect(vendedorDelAuto({ vendedor_asignado_id: "julian", sucursal_id: "central" }, perfiles)).toBe("julian");
+    expect(vendedorDelAuto({ vendedor_asignado_id: "asesor-2", sucursal_id: "oficina-1" }, perfiles)).toBe("asesor-2");
   });
 
-  it("sin vendedor asignado, el único que vende en la sucursal del auto (Don Torcuato → Lucas)", () => {
-    expect(vendedorDelAuto({ vendedor_asignado_id: null, sucursal_id: "torcuato" }, perfiles)).toBe("lucas");
-    expect(vendedorDelAuto({ vendedor_asignado_id: null, sucursal_id: "central" }, perfiles)).toBeNull(); // hay varios: ronda
-    expect(vendedorDelAuto({ vendedor_asignado_id: "baja", sucursal_id: "torcuato" }, perfiles)).toBe("lucas");
+  it("sin vendedor asignado, el único que vende en la oficina de la propiedad", () => {
+    expect(vendedorDelAuto({ vendedor_asignado_id: null, sucursal_id: "oficina-2" }, perfiles)).toBe("encargado-2");
+    expect(vendedorDelAuto({ vendedor_asignado_id: null, sucursal_id: "oficina-1" }, perfiles)).toBeNull(); // hay varios: ronda
+    expect(vendedorDelAuto({ vendedor_asignado_id: "baja", sucursal_id: "oficina-2" }, perfiles)).toBe("encargado-2");
   });
 
-  it("consignación va a Gabriel; un pase a mano no se toca; si ya lo tiene, no cambia", () => {
-    const base = { vendedorDelAuto: "lucas", gabrielId: "gabriel", vendedorActual: "fede", asignadoAMano: false };
-    expect(destinoDelLead(base)).toBe("lucas");
-    expect(destinoDelLead({ ...base, intencion: "CONSIGNACION" })).toBe("gabriel");
+  it("la consignación sigue la ronda; un pase a mano no se toca; si ya lo tiene, no cambia", () => {
+    const base = { vendedorDelAuto: "encargado-2", vendedorActual: "asesor-1", asignadoAMano: false };
+    expect(destinoDelLead(base)).toBe("encargado-2");
+    expect(destinoDelLead({ ...base, intencion: "CONSIGNACION" })).toBeNull();
     expect(destinoDelLead({ ...base, asignadoAMano: true })).toBeNull();
-    expect(destinoDelLead({ ...base, vendedorActual: "lucas" })).toBeNull();
+    expect(destinoDelLead({ ...base, vendedorActual: "encargado-2" })).toBeNull();
     expect(destinoDelLead({ ...base, vendedorDelAuto: null })).toBeNull();
   });
 });

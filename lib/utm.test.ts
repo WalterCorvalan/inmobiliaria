@@ -15,12 +15,12 @@ describe("origenDesde", () => {
 
   it("sin utm usa el sitio que lo mandó", () => {
     expect(origenDesde("", "https://www.instagram.com/")?.canal).toBe("Instagram (orgánico)");
-    expect(origenDesde("", "https://www.google.com/search?q=pfaffen")?.canal).toBe("Google (orgánico)");
+    expect(origenDesde("", "https://www.google.com/search?q=inmobiliaria")?.canal).toBe("Google (orgánico)");
   });
 
   it("sin utm ni referrer conocido no inventa origen", () => {
     expect(origenDesde("", "")).toBeNull();
-    expect(origenDesde("", "https://www.pfaffencars.com/catalogo")).toBeNull();
+    expect(origenDesde("", "https://www.ejemplo.com/catalogo")).toBeNull();
     expect(origenDesde("", "no es una url")).toBeNull();
   });
 });

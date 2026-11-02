@@ -286,12 +286,12 @@ export default function PanelLayoutClient({
     setComisionesActivas(inicial.comisionesActivas);
     setBranding(inicial.branding);
   }, [inicial]);
-  const nombreEmpresa = branding.nombre || "Pfaffen Cars";
+  const nombreEmpresa = branding.nombre || "Inmobiliaria CRM";
   // Los títulos de página vienen escritos como "Pantalla | Pfaffen Cars" -- se reemplaza el nombre en la pestaña del navegador.
   useEffect(() => {
     const nombre = branding.nombre;
-    if (!nombre || nombre.includes("Pfaffen Cars")) return;
-    const aplicar = () => { if (document.title.includes("Pfaffen Cars")) document.title = document.title.replace("Pfaffen Cars", nombre); };
+    if (!nombre || nombre.includes("Inmobiliaria CRM")) return;
+    const aplicar = () => { if (document.title.includes("Inmobiliaria CRM")) document.title = document.title.replace("Inmobiliaria CRM", nombre); };
     aplicar();
     const t = document.querySelector("title");
     if (!t) return;
@@ -454,7 +454,7 @@ export default function PanelLayoutClient({
             className={`h-[60px] flex items-center gap-2 border-b border-slate-200 dark:border-white/10 shrink-0 ${colapsado ? "md:justify-center md:px-2 px-4" : "px-4"}`}
           >
             <Link href="/" target="_blank" title="Ver la web pública" className="flex items-center gap-2 min-w-0">
-              <img src={branding.logoUrl || "/pfaffen-automotores-icono.webp"} alt={nombreEmpresa} className={`rounded-lg object-cover shrink-0 transition-[width,height] duration-150 ease-out ${colapsado ? "w-8 h-8 md:w-11 md:h-11" : "w-8 h-8"}`} />
+              <img src={branding.logoUrl || "/logo-placeholder.svg"} alt={nombreEmpresa} className={`rounded-lg object-cover shrink-0 transition-[width,height] duration-150 ease-out ${colapsado ? "w-8 h-8 md:w-11 md:h-11" : "w-8 h-8"}`} />
               <div className={colapsado ? "md:hidden" : ""}>
                 <p className="text-sm font-bold leading-none">Panel</p>
                 <p className="text-[10px] text-slate-400 leading-none mt-0.5">

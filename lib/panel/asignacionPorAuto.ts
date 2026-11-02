@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 //  - si la charla es por un auto del stock, el lead va al vendedor asignado a ese auto; si el auto no tiene uno, al
 //    único vendedor o encargado activo de la sucursal donde está (Don Torcuato → Lucas). Un 0 km ya no va siempre a
 //    Gabriel: manda quién tiene el auto;
-//  - si el cliente quiere dejar su auto en consignación, va a Gabriel;
+//  - si el cliente quiere vender o dejar en consignación su propiedad no se mira el stock: sigue la ronda de siempre;
 //  - si una persona ya pasó el lead a mano, no se toca;
 //  - si no se habla de ningún auto, queda la ronda de siempre.
 
@@ -36,10 +36,10 @@ export function autoDeLaCharla(vehiculoFocoId: string | null | undefined, intenc
 
 /** A quién pasar el lead, o null si se deja como está. */
 export function destinoDelLead(d: {
-  intencion?: string | null; vendedorDelAuto: string | null; gabrielId: string | null; vendedorActual: string | null; asignadoAMano: boolean;
+  intencion?: string | null; vendedorDelAuto: string | null; vendedorActual: string | null; asignadoAMano: boolean;
 }): string | null {
   if (d.asignadoAMano) return null;
-  const destino = d.intencion === "CONSIGNACION" ? d.gabrielId : d.vendedorDelAuto;
+  const destino = d.intencion === "CONSIGNACION" ? null : d.vendedorDelAuto;
   return destino && destino !== d.vendedorActual ? destino : null;
 }
 
@@ -50,27 +50,20 @@ export function destinoDelLead(d: {
 export async function asignacionPorAuto(supabase: SupabaseClient, d: {
   fk: string; conversacionId: string; vehiculoId: string | null; intencion?: string | null; vendedorActual: string | null;
 }): Promise<{ vendedorId: string; descripcion: string } | null> {
-  const esConsignacion = d.intencion === "CONSIGNACION";
-  if (!d.vehiculoId && !esConsignacion) return null;
+  // Vender o dejar en consignación la propiedad propia no es una consulta por el stock: sigue la ronda.
+  if (!d.vehiculoId || d.intencion === "CONSIGNACION") return null;
 
   const [{ data: perfiles }, { data: auto }, { count: manuales }] = await Promise.all([
-    supabase.from("perfiles").select("id, nombre, roles, sucursal_id, activo, sucursal:sucursal_id ( nombre )").eq("activo", true),
-    d.vehiculoId && !esConsignacion
-      ? supabase.from("vehiculos").select("marca, modelo, vendedor_asignado_id, sucursal_id").eq("id", d.vehiculoId).maybeSingle()
-      : Promise.resolve({ data: null }),
+    supabase.from("perfiles").select("id, nombre, roles, sucursal_id, activo").eq("activo", true),
+    supabase.from("vehiculos").select("marca, modelo, vendedor_asignado_id, sucursal_id").eq("id", d.vehiculoId).maybeSingle(),
     supabase.from("eventos_lead").select("id", { count: "exact", head: true }).eq(d.fk, d.conversacionId).eq("tipo", "asignacion").not("creado_por", "is", null),
   ]);
-  const lista = (perfiles || []) as (PerfilVendedor & { sucursal?: { nombre?: string } | { nombre?: string }[] | null })[];
-  const sucursalDe = (p: (typeof lista)[number]) => (Array.isArray(p.sucursal) ? p.sucursal[0]?.nombre : p.sucursal?.nombre) || "";
-  const gabriel = lista.find((p) => /^gabriel/i.test(p.nombre || "") && /casa central/i.test(sucursalDe(p))) ?? null;
+  const lista = (perfiles || []) as PerfilVendedor[];
   const delAuto = auto ? vendedorDelAuto(auto as AutoConDueno, lista) : null;
 
-  const destino = destinoDelLead({ intencion: d.intencion, vendedorDelAuto: delAuto, gabrielId: gabriel?.id ?? null, vendedorActual: d.vendedorActual, asignadoAMano: (manuales ?? 0) > 0 });
+  const destino = destinoDelLead({ intencion: d.intencion, vendedorDelAuto: delAuto, vendedorActual: d.vendedorActual, asignadoAMano: (manuales ?? 0) > 0 });
   if (!destino) return null;
   const nombre = lista.find((p) => p.id === destino)?.nombre || "vendedor";
   const nombreAuto = auto ? `${(auto as { marca?: string }).marca ?? ""} ${(auto as { modelo?: string }).modelo ?? ""}`.trim() : "";
-  const descripcion = esConsignacion
-    ? `Reasignado automáticamente a ${nombre}: el cliente quiere dejar su auto en consignación.`
-    : `Reasignado automáticamente a ${nombre}: tiene el auto por el que consulta${nombreAuto ? ` (${nombreAuto})` : ""}.`;
-  return { vendedorId: destino, descripcion };
+  return { vendedorId: destino, descripcion: `Reasignado automáticamente a ${nombre}: tiene el auto por el que consulta${nombreAuto ? ` (${nombreAuto})` : ""}.` };
 }

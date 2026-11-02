@@ -3,7 +3,6 @@
 // contexto, inventaba cosas ("¿qué pasó?, ¿no te gustó?"): se contesta con un
 // texto fijo según el tipo de emoji, siempre invitando a ver el stock.
 
-const URL_CATALOGO = "https://www.pfaffencars.com/catalogo";
 const EMOJI = /[\p{Extended_Pictographic}\p{Emoji_Modifier}]/u;
 
 const RISA = ["😂", "🤣", "😆", "😄", "😁", "😅", "😹"];
@@ -30,7 +29,7 @@ export function tipoDeReaccion(texto: string): TipoReaccion {
 }
 
 export function respuestaAReaccionHistoria(texto: string): string {
-  const cierre = `Si estás buscando auto, mirá todo nuestro stock acá: ${URL_CATALOGO}\nContanos qué modelo te interesa y te asesoramos. 🚗`;
+  const cierre = `Si estás buscando una propiedad, contanos qué tipo, zona y presupuesto y te asesoramos.`;
   switch (tipoDeReaccion(texto)) {
     case "risa":
       return `¡Qué bueno que te hizo reír! 😄 Gracias por seguirnos.\n${cierre}`;
@@ -48,7 +47,7 @@ export function respuestaAReaccionHistoria(texto: string): string {
 // Alguien nos menciona (@) en su propia historia: llega como adjunto
 // "story_mention", sin texto. Se agradece y se invita a ver el stock.
 export function respuestaAMencionHistoria(): string {
-  return `¡Gracias por mencionarnos en tu historia! 🙌\nSi estás buscando auto, mirá todo nuestro stock acá: ${URL_CATALOGO}\nContanos qué modelo te interesa y te asesoramos. 🚗`;
+  return `¡Gracias por mencionarnos en tu historia! 🙌\nSi estás buscando una propiedad, contanos qué tipo, zona y presupuesto y te asesoramos.`;
 }
 
 // Respuesta de texto a una historia nuestra ("¿cuánto sale ese auto?"): se

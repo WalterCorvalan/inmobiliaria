@@ -25,7 +25,7 @@ export default function LoginPageV2() {
   // Nombre, logo y color de la empresa (Configuración > Empresa > Branding). Sin nada cargado queda Pfaffen Cars.
   const [marca, setMarca] = useState<{ nombre: string | null; logoUrl: string | null; color: string | null }>({ nombre: null, logoUrl: null, color: null });
   useEffect(() => { fetch("/api/panel/branding").then((r) => r.json()).then(setMarca).catch(() => {}); }, []);
-  const nombreEmpresa = marca.nombre || "Pfaffen Cars";
+  const nombreEmpresa = marca.nombre || "Inmobiliaria CRM";
   const colorMarca = marca.color || "#0145F2";
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -87,7 +87,7 @@ export default function LoginPageV2() {
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
           <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg mb-4 overflow-hidden">
-            <img src="/pfaffen-automotores-icono.webp" alt={nombreEmpresa} className="w-full h-full object-cover" />
+            <img src="/logo-placeholder.svg" alt={nombreEmpresa} className="w-full h-full object-cover" />
           </div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">{nombreEmpresa}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Ingresá al panel</p>

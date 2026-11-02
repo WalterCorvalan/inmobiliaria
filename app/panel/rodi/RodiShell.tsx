@@ -25,7 +25,7 @@ export default function RodiShell({ conversacionesIniciales, vendedores, miId }:
         <div className="flex items-center gap-3 ml-auto">
           <p className="text-[10px] text-slate-400 shrink-0 hidden sm:block">{leadsConConversacion} lead{leadsConConversacion === 1 ? "" : "s"} con conversación</p>
           <h1 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5 shrink-0">
-            <img src="/icons/panel/rodi.png" alt="" className="w-4 h-4 object-contain shrink-0" /> Paffy (chat web)
+            <img src="/icons/panel/rodi.png" alt="" className="w-4 h-4 object-contain shrink-0" /> Chat de la web
           </h1>
         </div>
       </div>

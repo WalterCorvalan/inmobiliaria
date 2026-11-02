@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { X, Send, User, RotateCcw } from "lucide-react";
-import IconoPaffy from "@/components/ui/IconoPaffy";
+import IconoAsistente from "@/components/ui/IconoAsistente";
 import { NOMBRE_ASISTENTE_WEB } from "@/lib/asistenteWeb";
 import { trackEvent } from "@/lib/analytics";
 import { RESORTE } from "@/components/ui/movimiento";
@@ -19,7 +19,7 @@ interface Message {
 
 const MENSAJE_INICIAL: Message = {
   role: "assistant",
-  content: `¡Hola! 🐶 Soy ${NOMBRE_ASISTENTE_WEB}, tu amigo de Pfaffen Cars. ¿Estás buscando tu próximo auto o querés vender el tuyo? ¡Te doy una mano!`,
+  content: `¡Hola! Soy ${NOMBRE_ASISTENTE_WEB.toLowerCase()} virtual. ¿Estás buscando una propiedad o querés vender o alquilar la tuya? ¡Te doy una mano!`,
 };
 
 // Botones de respuesta rápida debajo del saludo (Walter, 22/10/2026): se mandan como si el cliente los escribiera y
@@ -100,9 +100,9 @@ export default function FloatingChatbot() {
     void enviar(input.trim());
   };
 
-  const avatarPaffy = (
+  const avatarAsistente = (
     <div className="w-7 h-7 rounded-full bg-[#0145F2]/10 dark:bg-sky-400/15 text-[#0145F2] flex items-center justify-center shrink-0 mb-1">
-      <IconoPaffy className="w-7 h-7" />
+      <IconoAsistente className="w-7 h-7" />
     </div>
   );
 
@@ -121,7 +121,7 @@ export default function FloatingChatbot() {
           className="relative bg-[#0145F2] hover:bg-blue-700 text-white p-0.5 rounded-full shadow-2xl flex items-center justify-center transition-colors duration-300 group cursor-pointer border-2 border-white/20"
           aria-label="Abrir chat de asistencia"
         >
-          <IconoPaffy className="w-14 h-14 group-hover:rotate-12 transition-transform" />
+          <IconoAsistente className="w-14 h-14 group-hover:rotate-12 transition-transform" />
           <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full animate-ping"></span>
           <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full"></span>
         </m.button>
@@ -133,13 +133,13 @@ export default function FloatingChatbot() {
           {/* Cabecera del Chat */}
           <div className="bg-[#0F172A] dark:bg-[#16161b] dark:border-b dark:border-white/10 text-white px-4 py-3.5 flex items-center gap-3 shrink-0">
             <div className="w-10 h-10 rounded-full bg-[#0145F2] flex items-center justify-center text-white shrink-0">
-              <IconoPaffy className="w-10 h-10" />
+              <IconoAsistente className="w-10 h-10" />
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-black text-base leading-tight">{NOMBRE_ASISTENTE_WEB}</h3>
               <p className="text-[11px] text-slate-400 flex items-center gap-1.5 truncate">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                Asistente de Pfaffen Cars
+                Asistente virtual
               </p>
             </div>
             <button
@@ -166,7 +166,7 @@ export default function FloatingChatbot() {
                 key={idx}
                 className={`flex gap-2.5 items-end ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                {m.role === "assistant" && avatarPaffy}
+                {m.role === "assistant" && avatarAsistente}
                 <div className="max-w-[80%] flex flex-col gap-2">
                   <div
                     className={`px-3.5 py-2.5 rounded-2xl text-sm sm:text-[13px] leading-relaxed whitespace-pre-wrap ${
@@ -210,7 +210,7 @@ export default function FloatingChatbot() {
             )}
             {loading && (
               <div className="flex gap-2.5 items-end justify-start">
-                {avatarPaffy}
+                {avatarAsistente}
                 <div className="bg-white dark:bg-[#1c1c22] px-3.5 py-3 rounded-2xl rounded-bl-md border border-slate-200/80 dark:border-white/10 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
                   <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
@@ -223,7 +223,7 @@ export default function FloatingChatbot() {
 
           {handoff && (
             <div className="px-4 py-2.5 bg-emerald-50 dark:bg-emerald-400/10 border-t border-emerald-100 dark:border-emerald-400/20 text-[12px] font-semibold text-emerald-700 dark:text-emerald-300 text-center shrink-0">
-              Un asesor de Pfaffen Cars te va a contactar en breve. 🚗
+              Un asesor te va a contactar en breve.
             </div>
           )}
 

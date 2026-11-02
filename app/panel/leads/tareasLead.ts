@@ -57,7 +57,7 @@ export async function cargarTareasLead(supabase: Awaited<ReturnType<typeof creat
       : t.instagram_conversaciones
       ? { id: t.instagram_conversaciones.id, origen: "instagram" as const, nombre: t.instagram_conversaciones.instagram_contactos?.username ? `@${t.instagram_conversaciones.instagram_contactos.username}` : "Consulta Instagram", vendedor_id: t.instagram_conversaciones.vendedor_id, calificacion: t.instagram_conversaciones.calificacion }
       : t.rodi_conversaciones
-      ? { id: t.rodi_conversaciones.id, origen: "rodi" as const, nombre: t.rodi_conversaciones.nombre_contacto || t.rodi_conversaciones.telefono_contacto || "Consulta de Paffy", vendedor_id: t.rodi_conversaciones.vendedor_id, calificacion: t.rodi_conversaciones.calificacion }
+      ? { id: t.rodi_conversaciones.id, origen: "rodi" as const, nombre: t.rodi_conversaciones.nombre_contacto || t.rodi_conversaciones.telefono_contacto || "Consulta del chat web", vendedor_id: t.rodi_conversaciones.vendedor_id, calificacion: t.rodi_conversaciones.calificacion }
       : t.leads_manuales
       ? { id: t.leads_manuales.id, origen: "manual" as const, nombre: t.leads_manuales.nombre || t.leads_manuales.telefono || "Lead manual", vendedor_id: t.leads_manuales.vendedor_id, calificacion: t.leads_manuales.calificacion }
       : null;
@@ -68,7 +68,7 @@ export async function cargarTareasLead(supabase: Awaited<ReturnType<typeof creat
   const leadsSinContacto = [
     ...(leadsWaNuevos || []).filter((l) => !idsConTarea.has(l.id)).map((l: any) => ({ id: l.id, origen: "whatsapp" as const, nombre: l.whatsapp_contactos?.nombre_perfil || l.whatsapp_contactos?.telefono || "Consulta WhatsApp", telefono: l.whatsapp_contactos?.telefono, vendedor_id: l.vendedor_id, calificacion: l.calificacion, created_at: l.created_at })),
     ...(leadsIgNuevos || []).filter((l) => !idsConTarea.has(l.id)).map((l: any) => ({ id: l.id, origen: "instagram" as const, nombre: l.instagram_contactos?.username ? `@${l.instagram_contactos.username}` : "Consulta Instagram", telefono: null, vendedor_id: l.vendedor_id, calificacion: l.calificacion, created_at: l.created_at })),
-    ...(leadsRodiNuevos || []).filter((l) => !idsConTarea.has(l.id)).map((l) => ({ id: l.id, origen: "rodi" as const, nombre: l.nombre_contacto || l.telefono_contacto || "Consulta de Paffy", telefono: l.telefono_contacto, vendedor_id: l.vendedor_id, calificacion: l.calificacion, created_at: l.created_at })),
+    ...(leadsRodiNuevos || []).filter((l) => !idsConTarea.has(l.id)).map((l) => ({ id: l.id, origen: "rodi" as const, nombre: l.nombre_contacto || l.telefono_contacto || "Consulta del chat web", telefono: l.telefono_contacto, vendedor_id: l.vendedor_id, calificacion: l.calificacion, created_at: l.created_at })),
     ...(leadsManualesNuevos || []).filter((l) => !idsConTarea.has(l.id)).map((l) => ({ id: l.id, origen: "manual" as const, nombre: l.nombre || l.telefono || "Lead manual", telefono: l.telefono, vendedor_id: l.vendedor_id, calificacion: l.calificacion, created_at: l.created_at })),
   ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 

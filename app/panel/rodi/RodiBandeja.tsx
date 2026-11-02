@@ -183,7 +183,7 @@ export default function RodiBandeja({ conversacionesIniciales, vendedores, miId 
                   <AvatarVendedor vendedorId={c.vendedor_id} nombreRespaldo={c.vendedor?.nombre} clase="w-10 h-10" />
                   <span className={`absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-[#111] ${colorCalificacion(c.calificacion)}`} />
                   {/* eslint-disable-next-line @next/next/no-img-element -- ícono de 16 px, igual que el logo de canal de las otras bandejas */}
-                  <img src="/paffy.webp" alt="" title="Paffy (chat web)" className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white dark:border-[#111] object-cover" />
+                  <img src="/icons/panel/rodi.png" alt="" title="Chat de la web" className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white dark:border-[#111] object-cover" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-0.5">
