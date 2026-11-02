@@ -4,6 +4,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
+import { TABLAS_DE_EMPRESA } from "../../lib/empresa/db";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const DIR = join(process.cwd(), "migraciones");
@@ -89,6 +90,11 @@ describe("estructura: ninguna tabla con empresa queda sin protección", () => {
       expect(pols.length, `${t.relname} sin políticas`).toBeGreaterThan(0);
       expect(pols.some((p) => /mi_empresa_id/.test(`${p.qual} ${p.with_check}`)), `${t.relname}: ninguna política mira la empresa`).toBe(true);
     }
+  });
+
+  it("la lista de tablas que el servidor ata a la empresa (lib/empresa/db.ts) coincide con la base", async () => {
+    const enBase = await filas(`select distinct table_name from information_schema.columns where table_schema = 'public' and column_name = 'empresa_id' and table_name <> 'soporte_accesos' order by 1`);
+    expect(enBase.map((r) => r.table_name as string)).toEqual([...TABLAS_DE_EMPRESA].sort());
   });
 
   it("las únicas tablas sin empresa_id son las de la plataforma", async () => {
