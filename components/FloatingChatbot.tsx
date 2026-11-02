@@ -38,7 +38,9 @@ function obtenerSessionId(): string {
   return id;
 }
 
-export default function FloatingChatbot() {
+// `empresa` es el identificador público (slug) de la empresa dueña del chat. El código para pegar en la web de cada
+// inmobiliaria lo trae; mientras no exista, se toma de NEXT_PUBLIC_EMPRESA_SLUG.
+export default function FloatingChatbot({ empresa = process.env.NEXT_PUBLIC_EMPRESA_SLUG ?? "" }: { empresa?: string }) {
   const pathname = usePathname();
   const enDetalleVehiculo = pathname?.startsWith("/catalogo/") ?? false;
 
@@ -77,7 +79,7 @@ export default function FloatingChatbot() {
       const res = await fetch("/api/panel/rodi/mensaje", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...datosDeOrigen(), sessionId: obtenerSessionId(), texto, origenPagina: pathname }),
+        body: JSON.stringify({ ...datosDeOrigen(), empresa, sessionId: obtenerSessionId(), texto, origenPagina: pathname }),
       });
       const data = await res.json();
       if (!res.ok) {

@@ -1,7 +1,5 @@
 import { asignacionPorAuto, autoDeLaCharla } from "@/lib/panel/asignacionPorAuto";
 import { asignarCharlaWhatsapp } from "@/lib/panel/asignacionWhatsapp";
-import { createHmac, timingSafeEqual } from "crypto";
-import { createClient } from "@supabase/supabase-js";
 import { isAiConfiguredV2 } from "@/lib/ai/indexV2";
 import { generarRespuestaAgenteV2, dividirRespuestaEnMensajes } from "@/lib/ai/agenteV2";
 import { sendTextMessage, sendImageMessage, descargarMediaWhatsapp } from "@/lib/meta/client";
@@ -20,6 +18,8 @@ import { cargarPedidoDesdeChat } from "@/lib/panel/pedidoDesdeChat";
 import { completarVisitaRepetida } from "@/lib/panel/visitaRepetida";
 import { guardarPedidoDelBot } from "@/lib/panel/pedidoDelBot";
 import { RESPUESTA_FALLBACK } from "@/lib/panel/textosBot";
+import { supabaseEmpresa as supabase, dentroDeEmpresa, empresaPorTokenDeWebhook } from "@/lib/empresa/db";
+import { verificarFirmaDeMeta } from "@/lib/empresa/credenciales";
 
 // Webhook de Meta para el WhatsApp de panel-v2 (Conversaciones → WhatsApp,
 // replica /panel/chat de v1: bandeja de mensajes reales de clientes con
@@ -30,37 +30,23 @@ import { RESPUESTA_FALLBACK } from "@/lib/panel/textosBot";
 // whatsapp_configuracion (Configuración → WhatsApp), no en env vars como v1
 // — así cada instalación puede tener su propio número sin redeployar.
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE2_URL!,
-  process.env.SUPABASE2_SERVICE_ROLE_KEY!
-);
 
 // El colchón de DEBOUNCE_MS (ver más abajo) se suma al tiempo de la función,
 // y el agente hace hasta dos pasadas de IA más la búsqueda de stock (5-15 s)
 // -- con 30 s una respuesta lenta quedaba cortada a la mitad sin enviarse.
 export const maxDuration = 60;
 
-async function tokenValido(token: string): Promise<boolean> {
-  const { data } = await supabase.from("whatsapp_configuracion").select("webhook_verify_token").eq("id", true).maybeSingle();
-  const expected = data?.webhook_verify_token ?? "";
-  if (!expected) return false;
-  const a = Buffer.from(token);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
 export async function GET(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  if (!(await tokenValido(token))) return new Response("Not found", { status: 404 });
+  const empresaId = await empresaPorTokenDeWebhook("whatsapp", token);
+  if (!empresaId) return new Response("Not found", { status: 404 });
 
   const url = new URL(req.url);
   const mode = url.searchParams.get("hub.mode");
   const verifyToken = url.searchParams.get("hub.verify_token");
   const challenge = url.searchParams.get("hub.challenge");
 
-  const { data: config } = await supabase.from("whatsapp_configuracion").select("webhook_verify_token").eq("id", true).maybeSingle();
-  if (mode === "subscribe" && verifyToken === config?.webhook_verify_token) {
+  if (mode === "subscribe" && verifyToken === token) {
     return new Response(challenge ?? "", { status: 200 });
   }
   return new Response("Forbidden", { status: 403 });
@@ -74,21 +60,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   if (!limite.ok) return new Response("Too many requests", { status: 429 });
 
   const { token } = await params;
-  if (!(await tokenValido(token))) return new Response("Not found", { status: 404 });
+  const empresaId = await empresaPorTokenDeWebhook("whatsapp", token);
+  if (!empresaId) return new Response("Not found", { status: 404 });
 
   const rawBody = await req.text();
 
-  const appSecret = process.env.META_APP_SECRET;
-  if (!appSecret) {
-    console.error("[webhook-v2] META_APP_SECRET no está configurada.");
-    return new Response("Unauthorized", { status: 401 });
-  }
-
-  const signature = req.headers.get("x-hub-signature-256") ?? "";
-  const expected = "sha256=" + createHmac("sha256", appSecret).update(rawBody).digest("hex");
-  if (signature.length !== expected.length || !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  // Cada empresa firma con el secreto de SU app de Meta (guardado cifrado en su configuración).
+  const firmaOk = await dentroDeEmpresa(empresaId, () => verificarFirmaDeMeta("whatsapp", rawBody, req.headers.get("x-hub-signature-256") ?? "", "webhook-v2:firma"));
+  if (!firmaOk) return new Response("Unauthorized", { status: 401 });
 
   let payload: unknown;
   try {
@@ -106,7 +85,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   // respuesta, así que "fire and forget" nunca llega a terminar y el
   // mensaje entrante se pierde sin guardarse.
   try {
-    await procesarEvento(payload);
+    await dentroDeEmpresa(empresaId, () => procesarEvento(payload));
   } catch (err) {
     registrarError("webhook-v2:procesar-evento", err);
   }
@@ -307,7 +286,7 @@ async function guardarMensajeEntrante({ waId, nombrePerfil, msg }: { waId: strin
   let mediaUrl: string | null = null;
   if (mediaId) {
     try {
-      const { data: config } = await supabase.from("whatsapp_configuracion").select("token_cifrado, token_iv, token_tag").eq("id", true).maybeSingle();
+      const { data: config } = await supabase.from("whatsapp_configuracion").select("token_cifrado, token_iv, token_tag").maybeSingle();
       if (config?.token_cifrado && r2Configurado()) {
         const tokenPlano = decrypt(config.token_cifrado, config.token_iv, config.token_tag);
         const { buffer, mimeType } = await descargarMediaWhatsapp(mediaId, tokenPlano);
@@ -363,7 +342,7 @@ async function ejecutarAgente(conversacionId: string, mensajeId: string) {
   const { data: conversacionActual } = await supabase.from("whatsapp_conversaciones").select("*").eq("id", conversacionId).single();
   if (conversacionActual?.ai_habilitada === false) return;
 
-  const { data: config } = await supabase.from("whatsapp_configuracion").select("*").eq("id", true).maybeSingle();
+  const { data: config } = await supabase.from("whatsapp_configuracion").select("*").maybeSingle();
 
   // Horario de los bots (lib/panel/horarioBots.ts): fuera de horario, un solo aviso por noche; a las 9 el cron
   // /api/cron/panel/bots-apertura le escribe "ya estamos disponibles" a quien lo recibió.

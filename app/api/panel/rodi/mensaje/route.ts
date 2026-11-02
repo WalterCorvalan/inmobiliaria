@@ -1,6 +1,5 @@
 import { asignacionPorAuto, autoDeLaCharla } from "@/lib/panel/asignacionPorAuto";
 import { NextResponse, after } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { generarRespuestaAgenteV2, dividirRespuestaEnMensajes } from "@/lib/ai/agenteV2";
 import { menuBienvenidaV2 } from "@/lib/ai/promptsV2";
@@ -17,6 +16,7 @@ import { completarVisitaRepetida } from "@/lib/panel/visitaRepetida";
 import { cookiesPixel, enviarEventoMeta, type ContextoPedido } from "@/lib/conversionesMeta";
 import { guardarPedidoDelBot } from "@/lib/panel/pedidoDelBot";
 import { RESPUESTA_FALLBACK } from "@/lib/panel/textosBot";
+import { supabaseEmpresa as supabase, dentroDeEmpresa, empresaPorSlug } from "@/lib/empresa/db";
 
 // Endpoint público (sin sesión — lo llama el widget del sitio, un visitante
 // anónimo) que procesa un mensaje de Rodi. Identidad = sessionId generado
@@ -25,12 +25,9 @@ import { RESPUESTA_FALLBACK } from "@/lib/panel/textosBot";
 // Un pedido de compra/permuta busca el precio de mercado en segundo plano (13-40 s, lib/panel/pedidoDesdeChat.ts).
 export const maxDuration = 60;
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE2_URL!,
-  process.env.SUPABASE2_SERVICE_ROLE_KEY!
-);
 
 const MensajeSchema = z.object({
+  empresa: z.string().min(1).max(80), // identificador público (slug) de la empresa dueña del chat
   sessionId: z.string().min(8).max(200),
   texto: z.string().trim().min(1).max(2000),
   origenPagina: z.string().max(300).optional(),
@@ -49,6 +46,8 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Datos inválidos." }, { status: 400 });
   }
+  const empresaId = await empresaPorSlug(parsed.data.empresa);
+  if (!empresaId) return NextResponse.json({ error: "Empresa no encontrada." }, { status: 404 });
   const { sessionId, texto, origenPagina, nombre, telefono, email } = parsed.data;
   const origenWeb: OrigenWeb = parsed.data;
   // Datos del pedido para la API de conversiones de Meta (docs/marketing/medicion.md).
@@ -64,7 +63,7 @@ export async function POST(request: Request) {
   // Vercel, invisibles desde el panel. Try/catch + registrarError para que
   // aparezca en Errores del sistema como cualquier otro canal.
   try {
-    return await procesarMensaje({ sessionId, texto, origenPagina, nombre, telefono, email, origenWeb, contextoMeta });
+    return await dentroDeEmpresa(empresaId, () => procesarMensaje({ sessionId, texto, origenPagina, nombre, telefono, email, origenWeb, contextoMeta }));
   } catch (err) {
     registrarError("api/panel/rodi/mensaje", err, { sessionId });
     return NextResponse.json({ replies: [RESPUESTA_FALLBACK], handoff: false });

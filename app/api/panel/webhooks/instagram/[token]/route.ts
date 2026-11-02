@@ -1,8 +1,7 @@
 import { after } from "next/server";
 import { asignacionPorAuto, autoDeLaCharla } from "@/lib/panel/asignacionPorAuto";
-import { createHmac, timingSafeEqual, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import { extensionDeArchivo, resolverAdjuntoMeta } from "@/lib/panel/adjuntosMeta";
-import { createClient } from "@supabase/supabase-js";
 import { isAiConfiguredV2 } from "@/lib/ai/indexV2";
 import { generarRespuestaAgenteV2, dividirRespuestaEnMensajes } from "@/lib/ai/agenteV2";
 import { sendInstagramPrivateReply, sendInstagramMessage, sendInstagramImageMessage, replyToInstagramCommentPublicly, getInstagramUserProfile } from "@/lib/meta/client";
@@ -17,6 +16,8 @@ import { horarioDeConfig, estaEnHorario, debeAvisarFueraDeHorario, textoFueraDeH
 import { enviarTextoBot } from "@/lib/panel/enviarMensajeBot";
 import { subirArchivoR2, r2Configurado } from "@/lib/storage/r2";
 import { RESPUESTA_FALLBACK } from "@/lib/panel/textosBot";
+import { supabaseEmpresa as supabase, dentroDeEmpresa, empresaPorTokenDeWebhook } from "@/lib/empresa/db";
+import { verificarFirmaDeMeta } from "@/lib/empresa/credenciales";
 
 // Webhook de Meta para el Instagram de panel (Conversaciones → Instagram),
 // mismo patrón que /api/panel/webhooks/whatsapp: comentario en un post →
@@ -24,10 +25,6 @@ import { RESPUESTA_FALLBACK } from "@/lib/panel/textosBot";
 // atendido por el mismo agente (agenteV2). Credenciales cifradas en
 // instagram_configuracion (Configuración → Instagram), no en env vars.
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE2_URL!,
-  process.env.SUPABASE2_SERVICE_ROLE_KEY!
-);
 
 // El colchón de DEBOUNCE_MS (ver más abajo) se suma al tiempo de la función
 // -- sin este límite explícito corre el riesgo de superar el default de la
@@ -57,27 +54,17 @@ async function buscarAutomatizacionPorComentario(texto: string): Promise<{ respu
   return null;
 }
 
-async function tokenValido(token: string): Promise<boolean> {
-  const { data } = await supabase.from("instagram_configuracion").select("webhook_verify_token").eq("id", true).maybeSingle();
-  const expected = data?.webhook_verify_token ?? "";
-  if (!expected) return false;
-  const a = Buffer.from(token);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
 export async function GET(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  if (!(await tokenValido(token))) return new Response("Not found", { status: 404 });
+  const empresaId = await empresaPorTokenDeWebhook("instagram", token);
+  if (!empresaId) return new Response("Not found", { status: 404 });
 
   const url = new URL(req.url);
   const mode = url.searchParams.get("hub.mode");
   const verifyToken = url.searchParams.get("hub.verify_token");
   const challenge = url.searchParams.get("hub.challenge");
 
-  const { data: config } = await supabase.from("instagram_configuracion").select("webhook_verify_token").eq("id", true).maybeSingle();
-  if (mode === "subscribe" && verifyToken === config?.webhook_verify_token) {
+  if (mode === "subscribe" && verifyToken === token) {
     return new Response(challenge ?? "", { status: 200 });
   }
   return new Response("Forbidden", { status: 403 });
@@ -88,30 +75,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   if (!limite.ok) return new Response("Too many requests", { status: 429 });
 
   const { token } = await params;
-  if (!(await tokenValido(token))) return new Response("Not found", { status: 404 });
+  const empresaId = await empresaPorTokenDeWebhook("instagram", token);
+  if (!empresaId) return new Response("Not found", { status: 404 });
 
   const rawBody = await req.text();
 
-  // Los webhooks de la API de Instagram con inicio de sesión de Instagram
-  // pueden venir firmados con la clave de la app de Instagram (no la de la app
-  // de Meta) -- se acepta cualquiera de las dos. Antes un rechazo de firma
-  // volvía 401 sin dejar rastro: los DM se perdían en silencio y nadie se
-  // enteraba. Ahora queda en Errores del sistema.
-  const secretos = [process.env.META_APP_SECRET, process.env.INSTAGRAM_APP_SECRET].filter((s): s is string => !!s);
-  if (secretos.length === 0) {
-    await registrarError("webhook-ig-v2:firma", new Error("Falta META_APP_SECRET / INSTAGRAM_APP_SECRET en el servidor."));
-    return new Response("Unauthorized", { status: 401 });
-  }
-
-  const signature = req.headers.get("x-hub-signature-256") ?? "";
-  const firmaValida = secretos.some((secreto) => {
-    const expected = "sha256=" + createHmac("sha256", secreto).update(rawBody).digest("hex");
-    return signature.length === expected.length && timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
-  });
-  if (!firmaValida) {
-    await registrarError("webhook-ig-v2:firma", new Error("Firma de Meta inválida: el webhook de Instagram llegó pero se rechazó (revisar META_APP_SECRET / INSTAGRAM_APP_SECRET en Vercel)."), { conFirma: !!signature });
-    return new Response("Unauthorized", { status: 401 });
-  }
+  // Cada empresa firma con el secreto de SU app de Meta (guardado cifrado en su configuración).
+  const firmaOk = await dentroDeEmpresa(empresaId, () => verificarFirmaDeMeta("instagram", rawBody, req.headers.get("x-hub-signature-256") ?? "", "webhook-ig-v2:firma"));
+  if (!firmaOk) return new Response("Unauthorized", { status: 401 });
 
   let payload: unknown;
   try {
@@ -124,7 +95,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     return Response.json({ received: true });
   }
   try {
-    await procesarEvento(payload);
+    await dentroDeEmpresa(empresaId, () => procesarEvento(payload));
   } catch (err) {
     registrarError("webhook-ig-v2:procesar-evento", err);
   }
@@ -328,7 +299,7 @@ async function procesarComentario(value: any) {
   });
   await supabase.from("instagram_conversaciones").update({ last_inbound_at: new Date().toISOString() }).eq("id", refs.conversacionId);
 
-  const { data: config } = await supabase.from("instagram_configuracion").select("*").eq("id", true).maybeSingle();
+  const { data: config } = await supabase.from("instagram_configuracion").select("*").maybeSingle();
   if (!isInstagramEnvioConfigurado(config)) {
     console.warn("[webhook-ig-v2] Instagram no está configurado: respuesta privada no enviada.");
     return;
@@ -416,7 +387,7 @@ async function procesarMensajeDirecto(msg: any): Promise<{ conversacionId: strin
   const { data: contactoPrevio } = await supabase.from("instagram_contactos").select("username").eq("ig_user_id", igUserId).maybeSingle();
   let usernameResuelto: string | null = contactoPrevio?.username ?? null;
   if (!usernameResuelto) {
-    const { data: config } = await supabase.from("instagram_configuracion").select("token_cifrado, token_iv, token_tag").eq("id", true).maybeSingle();
+    const { data: config } = await supabase.from("instagram_configuracion").select("token_cifrado, token_iv, token_tag").maybeSingle();
     if (config?.token_cifrado && config.token_iv && config.token_tag) {
       try {
         const tokenPlano = decrypt(config.token_cifrado, config.token_iv, config.token_tag);
@@ -475,7 +446,7 @@ function isInstagramEnvioConfigurado(config: any): boolean {
 // Horario de los bots: el mismo para WhatsApp, Instagram y Messenger (whatsapp_configuracion, editable en
 // Configuración → WhatsApp). Ver lib/panel/horarioBots.ts.
 async function horarioBots() {
-  const { data } = await supabase.from("whatsapp_configuracion").select("horario_inicio, horario_fin").eq("id", true).maybeSingle();
+  const { data } = await supabase.from("whatsapp_configuracion").select("horario_inicio, horario_fin").maybeSingle();
   return horarioDeConfig(data);
 }
 
@@ -505,7 +476,7 @@ async function responderConTextoFijo(conversacionId: string, igUserId: string, r
   const { data: salienteReciente } = await supabase.from("instagram_mensajes").select("id").eq("conversacion_id", conversacionId).eq("direccion", "out").gte("created_at", desde).limit(1).maybeSingle();
   if (salienteReciente) return;
 
-  const { data: config } = await supabase.from("instagram_configuracion").select("*").eq("id", true).maybeSingle();
+  const { data: config } = await supabase.from("instagram_configuracion").select("*").maybeSingle();
   const { data: mensaje } = await supabase.from("instagram_mensajes").insert({ conversacion_id: conversacionId, direccion: "out", tipo: "text", texto: respuesta, status: "pending", ai_generado: true }).select("id").single();
   if (mensaje) await enviarYActualizarMensaje(mensaje.id, igUserId, respuesta, config);
 }
@@ -524,7 +495,7 @@ async function ejecutarAgente(conversacionId: string, igUserId: string, mensajeI
   const mensajes = mensajesDesc ? [...mensajesDesc].reverse() : mensajesDesc;
   const historial = (mensajes ?? []).filter((m) => m.texto).map((m) => ({ role: (m.direccion === "in" ? "user" : "assistant") as "user" | "assistant", content: m.texto as string }));
 
-  const { data: config } = await supabase.from("instagram_configuracion").select("*").eq("id", true).maybeSingle();
+  const { data: config } = await supabase.from("instagram_configuracion").select("*").maybeSingle();
   // Instagram tiene que sonar igual de profesional y serio que WhatsApp --
   // un vendedor real, no un amigo chateando. El admin puede pisar esto
   // cargando su propio tono en Configuración > Instagram, pero no depende

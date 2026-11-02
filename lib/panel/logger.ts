@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { empresaActualOpcional } from "@/lib/empresa/db";
 
 // Mismo patrón que lib/logger.ts (v1), apuntando a nova. Best-effort: si el
 // insert falla no rompe el flujo que lo llamó.
@@ -32,7 +33,7 @@ export function registrarError(origen: string, error: unknown, contexto?: Record
   return Promise.resolve(
     supabaseLogs
       .from("logs_errores")
-      .insert({ origen, mensaje: mensaje.slice(0, 2000), detalle })
+      .insert({ origen, mensaje: mensaje.slice(0, 2000), detalle, empresa_id: empresaActualOpcional() })
       .then(({ error: insertError }) => {
         if (insertError) console.error("[logger] no se pudo guardar el log:", insertError.message);
       }),

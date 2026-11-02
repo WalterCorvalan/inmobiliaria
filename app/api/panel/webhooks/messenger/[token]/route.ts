@@ -1,7 +1,6 @@
 import { asignacionPorAuto, autoDeLaCharla } from "@/lib/panel/asignacionPorAuto";
-import { createHmac, timingSafeEqual, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import { extensionDeArchivo, resolverAdjuntoMeta } from "@/lib/panel/adjuntosMeta";
-import { createClient } from "@supabase/supabase-js";
 import { isAiConfiguredV2 } from "@/lib/ai/indexV2";
 import { generarRespuestaAgenteV2, dividirRespuestaEnMensajes } from "@/lib/ai/agenteV2";
 import { sendMessengerMessage, sendMessengerImageMessage, getMessengerUserProfile } from "@/lib/meta/client";
@@ -15,6 +14,8 @@ import { horarioDeConfig, estaEnHorario, debeAvisarFueraDeHorario, textoFueraDeH
 import { enviarTextoBot } from "@/lib/panel/enviarMensajeBot";
 import { subirArchivoR2, r2Configurado } from "@/lib/storage/r2";
 import { RESPUESTA_FALLBACK } from "@/lib/panel/textosBot";
+import { supabaseEmpresa as supabase, dentroDeEmpresa, empresaPorTokenDeWebhook } from "@/lib/empresa/db";
+import { verificarFirmaDeMeta } from "@/lib/empresa/credenciales";
 
 // Webhook de Meta para el Facebook Messenger de la página -- mismo patrón
 // exacto que /api/panel/webhooks/instagram (Messenger y el Instagram DM
@@ -32,36 +33,22 @@ import { RESPUESTA_FALLBACK } from "@/lib/panel/textosBot";
 // verificación de negocio está pendiente (28/9), para que quede listo el día
 // que se apruebe. Revisar el primer webhook real que llegue con cuidado.
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE2_URL!,
-  process.env.SUPABASE2_SERVICE_ROLE_KEY!
-);
 
 // Espera de DEBOUNCE_MS + dos pasadas de IA + búsqueda de stock -- mismo
 // límite que WhatsApp/Instagram.
 export const maxDuration = 60;
 
-async function tokenValido(token: string): Promise<boolean> {
-  const { data } = await supabase.from("messenger_configuracion").select("verify_token").eq("id", true).maybeSingle();
-  const expected = data?.verify_token ?? "";
-  if (!expected) return false;
-  const a = Buffer.from(token);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
 export async function GET(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  if (!(await tokenValido(token))) return new Response("Not found", { status: 404 });
+  const empresaId = await empresaPorTokenDeWebhook("messenger", token);
+  if (!empresaId) return new Response("Not found", { status: 404 });
 
   const url = new URL(req.url);
   const mode = url.searchParams.get("hub.mode");
   const verifyToken = url.searchParams.get("hub.verify_token");
   const challenge = url.searchParams.get("hub.challenge");
 
-  const { data: config } = await supabase.from("messenger_configuracion").select("verify_token").eq("id", true).maybeSingle();
-  if (mode === "subscribe" && verifyToken === config?.verify_token) {
+  if (mode === "subscribe" && verifyToken === token) {
     return new Response(challenge ?? "", { status: 200 });
   }
   return new Response("Forbidden", { status: 403 });
@@ -72,23 +59,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   if (!limite.ok) return new Response("Too many requests", { status: 429 });
 
   const { token } = await params;
-  if (!(await tokenValido(token))) return new Response("Not found", { status: 404 });
+  const empresaId = await empresaPorTokenDeWebhook("messenger", token);
+  if (!empresaId) return new Response("Not found", { status: 404 });
 
   const rawBody = await req.text();
 
-  const appSecret = process.env.META_APP_SECRET;
-  if (!appSecret) {
-    console.error("[webhook-messenger] META_APP_SECRET no está configurada.");
-    return new Response("Unauthorized", { status: 401 });
-  }
-
-  const signature = req.headers.get("x-hub-signature-256") ?? "";
-  const expected = "sha256=" + createHmac("sha256", appSecret).update(rawBody).digest("hex");
-  if (signature.length !== expected.length || !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
-    // Antes se rechazaba sin dejar rastro y los mensajes se perdían en silencio.
-    await registrarError("webhook-messenger:firma", new Error("Firma de Meta inválida: el webhook de Messenger llegó pero se rechazó (revisar META_APP_SECRET en Vercel)."), { conFirma: !!signature });
-    return new Response("Unauthorized", { status: 401 });
-  }
+  // Cada empresa firma con el secreto de SU app de Meta (guardado cifrado en su configuración).
+  const firmaOk = await dentroDeEmpresa(empresaId, () => verificarFirmaDeMeta("messenger", rawBody, req.headers.get("x-hub-signature-256") ?? "", "webhook-messenger:firma"));
+  if (!firmaOk) return new Response("Unauthorized", { status: 401 });
 
   let payload: unknown;
   try {
@@ -98,7 +76,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     return Response.json({ received: true });
   }
   try {
-    await procesarEvento(payload);
+    await dentroDeEmpresa(empresaId, () => procesarEvento(payload));
   } catch (err) {
     registrarError("webhook-messenger:procesar-evento", err);
   }
@@ -235,7 +213,7 @@ async function procesarMensajeDirecto(msg: any): Promise<{ conversacionId: strin
   const { data: contactoPrevio } = await supabase.from("messenger_contactos").select("nombre_perfil").eq("psid", psid).maybeSingle();
   let nombreResuelto: string | null = contactoPrevio?.nombre_perfil ?? null;
   if (!nombreResuelto) {
-    const { data: config } = await supabase.from("messenger_configuracion").select("token_cifrado, token_iv, token_tag").eq("id", true).maybeSingle();
+    const { data: config } = await supabase.from("messenger_configuracion").select("token_cifrado, token_iv, token_tag").maybeSingle();
     if (config?.token_cifrado && config.token_iv && config.token_tag) {
       try {
         const tokenPlano = decrypt(config.token_cifrado, config.token_iv, config.token_tag);
@@ -290,7 +268,7 @@ function isMessengerEnvioConfigurado(config: any): boolean {
 // Horario de los bots: el mismo para WhatsApp, Instagram y Messenger (whatsapp_configuracion, editable en
 // Configuración → WhatsApp). Ver lib/panel/horarioBots.ts.
 async function horarioBots() {
-  const { data } = await supabase.from("whatsapp_configuracion").select("horario_inicio, horario_fin").eq("id", true).maybeSingle();
+  const { data } = await supabase.from("whatsapp_configuracion").select("horario_inicio, horario_fin").maybeSingle();
   return horarioDeConfig(data);
 }
 
@@ -319,7 +297,7 @@ async function ejecutarAgente(conversacionId: string, psid: string, mensajeId: s
   const mensajes = mensajesDesc ? [...mensajesDesc].reverse() : mensajesDesc;
   const historial = (mensajes ?? []).filter((m) => m.texto).map((m) => ({ role: (m.direccion === "in" ? "user" : "assistant") as "user" | "assistant", content: m.texto as string }));
 
-  const { data: config } = await supabase.from("messenger_configuracion").select("*").eq("id", true).maybeSingle();
+  const { data: config } = await supabase.from("messenger_configuracion").select("*").maybeSingle();
   // "Memoria del bot" primero (respuestas fijas por palabra clave, sin gastar IA), igual que WhatsApp: solo si lo
   // que escribió el cliente no pregunta por un auto. Se edita en Configuración → WhatsApp → Memoria del bot.
   const textoPendiente = textoPendienteDelCliente(historial);
