@@ -1,0 +1,48 @@
+name: CI
+
+# Puerta de calidad antes de mergear a master (y de que Vercel publique):
+# tipos, tests, tope de lint y formato de migraciones. Un cambio en rojo no
+# debería llegar a producción -- el 6/10 un error de JSX tiró abajo 4 deploys
+# seguidos y nadie se enteró hasta mirar Vercel.
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Tipos, tests y lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Tipos (tsc)
+        run: npm run typecheck
+      - name: Tests de regresión
+        run: npm test
+      - name: Tope de lint (no se puede agregar avisos nuevos)
+        run: npm run lint:baseline
+
+  migraciones:
+    name: Formato de migraciones nuevas
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/check-migraciones.mjs origin/${{ github.base_ref }}

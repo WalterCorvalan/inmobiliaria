@@ -1,0 +1,433 @@
+@import "tailwindcss";
+@import "./panel-marca.css";
+@import "./panel-tema-oscuro.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dark mode del panel: activado por clase .dark (no por prefers-color-scheme),
+   así el sitio público no se ve afectado. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Botón principal de cada pantalla del panel ("Nuevo…", "Agregar", "Registrar"): brillo azul de la marca, pedido de
+   Walter del 13/10/2026 (como el panel viejo). Solo el botón principal: si brillan todos se pierde la referencia. */
+.boton-principal {
+  box-shadow: 0 0 22px -6px rgba(1, 69, 242, 0.85);
+  transition: box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.boton-principal:hover {
+  box-shadow: 0 0 28px -4px rgba(1, 69, 242, 0.95);
+}
+.dark .boton-principal {
+  box-shadow: 0 0 24px -4px rgba(1, 69, 242, 0.9);
+}
+.dark .boton-principal:hover {
+  box-shadow: 0 0 32px -2px rgba(1, 69, 242, 1);
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.4);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.6);
+}
+.dark .custom-scrollbar {
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.35);
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.5);
+}
+
+/* Panel en modo oscuro: toda barra de desplazamiento que no tenga su propio estilo
+   (filas de pestañas, tablas anchas, listas de un modal) usaba la del sistema, que
+   en Windows queda blanca sobre el fondo oscuro (PENDIENTES 4b, captura del 10/10:
+   las pestañas de la ficha del auto). Mismo color que .custom-scrollbar en oscuro. */
+.dark .panel-v2-root,
+.dark .panel-v2-root * {
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+/* El modo oscuro del panel va en un div (PanelLayoutClient), no en <html>: el fondo de la página quedaba claro y en
+   el celular, cuando el navegador cambia el alto de la pantalla (barras que aparecen y se esconden, teclado), asomaba
+   una franja blanca debajo del chat (captura de Walter del 17/10/2026, /panel/instagram). Mismo color que el panel. */
+html:has(.dark > .panel-v2-root),
+body:has(.dark > .panel-v2-root) {
+  background: #0a0a0a;
+}
+
+/* Scroll horizontal sin barra visible -- usado en el menú del header público
+   (PublicHeader.tsx) para que en resoluciones intermedias (netbooks, ventanas
+   achicadas) el menú se pueda deslizar en vez de recortarse o desbordar la
+   pantalla cuando no entran todos los links + botones a la vez. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(150%); }
+}
+
+/* Feedback táctil del panel-v2 en mobile -- "toqué esto, algo va a pasar"
+   mientras la próxima pantalla carga. Solo touch (hover:none), solo dentro
+   del panel (no afecta el sitio público). Pedido explícito: el feedback
+   anterior (scale 0.96, 80ms) pasaba desapercibido -- ahora es más marcado
+   (scale 0.93 + un destello de fondo) y cubre también tabs/labels/selects,
+   no solo <button>/<a>, para que cualquier tab o subfiltro lo tenga sin
+   tener que tocar cada uno a mano. */
+@media (hover: none) and (pointer: coarse) {
+  .panel-v2-root a:active,
+  .panel-v2-root button:not(:disabled):active,
+  .panel-v2-root [role="button"]:active,
+  .panel-v2-root [role="tab"]:active,
+  .panel-v2-root label:active,
+  .panel-v2-root select:active {
+    transform: scale(0.93);
+    opacity: 0.7;
+    background-color: rgba(1, 69, 242, 0.08);
+    transition: transform 0.12s ease-out, opacity 0.12s ease-out, background-color 0.12s ease-out;
+  }
+  .dark .panel-v2-root a:active,
+  .dark .panel-v2-root button:not(:disabled):active,
+  .dark .panel-v2-root [role="button"]:active,
+  .dark .panel-v2-root [role="tab"]:active,
+  .dark .panel-v2-root label:active,
+  .dark .panel-v2-root select:active {
+    background-color: rgba(1, 69, 242, 0.18);
+  }
+}
+
+@keyframes panelV2NavProgress {
+  0% { width: 0%; opacity: 1; }
+  70% { width: 85%; }
+  100% { width: 100%; opacity: 0; }
+}
+.panel-v2-nav-progress {
+  animation: panelV2NavProgress 1.1s ease-out forwards;
+}
+
+/* Nunca scroll horizontal por accidente en ningún módulo -- un div con
+   ancho/margen mal calculado no debe poder arrastrar la pantalla hacia
+   los costados. Las tablas anchas que SÍ necesitan scroll horizontal ya
+   usan overflow-x-auto explícito, que queda exceptuado acá. */
+.panel-v2-root {
+  overflow-x: hidden;
+}
+.panel-v2-root .overflow-y-auto:not(.overflow-x-auto) {
+  overflow-x: hidden;
+}
+
+/* Monitores grandes (1920x1080+): el layout de "netbook" (max-w-6xl/7xl
+   centrado) dejaba franjas enormes sin usar a los costados. A partir de
+   2xl (1536px) los mismos contenedores de siempre se ensanchan solos --
+   no hace falta tocar cada módulo uno por uno. */
+@media (min-width: 1536px) {
+  .panel-v2-root .max-w-6xl {
+    max-width: 87.5rem; /* 1400px, antes 1152px */
+  }
+  .panel-v2-root .max-w-7xl {
+    max-width: 100rem; /* 1600px, antes 1280px */
+  }
+}
+
+/* Mismo problema en el sitio público: contenedores pensados para netbook
+   dejan franjas vacías en monitores 1920x1080+. */
+@media (min-width: 1536px) {
+  .public-root .max-w-6xl {
+    max-width: 87.5rem; /* 1400px, antes 1152px */
+  }
+  .public-root .max-w-7xl {
+    max-width: 100rem; /* 1600px, antes 1280px */
+  }
+}
+
+/* Entrada de cada página del sitio público (components/ui/PageTransition.tsx):
+   fundido corto, sin esperar a que la página anterior termine de irse. */
+@keyframes entrada-pagina {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.entrada-pagina {
+  animation: entrada-pagina 180ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .entrada-pagina { animation: none; }
+}
+
+/* Sitio público (y las páginas de Karry/Rely): el texto no se selecciona al
+   tocarlo -- en el celular un toque largo marcaba los títulos como en un Word.
+   Los campos de los formularios se siguen pudiendo seleccionar y pegar. */
+.public-root,
+.sin-seleccion {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.public-root :is(input, textarea, select, [contenteditable="true"]),
+.sin-seleccion :is(input, textarea, select, [contenteditable="true"]) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Barra de carga en la navegación del sidebar de panel-v2 — feedback de
+   "esto ya arrancó" mientras carga la página siguiente */
+@keyframes barraCarga {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
+  100% { transform: translateX(250%); }
+}
+.animate-barra-carga {
+  animation: barraCarga 0.9s ease-in-out infinite;
+}
+
+/* Usado en decenas de componentes (modales, pasos de formulario, estados de éxito) */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.35s ease-out;
+}
+
+/* Feedback de error en formularios */
+@keyframes shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+/* Toasts globales (ToastHost) */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(24px) scale(0.96); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+.animate-toastIn {
+  animation: toastIn 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes toastBar {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+.animate-toastBar {
+  animation: toastBar 3.2s linear forwards;
+}
+
+/* Los imprimibles del panel (recibo de seña/presupuesto) traen su propio
+   tamaño de hoja (210mm) y padding -- sin esto el navegador agrega su
+   margen de impresión por defecto arriba de eso. */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  html, body {
+    width: 210mm;
+  }
+}
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+.dark {
+  --background: #0a0a0f;
+  --foreground: #f8fafc;
+}
+
+/* Los <select> nativos abren su lista de opciones con estilos del sistema
+   operativo/navegador — el CSS normal no puede repintarla (fondo blanco fijo
+   pase lo que pase con el resto del tema). "color-scheme" es la única forma
+   real de pedirle al navegador que la dibuje en oscuro cuando corresponde. */
+.dark select {
+  color-scheme: dark;
+}
+
+/* color-scheme no alcanza en todos los navegadores (ej. Chrome/Windows sigue
+   dibujando el popup de opciones en blanco pase lo que pase) -- forzamos
+   fondo/texto en las <option> tambien, que sí se respeta más ampliamente. */
+.dark select option {
+  background-color: #16181d;
+  color: #f8fafc;
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-primary: #0145F2;
+  --color-secondary: #26bae0;
+  --color-navy: #0f293e;
+  --color-card: #ffffff;
+
+  /* ====================================================
+     ACÁ OCURRE LA MAGIA: Forzamos Plus Jakarta globalmente
+     ==================================================== */
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+
+  /* Unificación de criterios de animación y transiciones:
+     - Fast (200ms): Micro-interacciones rápidas, clicks, focus, active states, progress.
+     - Normal (300ms): Transiciones interactivas estándar (botones, links, inputs, FAQs).
+     - Card (500ms): Cambios de estado en contenedores grandes (cards background, borders, shadows).
+     - Fluid (700ms): Zoom de imágenes en hover, gradientes y efectos lentos/fluidos. */
+  --duration-fast: 200ms;
+  --duration-normal: 300ms;
+  --duration-card: 500ms;
+  --duration-fluid: 700ms;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans); /* Aplicación global */
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    background-attachment: initial !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+}
+
+.bg-grid-pattern {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.4) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.4) 1px, transparent 1px);
+}
+
+/* Efecto de luz/sombra pedido para todo el panel: un brillo azul suave al
+   pasar el mouse sobre los botones principales (el color de marca
+   bg-[#0145F2]/hover:bg-[#0138c9], usado en todos los módulos para
+   "Guardar"/"Nuevo"/acciones primarias) -- se aplica una sola vez acá con
+   selectores de atributo sobre la clase renderizada, no hay que tocar cada
+   botón de cada módulo a mano. El dashboard (Resumen general) ya tenía su
+   propia luz ambiente de fondo -- esto suma la misma idea a los botones,
+   no la duplica. */
+.panel-v2-root button:not(:disabled)[class*="bg-[#0145F2]"],
+.panel-v2-root a[class*="bg-[#0145F2]"] {
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+.panel-v2-root button:not(:disabled)[class*="bg-[#0145F2]"]:hover,
+.panel-v2-root a[class*="bg-[#0145F2]"]:hover {
+  box-shadow: 0 6px 24px -4px rgba(1, 69, 242, 0.5), 0 2px 8px -2px rgba(1, 69, 242, 0.3);
+  transform: translateY(-1px);
+}
+.dark .panel-v2-root button:not(:disabled)[class*="bg-[#0145F2]"]:hover,
+.dark .panel-v2-root a[class*="bg-[#0145F2]"]:hover {
+  box-shadow: 0 6px 28px -2px rgba(56, 132, 255, 0.55), 0 2px 10px -2px rgba(56, 132, 255, 0.35);
+}
+
+/* ===== Cambio de módulo del panel (View Transitions) =====
+   Cruce: el módulo viejo se desvanece mientras entra el nuevo, al mismo tiempo, sin movimiento (nada se desplaza).
+   El menú lateral y la barra de arriba quedan fijos: solo el contenido del <main> cruza. */
+/* El resto de la pantalla (menú, barra de arriba) no se anima: se quita el cruce automático del documento. */
+::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+::view-transition-group(panel-contenido) { animation-duration: 0.22s; }
+::view-transition-old(panel-contenido) { animation: 0.22s cubic-bezier(0.22, 1, 0.36, 1) both vt-salir; }
+::view-transition-new(panel-contenido) { animation: 0.22s cubic-bezier(0.22, 1, 0.36, 1) both vt-entrar; }
+@keyframes vt-salir { from { opacity: 1; } to { opacity: 0; } }
+@keyframes vt-entrar { from { opacity: 0; } to { opacity: 1; } }
+/* Durante el cruce los clics pasan al contenido real (si no, se pierden). */
+::view-transition { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*), ::view-transition-new(*), ::view-transition-group(*) { animation-duration: 0s !important; animation-delay: 0s !important; }
+}
+
+/* ===== Cascada (CascadaItem en components/ui/movimiento.tsx) =====
+   Los elementos de un grupo entran uno detrás de otro (el retraso lo pone el componente). En CSS para que arranque
+   con el HTML, sin esperar al JavaScript. */
+@keyframes cascada-entra { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.cascada-item { animation: cascada-entra 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) { .cascada-item { animation: none; } }
+
+/* Líneas de velocidad del Hero (components/Hero.tsx): en CSS, sin JavaScript en cada cuadro (antes framer-motion
+   movía 8 líneas en loop y competía con el scroll). Duración y retraso los pone cada línea. */
+@keyframes estela-cruza { from { transform: translateX(0); } to { transform: translateX(200vw); } }
+.estela-hero { animation: estela-cruza linear infinite; will-change: transform; }
+
+/* ===== Loader de entrada (components/IntroLoader.tsx) =====
+   Anima solo con CSS: arranca apenas llega el HTML, sin esperar al JavaScript. Si ya se vio en esta visita, el
+   script del componente marca <html data-intro-visto> antes del primer dibujo y no se muestra. */
+html[data-intro-visto] .intro-loader { display: none; }
+/* Aviso de cookies ya aceptado (components/CookieBanner.tsx): el mismo script del <head> marca <html data-cookies-ok>. */
+html[data-cookies-ok] .aviso-cookies { display: none; }
+/* La entrada espera a <html data-intro-anda> y la salida a <html data-intro-sale>: las dos marcas las pone el script
+   pegado al loader (lib/introLoader.ts, SCRIPT_INTRO_ARRANQUE). Así empieza cuando el loader ya se dibujó y el logo
+   ya cargó, se ve completa y sale sola, sin esperar al resto del JavaScript. Hasta que arranca se ven solo los
+   paneles oscuros. */
+.intro-marca, .intro-linea, .intro-luz { opacity: 0; }
+html[data-intro-anda] .intro-marca { animation: intro-marca-entra 0.4s ease-out 0.3s both; }
+html[data-intro-anda] .intro-linea { animation: intro-linea-entra 0.4s ease-out 0.5s both; }
+html[data-intro-anda] .intro-luz { animation: intro-luz-cruza 0.7s ease-in both; }
+html[data-intro-sale] .intro-panel-arriba { animation: intro-panel-sube 0.5s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+html[data-intro-sale] .intro-panel-abajo { animation: intro-panel-baja 0.5s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+html[data-intro-sale] .intro-marca { animation: intro-marca-sale 0.35s ease-in forwards; }
+@keyframes intro-marca-entra { from { opacity: 0; transform: scale(0.85); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes intro-marca-sale { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(1.05); } }
+@keyframes intro-linea-entra { from { opacity: 0; transform: scaleX(0); } to { opacity: 1; transform: none; } }
+@keyframes intro-luz-cruza { 0% { opacity: 0; transform: translateX(-30vw) skewX(-12deg); } 15%, 70% { opacity: 1; } 100% { opacity: 0; transform: translateX(130vw) skewX(-12deg); } }
+@keyframes intro-panel-sube { to { transform: translateY(-100%); } }
+@keyframes intro-panel-baja { to { transform: translateY(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .intro-marca, .intro-linea, html[data-intro-anda] .intro-marca, html[data-intro-anda] .intro-linea { animation: none; opacity: 1; }
+  .intro-luz, html[data-intro-anda] .intro-luz { animation: none; opacity: 0; }
+}
+
+/* ===== Resplandores de fondo en celular =====
+   Los resplandores decorativos (círculos con blur grande detrás de las secciones) se dibujan en el celular con
+   costuras: franjas más claras que cortan tarjetas y formularios (Vivaldi/Chrome Android). En pantallas chicas
+   se esconden; en escritorio siguen igual. El blur-sm no se toca (oculta montos en el panel) ni el loader de entrada. */
+@media (max-width: 767px) {
+  :is(.blur-2xl, .blur-3xl, .blur-\[60px\], .blur-\[80px\], .blur-\[120px\], .blur-\[140px\], .blur-\[150px\]):not([data-intro-loader] *) {
+    display: none !important;
+  }
+}
+
+/* ===== Fluidez al desplazar en celular (sitio público) =====
+   Medido el 11/10/2026 con un celular emulado: la portada tenía 74 elementos con desenfoque de fondo (47 en las
+   tarjetas de stock) y la placa de video rehacía cada uno en cada cuadro del desplazamiento. En pantallas táctiles y
+   angostas se apaga el desenfoque; los fondos que dependían de él para leerse se hacen más opacos en cada componente
+   (ver max-lg: en PublicHeader.tsx). En escritorio queda igual. */
+@media (max-width: 1023px), (pointer: coarse) {
+  .public-root [class*="backdrop-blur"] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+/* Secciones de la portada debajo de la primera pantalla: el navegador no calcula estilos ni dibuja las que están
+   lejos de la pantalla (la portada mide unos 18.000 px en celular). El alto estimado evita que la página "salte"
+   antes de dibujarlas; después el navegador recuerda el alto real. */
+.seccion-diferida { content-visibility: auto; contain-intrinsic-size: auto 800px; }
+/* Hero fuera de pantalla (components/Hero.tsx): las líneas de velocidad dejan de animarse. */
+.hero-fuera .estela-hero { animation-play-state: paused; }

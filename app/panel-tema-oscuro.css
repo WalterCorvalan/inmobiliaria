@@ -1,0 +1,60 @@
+/* ===== Colores del modo oscuro a elección (Walter, 21/10/2026) =====
+   El modo claro no cambia. En el oscuro, cada persona elige un tema en Mi Perfil (lib/panel/temasOscuros.ts) y
+   PanelLayoutClient.tsx pone las clases "tema-oscuro" y "tema-<nombre>" en el mismo <div> que lleva "dark" (el modo
+   oscuro del panel vive ahí, no en <html>), por eso las reglas empiezan con ".dark.tema-…" sin espacio. El "negro" de siempre no lleva clases. El sitio público no cambia.
+   Cómo funciona: cada tema solo define sus colores (fondo, tarjetas, botón); las reglas de abajo los aplican a los
+   grises de Tailwind y a los fondos oscuros escritos a mano en los módulos, sin tocar módulo por módulo.
+   Si aparece un rincón que quedó negro, se agrega su color acá. */
+
+.dark.tema-gris        { --t-fondo: #495057; --t-tarjeta: #3d444b; --t-tarjeta-2: #343a40; }
+.dark.tema-azul-marino { --t-fondo: #0b1733; --t-tarjeta: #13234a; --t-tarjeta-2: #1a2d5c; }
+.dark.tema-noche-oro   { --t-fondo: #000814; --t-tarjeta: #001D3D; --t-tarjeta-2: #003566; --t-acento: #FFC300; --t-acento-texto: #000814; }
+.dark.tema-oceano      { --t-fondo: #003049; --t-tarjeta: #0A4060; --t-tarjeta-2: #0F4C70; --t-acento: #669BBC; --t-acento-texto: #002236; }
+.dark.tema-petroleo    { --t-fondo: #04151F; --t-tarjeta: #183A37; --t-tarjeta-2: #1F4844; --t-acento: #C44900; --t-acento-texto: #ffffff; }
+.dark.tema-bosque      { --t-fondo: #344E41; --t-tarjeta: #3A5A40; --t-tarjeta-2: #436848; --t-acento: #A3B18A; --t-acento-texto: #1e2e25; }
+
+/* Letras blancas y grises claros, para que se lean sobre cualquier fondo de color. */
+.dark.tema-oscuro {
+  --color-slate-100: #ffffff; --color-slate-200: #f8f9fa; --color-slate-300: #f1f3f5;
+  --color-slate-400: #e9ecef; --color-slate-500: #dee2e6; --color-slate-600: #ced4da;
+  background-color: var(--t-fondo);
+}
+/* Fondo de página (main, raíz del panel, bandejas). */
+.dark.tema-oscuro .dark\:bg-\[\#0A0A0A\], .dark.tema-oscuro .dark\:bg-\[\#0a0a0f\] { background-color: var(--t-fondo); }
+/* Tarjetas, menú, barra de arriba y paneles. */
+.dark.tema-oscuro .dark\:bg-\[\#141414\], .dark.tema-oscuro .dark\:bg-\[\#111\], .dark.tema-oscuro .dark\:bg-\[\#0b141a\] { background-color: var(--t-tarjeta); }
+.dark.tema-oscuro .dark\:border-\[\#111\] { border-color: var(--t-tarjeta); }
+.dark.tema-oscuro .dark\:bg-\[\#1A1A1A\], .dark.tema-oscuro .dark\:bg-\[\#1a1a1a\] { background-color: var(--t-tarjeta-2); }
+.dark.tema-oscuro .dark\:bg-white\/5 { background-color: rgba(255, 255, 255, 0.10); }
+/* La franja de pestañas (bg-white/[0.02]) queda igual al fondo: aclarada se veían dos tonos (Walter, 21/10/2026). */
+.dark.tema-oscuro .dark\:bg-white\/\[0\.03\] { background-color: rgba(255, 255, 255, 0.09); }
+.dark.tema-oscuro .dark\:border-white\/5 { border-color: rgba(255, 255, 255, 0.16); }
+.dark.tema-oscuro .dark\:border-white\/10 { border-color: rgba(255, 255, 255, 0.22); }
+/* El color de los botones: el panel ya lo pinta con --marca (app/panel-marca.css, color de Configuración → Branding).
+   Los temas con color propio (noche y oro, océano, etc.) lo reemplazan; gris y azul marino dejan el de la empresa.
+   Si el color es claro (amarillo), la letra del botón va oscura. */
+.dark.tema-oscuro .panel-v2-root { --marca: var(--t-acento, #0145F2); }
+.dark.tema-oscuro .panel-v2-root .bg-\[\#0145F2\] { color: var(--t-acento-texto, #ffffff); }
+
+/* ===== Modo claro: Softcars (clásico). Walter 26/10/2026; desde el 27/10/2026 es el modo claro de todos =====
+   Los colores del sistema viejo (Softcars): fondo gris claro, encabezados celeste grisáceo, letra negra, títulos azul
+   oscuro y los nombres de los datos en bordó. Con el modo oscuro apagado el panel lleva "tema-softcars"
+   (CLASE_MODO_CLARO en lib/panel/temasOscuros.ts). Los botones siguen con el color de la empresa. */
+.tema-softcars {
+  /* Grises de Tailwind: los suaves con tinte celeste, las letras más oscuras para que se lean. */
+  --color-slate-50: #EEF1F7; --color-slate-100: #E2E7F1; --color-slate-200: #B8C4DC; --color-slate-300: #9AA8C4;
+  --color-slate-400: #4A4A4A; --color-slate-500: #333333; --color-slate-600: #222222; --color-slate-700: #111111;
+  --color-slate-800: #000000; --color-slate-900: #000000;
+}
+.tema-softcars .bg-\[\#F8FAFC\] { background-color: #E6E6E6; }
+/* Encabezados de tabla como el listado del Softcars. */
+.tema-softcars thead tr, .tema-softcars thead th { background-color: #C5CFE3; color: #000000; }
+/* Títulos en azul oscuro y nombres de los datos (ficha, formularios) en bordó. */
+.tema-softcars h1, .tema-softcars h2 { color: #1F3A6E; }
+.tema-softcars dt, .tema-softcars label { color: #A00000; }
+
+/* ===== Softcars oscuro (Walter, 26/10/2026, reemplaza a "Bordó"): el Softcars de noche. Botones con el color de la empresa. ===== */
+.dark.tema-softcars-oscuro { --t-fondo: #1E2430; --t-tarjeta: #272F3E; --t-tarjeta-2: #2F3A4D; }
+.dark.tema-softcars-oscuro thead tr, .dark.tema-softcars-oscuro thead th { background-color: #3A4A6B; color: #FFFFFF; }
+.dark.tema-softcars-oscuro h1, .dark.tema-softcars-oscuro h2 { color: #9DB7E8; }
+.dark.tema-softcars-oscuro dt, .dark.tema-softcars-oscuro label { color: #F08A8A; }

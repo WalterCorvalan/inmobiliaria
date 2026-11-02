@@ -1,0 +1,16 @@
+{
+  "name": "Pfaffen Cars — Panel",
+  "short_name": "Pfaffen",
+  "description": "Panel de Pfaffen Cars",
+  "start_url": "/panel",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0145F2",
+  "lang": "es-AR",
+  "icons": [
+    { "src": "/icons/panel-app-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/panel-app-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/panel-app-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

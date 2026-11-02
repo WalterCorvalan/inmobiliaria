@@ -1,0 +1,18 @@
+/* ===== Color principal configurable (Configuración > Empresa > Branding) =====
+   El panel usa el azul #0145F2 escrito a mano en cientos de clases (bg-[#0145F2], text-[#0145F2], etc.).
+   En vez de reescribirlas una por una, acá se redefinen todas con la variable --marca. PanelLayoutClient
+   pone --marca en .panel-v2-root con el color elegido; sin color elegido queda el azul de siempre.
+   Si en el panel se usa una clase nueva con el azul escrito a mano, agregarle su regla acá. */
+.panel-v2-root { --marca: #0145F2; --marca-hover: color-mix(in srgb, var(--marca) 85%, black); --marca-claro: color-mix(in srgb, var(--marca) 62%, white); }
+.panel-v2-root .bg-\[\#0145F2\], .panel-v2-root .hover\:bg-\[\#0145F2\]:hover { background-color: var(--marca) !important; }
+.panel-v2-root .hover\:bg-\[\#0138c9\]:hover, .panel-v2-root .active\:bg-\[\#0138c9\]:active { background-color: var(--marca-hover) !important; }
+.panel-v2-root .text-\[\#0145F2\], .panel-v2-root .hover\:text-\[\#0145F2\]:hover, .panel-v2-root .group:hover .group-hover\:text-\[\#0145F2\] { color: var(--marca) !important; }
+.panel-v2-root .hover\:text-\[\#0138c9\]:hover { color: var(--marca-hover) !important; }
+.panel-v2-root .border-\[\#0145F2\], .panel-v2-root .focus\:border-\[\#0145F2\]:focus, .panel-v2-root .hover\:border-\[\#0145F2\]:hover { border-color: var(--marca) !important; }
+.panel-v2-root .accent-\[\#0145F2\] { accent-color: var(--marca) !important; }
+.panel-v2-root .bg-\[\#0145F2\]\/10, .panel-v2-root .dark\:bg-\[\#0145F2\]\/10 { background-color: color-mix(in srgb, var(--marca) 10%, transparent) !important; }
+.panel-v2-root .bg-\[\#0145F2\]\/5, .panel-v2-root .hover\:bg-\[\#0145F2\]\/5:hover { background-color: color-mix(in srgb, var(--marca) 5%, transparent) !important; }
+.panel-v2-root .dark\:bg-\[\#0145F2\]\/20 { background-color: color-mix(in srgb, var(--marca) 20%, transparent) !important; }
+.panel-v2-root .border-\[\#0145F2\]\/40 { border-color: color-mix(in srgb, var(--marca) 40%, transparent) !important; }
+.panel-v2-root .border-\[\#0145F2\]\/20 { border-color: color-mix(in srgb, var(--marca) 20%, transparent) !important; }
+.dark .panel-v2-root .dark\:text-\[\#5b8dff\], .dark .panel-v2-root .dark\:hover\:text-\[\#5b8dff\]:hover, .dark .panel-v2-root .dark\:group-hover\:text-\[\#5b8dff\] { color: var(--marca-claro) !important; }
