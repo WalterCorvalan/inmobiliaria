@@ -17,7 +17,7 @@ const A = "aaaaaaaa-0000-0000-0000-00000000000a";
 const B = "bbbbbbbb-0000-0000-0000-00000000000b";
 
 let db: PGlite;
-const filas = async (sql: string) => (await db.query(sql)).rows as Record<string, any>[];
+const filas = async (sql: string) => (await db.query(sql)).rows as Record<string, unknown>[];
 const uno = async (sql: string) => (await filas(sql))[0];
 
 // Ejecuta como un usuario logueado (role "authenticated", con su sesión), o sin sesión = el servidor (clave de servicio).
@@ -231,7 +231,7 @@ describe("reparto y avisos: nunca cruzan de empresa", () => {
     const asignados: string[] = [];
     for (let i = 0; i < 4; i++) {
       const ct = await uno(`insert into instagram_contactos (empresa_id, ig_user_id, username) values ('${A}', 'ig-a-${i}', 'user${i}') returning id`);
-      asignados.push((await uno(`insert into instagram_conversaciones (contacto_id) values ('${ct.id}') returning vendedor_id`)).vendedor_id);
+      asignados.push((await uno(`insert into instagram_conversaciones (contacto_id) values ('${ct.id}') returning vendedor_id`)).vendedor_id as string);
     }
     expect(new Set(asignados)).toEqual(new Set([U.asesorA1, U.asesorA2]));
     expect(asignados[0]).not.toBe(asignados[1]);
