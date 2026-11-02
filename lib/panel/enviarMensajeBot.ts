@@ -18,7 +18,7 @@ export const TABLAS_CANAL: Record<CanalBot, { conversaciones: string; mensajes: 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export async function enviarTextoBot(supabase: SupabaseClient, canal: CanalBot, conversacionId: string, texto: string, config?: any): Promise<boolean> {
   const t = TABLAS_CANAL[canal];
-  const cfg = config ?? (await supabase.from(t.config).select("*").eq("id", true).maybeSingle()).data;
+  const cfg = config ?? (await supabase.from(t.config).select("*").maybeSingle()).data;
   if (!cfg?.token_cifrado) return false;
 
   const { data: conv } = await supabase.from(t.conversaciones).select("contacto_id").eq("id", conversacionId).maybeSingle();

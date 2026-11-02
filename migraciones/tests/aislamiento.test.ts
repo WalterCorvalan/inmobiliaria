@@ -40,7 +40,7 @@ beforeAll(async () => {
   const archivos = readdirSync(DIR).filter((f) => /^sql_(schema_migraciones|\d{3}_.*)\.sql$/.test(f)).sort((a, b) => (a.startsWith("sql_schema") ? -1 : b.startsWith("sql_schema") ? 1 : a.localeCompare(b)));
   for (const f of archivos) await db.exec(readFileSync(join(DIR, f), "utf8"));
   // Supabase da permisos de tabla a "authenticated"; lo que filtra es la seguridad por fila.
-  await db.exec(`grant usage on schema public to authenticated, anon; grant all on all tables in schema public to authenticated; grant execute on all functions in schema public to authenticated;`);
+  await db.exec(`grant usage on schema public to authenticated, anon; grant all on all tables in schema public to authenticated;`);
 
   // Dos empresas y su gente.
   await db.exec(`insert into empresas (id, nombre, slug) values ('${A}', 'Inmobiliaria A', 'a'), ('${B}', 'Inmobiliaria B', 'b');`);
@@ -63,6 +63,12 @@ beforeAll(async () => {
 afterAll(async () => { await db?.close(); });
 
 describe("alta de una empresa", () => {
+  it("cada empresa nace con sus motivos de cierre", async () => {
+    const r = await filas(`select empresa_id, count(*)::int n from motivos_cierre where nombre in ('No respondió', 'Precio') group by empresa_id`);
+    expect(r.length).toBe(2);
+    expect(r.every((x) => x.n === 2)).toBe(true);
+  });
+
   it("cada empresa nace con sus filas de configuración y sus tres verify tokens propios", async () => {
     expect((await filas(`select empresa_id from configuracion_empresa`)).length).toBe(2);
     const tokens = await filas(`select webhook_verify_token t from whatsapp_configuracion union all select webhook_verify_token from instagram_configuracion union all select verify_token from messenger_configuracion`);
@@ -74,6 +80,21 @@ describe("alta de una empresa", () => {
   it("el mismo verify token no puede estar en dos empresas (así el webhook sabe de quién es cada mensaje)", async () => {
     const a = await uno(`select webhook_verify_token t from whatsapp_configuracion where empresa_id = '${A}'`);
     await expect(db.exec(`update whatsapp_configuracion set webhook_verify_token = '${a.t}' where empresa_id = '${B}'`)).rejects.toThrow(/duplicate|unique|único/i);
+  });
+});
+
+describe("límite de pedidos", () => {
+  it("corta al pasar el tope y vuelve a dejar pasar al terminar la ventana; nadie logueado lo puede llamar", async () => {
+    const llamar = async () => uno(`select * from rate_limit_check('ip:1.2.3.4', 3, 60000)`);
+    const r = [await llamar(), await llamar(), await llamar(), await llamar()];
+    expect(r.map((x) => x.ok)).toEqual([true, true, true, false]);
+    expect(Number(r[3].retry_after_seconds)).toBeGreaterThan(0);
+    await db.exec(`update rate_limits set ventana_inicio = now() - interval '2 minutes' where clave = 'ip:1.2.3.4'`);
+    expect((await llamar()).ok).toBe(true);
+    await como(U.asesorA1, async () => {
+      await expect(db.query(`select * from rate_limit_check('x', 1, 1000)`)).rejects.toThrow(/permission|permiso/i);
+      expect((await filas(`select * from rate_limits`)).length).toBe(0);
+    });
   });
 });
 
@@ -100,7 +121,7 @@ describe("estructura: ninguna tabla con empresa queda sin protección", () => {
   it("las únicas tablas sin empresa_id son las de la plataforma", async () => {
     const sin = await filas(`select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
       where n.nspname = 'public' and c.relkind = 'r' and not exists (select 1 from information_schema.columns k where k.table_schema = 'public' and k.table_name = c.relname and k.column_name = 'empresa_id') order by 1`);
-    expect(sin.map((r) => r.relname)).toEqual(["empresas", "schema_migraciones", "superadmins"]);
+    expect(sin.map((r) => r.relname)).toEqual(["empresas", "rate_limits", "schema_migraciones", "superadmins"]);
   });
 
   it("las tablas de la plataforma no se leen desde el navegador", async () => {
@@ -121,7 +142,7 @@ describe("cada empresa ve y toca solo lo suyo", () => {
     await db.exec(`
       insert into leads_manuales (empresa_id, nombre, vendedor_id) values ('${A}', 'Lead de A', '${U.asesorA1}'), ('${B}', 'Lead de B', '${U.asesorB1}');
       insert into clientes (empresa_id, nombre) values ('${A}', 'Cliente de A'), ('${B}', 'Cliente de B');
-      insert into motivos_cierre (empresa_id, nombre) values ('${A}', 'Precio'), ('${B}', 'Precio');
+      insert into motivos_cierre (empresa_id, nombre) values ('${A}', 'Motivo propio'), ('${B}', 'Motivo propio');
       insert into whatsapp_contactos (empresa_id, telefono, nombre_perfil) values ('${A}', '5491100000000', 'Cliente WA A'), ('${B}', '5491100000000', 'Cliente WA B');
     `);
   });

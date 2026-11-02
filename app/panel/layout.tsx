@@ -34,9 +34,9 @@ async function cargarInicial(): Promise<PanelInicial | null> {
     const [{ data: perfil }, config, tema, modo] = await Promise.all([
       supabase.from("perfiles").select("nombre, roles, activo").eq("id", user.id).maybeSingle(),
       (async () => {
-        const completa = await supabase.from("configuracion_empresa").select("modo_comision, branding_nombre, branding_logo_url, branding_color_primario").eq("id", true).maybeSingle();
+        const completa = await supabase.from("configuracion_empresa").select("branding_nombre, branding_logo_url, branding_color_primario").maybeSingle();
         // Si la columna del color todavía no existe en la base, se reintenta sin ella.
-        if (completa.error) return supabase.from("configuracion_empresa").select("modo_comision, branding_nombre, branding_logo_url").eq("id", true).maybeSingle();
+        if (completa.error) return supabase.from("configuracion_empresa").select("branding_nombre, branding_logo_url").maybeSingle();
         return completa;
       })(),
       // Color del modo oscuro (Mi Perfil). Si la columna todavía no existe, queda el de por defecto.

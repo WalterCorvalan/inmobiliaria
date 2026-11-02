@@ -1,3 +1,4 @@
+import { supabaseEmpresa } from "@/lib/empresa/db";
 import { createClient } from "@supabase/supabase-js";
 import { crearAlerta } from "@/lib/panel/alertas";
 import { costoFilaIaUsd, type FilaUsoIa } from "./costoIa";
@@ -11,7 +12,7 @@ import { factorAjusteIa, inicioDeMesUtc, proyeccionFinDeMes } from "./ajusteIa";
 // de vez en cuando cargando el saldo real que muestra la Consola.
 // Server-only (usa la service role): no importar desde componentes "use client".
 
-const supabaseAdmin = () => createClient(process.env.NEXT_PUBLIC_SUPABASE2_URL!, process.env.SUPABASE2_SERVICE_ROLE_KEY!);
+const supabaseAdmin = () => supabaseEmpresa;
 
 type GastoIa = { usd: number; tokensIn: number; tokensOut: number; porOrigen: Record<string, number> };
 
@@ -41,9 +42,9 @@ type ConfigIa = {
 async function leerConfigIa(): Promise<ConfigIa | null> {
   const supabase = supabaseAdmin();
   // Con las columnas de la compra (migraciones/sql_ia_credito_comprado.sql); si el SQL no corrió, sin ellas.
-  const completo = await supabase.from("configuracion_empresa").select("ia_saldo_inicial_usd, ia_saldo_desde, ia_alerta_saldo_usd, ia_credito_comprado_usd, ia_credito_comprado_el").eq("id", true).maybeSingle();
+  const completo = await supabase.from("configuracion_empresa").select("ia_saldo_inicial_usd, ia_saldo_desde, ia_alerta_saldo_usd, ia_credito_comprado_usd, ia_credito_comprado_el").maybeSingle();
   if (!completo.error) return completo.data as ConfigIa | null;
-  const basico = await supabase.from("configuracion_empresa").select("ia_saldo_inicial_usd, ia_saldo_desde, ia_alerta_saldo_usd").eq("id", true).maybeSingle();
+  const basico = await supabase.from("configuracion_empresa").select("ia_saldo_inicial_usd, ia_saldo_desde, ia_alerta_saldo_usd").maybeSingle();
   return basico.data as ConfigIa | null;
 }
 
@@ -143,14 +144,14 @@ export async function estimarSaldoIa(): Promise<EstimacionSaldoIa> {
 // Avisa a los admin (alerta en el panel). No repite el aviso dentro de `minHoras`.
 export async function avisarSaldoIa(titulo: string, mensaje: string, minHoras: number): Promise<{ avisado: boolean }> {
   const supabase = supabaseAdmin();
-  const { data: cfg } = await supabase.from("configuracion_empresa").select("ia_alerta_enviada_en").eq("id", true).maybeSingle();
+  const { data: cfg } = await supabase.from("configuracion_empresa").select("ia_alerta_enviada_en").maybeSingle();
   if (cfg?.ia_alerta_enviada_en && Date.now() - new Date(cfg.ia_alerta_enviada_en).getTime() < minHoras * 3600000) return { avisado: false };
 
   const { data: admins } = await supabase.from("perfiles").select("id").overlaps("roles", ["admin", "director"]).eq("activo", true);
   for (const a of admins || []) {
     await crearAlerta(supabase, a.id, titulo, { mensaje, link: "/panel/configuracion/empresa", tipo: "ia_saldo", prioridad: "alta" });
   }
-  await supabase.from("configuracion_empresa").update({ ia_alerta_enviada_en: new Date().toISOString() }).eq("id", true);
+  await supabase.from("configuracion_empresa").update({ ia_alerta_enviada_en: new Date().toISOString() });
   return { avisado: true };
 }
 

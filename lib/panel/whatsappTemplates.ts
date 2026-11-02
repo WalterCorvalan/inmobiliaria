@@ -1,3 +1,4 @@
+import { supabaseEmpresa as supabaseAdmin } from "@/lib/empresa/db";
 import { createClient } from "@supabase/supabase-js";
 import { decrypt } from "@/lib/crypto";
 import { createMessageTemplate, deleteMessageTemplate, listMessageTemplates, sendTemplateMessage, MetaApiError } from "@/lib/meta/client";
@@ -8,10 +9,6 @@ import { registrarError } from "@/lib/panel/logger";
 // a Supabase2 -- resuelve el mismo caso: enviar cuando la ventana de 24h de
 // WhatsApp está vencida y Meta rechaza texto libre.
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE2_URL!,
-  process.env.SUPABASE2_SERVICE_ROLE_KEY!
-);
 
 export class TemplateError extends Error {
   code: "not_connected" | "invalid" | "not_found" | "meta_error";
@@ -25,7 +22,7 @@ export class TemplateError extends Error {
 // Los datos {{1}}, {{2}}… se validan y completan en lib/panel/variablesPlantilla.ts (hasta 4 desde el 19/10/2026).
 
 async function getConfig() {
-  const { data } = await supabaseAdmin.from("whatsapp_configuracion").select("*").eq("id", true).maybeSingle();
+  const { data } = await supabaseAdmin.from("whatsapp_configuracion").select("*").maybeSingle();
   return data;
 }
 

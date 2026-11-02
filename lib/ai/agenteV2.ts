@@ -1,3 +1,4 @@
+import { supabaseEmpresa as supabase } from "@/lib/empresa/db";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { chatJsonV2 } from "@/lib/ai/indexV2";
@@ -14,10 +15,6 @@ import {
 // lib/ai/agente.ts adaptado al schema de la base nova. Solo razona con el
 // texto — nunca escribe la conversación, eso lo hace el webhook que lo llama.
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE2_URL!,
-  process.env.SUPABASE2_SERVICE_ROLE_KEY!
-);
 
 export const AgentReplySchemaV2 = z.object({
   reply: z.string(),
@@ -480,7 +477,7 @@ async function fetchSucursalesInfo(): Promise<SucursalInfo[]> {
 // público) -- el bot tiene que citar EXACTAMENTE los mismos números que ve
 // el cliente en la web, no una copia vieja hardcodeada en el prompt.
 async function fetchFinanciacionInfo(): Promise<FinanciacionInfo> {
-  const { data } = await supabase.from("configuracion_empresa").select("financiacion_topes, financiacion_tope_0km, financiacion_tna, financiacion_gastos_pct").eq("id", true).maybeSingle();
+  const { data } = await supabase.from("configuracion_empresa").select("financiacion_topes, financiacion_tope_0km, financiacion_tna, financiacion_gastos_pct").maybeSingle();
   return {
     topes: data?.financiacion_topes?.length ? data.financiacion_topes : TOPES_FINANCIACION_DEFAULT,
     tope0km: data?.financiacion_tope_0km ?? TOPE_0KM_DEFAULT,

@@ -318,7 +318,7 @@ export default function ConfiguracionInstagramClient() {
           <label className={labelClass}>Secreto de la app de Instagram</label>
           {secretos.appSecretCargado ? <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mb-1">Cargado (se guarda cifrado).</p> : null}
           <input type="password" value={appSecret} onChange={(e) => setAppSecret(e.target.value)} placeholder="•••••••• (dejalo vacío para no cambiarlo)" className={inputClass} />
-          <p className="text-[10px] text-slate-400 mt-1">Misma pantalla: "Secreto de la app de Instagram". Con él se firman los mensajes y se conecta la cuenta.</p>
+          <p className="text-[10px] text-slate-400 mt-1">Misma pantalla: Secreto de la app de Instagram. Con él se firman los mensajes y se conecta la cuenta.</p>
         </div>
         <div>
           <label className={labelClass}>Secreto de la app de Meta (opcional)</label>

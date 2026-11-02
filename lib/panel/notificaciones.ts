@@ -3,7 +3,7 @@ import { crearAlerta, type CategoriaNotif, type PrioridadAlerta } from "./alerta
 
 // Ojo: este archivo lo importan tanto Server Components como componentes
 // "use client" (ImprimirSena, NuevaSenaModal, etc.) -- NUNCA importar acá
-// lib/panel/logger.ts (usa SUPABASE2_SERVICE_ROLE_KEY, la key de servicio)
+// lib/panel/logger.ts (usa la clave de servicio de la base)
 // porque Next.js lo mete igual en el bundle del cliente y el navegador
 // revienta con "supabaseKey is required." apenas se carga el módulo, antes
 // de que se ejecute ninguna función. Loguear con console.error alcanza acá.

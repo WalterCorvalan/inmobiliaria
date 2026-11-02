@@ -267,9 +267,9 @@ export default function PanelLayoutClient({
     if (inicial) return; // ya vino del servidor
     (async () => {
       // Una sola consulta a la fila de la empresa: modo de comisiones + identidad (antes eran dos pedidos).
-      let res: { data: any; error: any } = await supabase2.from("configuracion_empresa").select("modo_comision, branding_nombre, branding_logo_url, branding_color_primario").eq("id", true).maybeSingle();
+      let res: { data: any; error: any } = await supabase2.from("configuracion_empresa").select("branding_nombre, branding_logo_url, branding_color_primario").maybeSingle();
       // Si la columna del color todavía no existe en la base, se reintenta sin ella.
-      if (res.error) res = await supabase2.from("configuracion_empresa").select("modo_comision, branding_nombre, branding_logo_url").eq("id", true).maybeSingle();
+      if (res.error) res = await supabase2.from("configuracion_empresa").select("branding_nombre, branding_logo_url").maybeSingle();
       if (res.data) setComisionesActivas(res.data.modo_comision !== "ninguna");
       if (res.data) setBranding({ nombre: res.data.branding_nombre || null, logoUrl: res.data.branding_logo_url || null, color: res.data.branding_color_primario || null });
     })();

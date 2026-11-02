@@ -40,19 +40,38 @@ values ('<id del usuario>', '<id de la empresa>', 'Nombre del dueño', '{admin}'
 
 Al crear la empresa se crean solas su configuración y los tres verify tokens.
 
-## Lo que falta: el código todavía no usa el esquema nuevo
+## Pasada 2b: el código ya usa el esquema nuevo (2/11/2026)
 
-La base está lista; la aplicación sigue escrita para una sola empresa. Pendiente (pasada 2b, antes de conectar nada):
+Todo lo que el servidor hace con la base pasa por `lib/empresa/db.ts`:
+- `dentroDeEmpresa(id, fn)` fija la empresa del pedido (cada pedido la suya, aunque corran a la vez).
+- `supabaseEmpresa` es el cliente de servicio atado a esa empresa: cada consulta a una tabla de empresa lleva sola el filtro `empresa_id`, y cada alta lleva el `empresa_id`. Sin empresa fijada, falla en vez de leer todo.
+- Las funciones de la base que reciben empresa la reciben siempre la del pedido.
 
-1. **56 lecturas de `id = true`** en 26 archivos (configuración de WhatsApp, Instagram, Messenger y empresa, crons, webhooks). Pasan a "la fila de esta empresa".
-2. **Webhooks y tareas automáticas** (corren con la clave de servicio, que se salta la seguridad): deben identificar la empresa por el verify token de la dirección, filtrar por ella en cada consulta y recorrer todas las empresas, cada una con su horario.
-3. **Chat de la web**: hoy no sabe de qué empresa es la visita; el código para pegar tiene que llevar un identificador de empresa.
-4. **Secreto de la app de Meta y ID de la app de Instagram por empresa** (columnas ya creadas, el código sigue usando variables de entorno y un número fijo).
-5. **Llamadas a funciones de la base** (`proximo_vendedor_ronda`, `asignacion_auto_en_tabla`, `leads_ultima_direccion`, `visitas_horarios_ocupados`) con la empresa como parámetro.
-6. **Gasto de IA** (`uso_ia_anthropic`): hoy el código lo guarda sin empresa; la columna es opcional hasta completarlo.
-7. **Catálogo**: el código aún consulta tablas que la base nueva no tiene (`vehiculos`, `pedidos`, `consignaciones`, `test_drives`, `ventas`, `senas`, `presupuestos`, `peritajes_lead`, `leads_tasacion`, `modulos_config`, `visibilidad_sector`, mensajes internos). Esas pantallas y partes del bot fallarán hasta sacar el catálogo de los chats (decidido el 2/11: no es del núcleo).
-8. **`rate_limit_check`** (límite de pedidos por IP): no está en la base nueva; el código cae a un contador en memoria. Falta su tabla y función.
-9. **Datos iniciales por empresa** que Pfaffen cargaba a mano: motivos de cierre, memoria del bot y plantillas.
-10. **Endurecimiento de credenciales**: el dueño puede leer los tokens cifrados desde el navegador. Pasarlos a lectura solo del servidor cuando las rutas de configuración lo permitan.
+Qué cambió:
+1. **Webhooks de WhatsApp, Instagram y Messenger**: la empresa sale del verify token de la dirección; la firma de Meta se comprueba con el secreto de ESA empresa (cifrado en su configuración). Una empresa suspendida no recibe mensajes.
+2. **Chat de la web**: el pedido lleva el identificador público (slug) de la empresa (`FloatingChatbot` recibe `empresa` o toma `NEXT_PUBLIC_EMPRESA_SLUG`).
+3. **15 rutas del panel** (configuración, envío, plantillas, estado, registro del número, importar, etc.) corren con la empresa de quien las llama; sin sesión o con la empresa suspendida responden 401.
+4. **Credenciales de Meta por empresa**: las pantallas de WhatsApp, Instagram y Messenger piden y guardan cifrados el secreto de la app (Instagram: ID y secreto de la app de Instagram, más el de Meta opcional). El ID de la app de Instagram ya no está escrito en el código; el botón "Conectar con Instagram" usa el de la empresa. Migración `sql_006`.
+5. **Las 7 tareas automáticas** recorren las empresas activas, cada una con su horario y su zona horaria. El mensaje de la mañana sale a las 9 de la zona de cada empresa (la tarea corre cada hora).
+6. **Gasto de IA** y **registro de errores** se anotan con la empresa.
+7. **Límite de pedidos por IP** (`rate_limit_check`) y **motivos de cierre iniciales** por empresa: migración `sql_007`.
+8. **Programación de las tareas**: migración `sql_008` deja la función `programar_tareas(url, clave)`; hay que llamarla una vez (ver el encabezado del archivo).
 
-Hasta terminar los puntos 1 al 6: no conectar ninguna inmobiliaria real.
+Pruebas:
+- `migraciones/tests/aislamiento.test.ts`: 26 pruebas con dos empresas sobre Postgres en memoria (incluye que la lista de tablas de `lib/empresa/db.ts` coincida con la base).
+- `lib/empresa/db.test.ts`: el cliente atado a la empresa (filtros, altas, no se puede pisar la empresa, pedidos simultáneos no se mezclan).
+- `lib/empresa/guardia.test.ts`: falla si alguien usa la clave de servicio fuera de `lib/empresa`, crea su propio cliente, lee `id = true`, agrega una ruta de la API sin empresa o una tarea automática que no recorra las empresas.
+
+Correr en Supabase, en orden: `sql_schema_migraciones`, `sql_001` a `sql_007`, y después `sql_008` si se quieren las tareas programadas (requiere pg_cron y pg_net).
+
+## Lo que sigue pendiente
+
+1. **Catálogo en los chats** (decidido el 2/11: no es del núcleo). El código aún consulta tablas que la base nueva no tiene (`vehiculos`, `pedidos`, `consignaciones`, `test_drives`, `ventas`, `senas`, `presupuestos`, `peritajes_lead`, `leads_tasacion`, `modulos_config`, `visibilidad_sector`, mensajes internos). Esas pantallas (detalle del lead, sugerencias de vehículo) y partes del bot fallan hasta sacarlas. **Es lo que más pesa antes del piloto.**
+2. **Nunca se corrió contra un Supabase real**: la base se probó en memoria. Tampoco se probó `programar_tareas` (pg_cron no existe en la base en memoria).
+3. **Firma de Instagram**: si Meta firma con un secreto distinto al cargado, el webhook rechaza y deja el error en "Errores del sistema". Cargar entonces el otro secreto (hay dos campos).
+4. **Datos iniciales**: falta la memoria del bot por empresa (respuestas fijas); las empresas nuevas arrancan con las genéricas de fuera de horario y apertura.
+5. **Código para pegar el chat en la web de cada inmobiliaria** (Fase 6): hoy el chat toma el identificador de una variable.
+6. **Endurecimiento de credenciales**: el dueño puede leer los tokens cifrados desde el navegador; pasarlos a lectura solo del servidor.
+7. **Panel superadmin** (alta de empresas sin SQL): hoy la primera empresa se crea con el SQL de más arriba.
+
+Regla firme: no conectar ninguna inmobiliaria real hasta resolver el punto 1 y probar contra un Supabase real.

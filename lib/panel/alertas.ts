@@ -6,7 +6,7 @@ import { categoriaDeTipo, nivelDeAlerta, type NivelesAlertas } from "./nivelesAl
 let nivelesCache: { valor: NivelesAlertas; hasta: number } | null = null;
 async function nivelesElegidos(supabase: SupabaseClient): Promise<NivelesAlertas> {
   if (nivelesCache && nivelesCache.hasta > Date.now()) return nivelesCache.valor;
-  const { data } = await supabase.from("configuracion_empresa").select("alertas_niveles").eq("id", true).maybeSingle();
+  const { data } = await supabase.from("configuracion_empresa").select("alertas_niveles").maybeSingle();
   const valor = (data?.alertas_niveles as NivelesAlertas) || {};
   nivelesCache = { valor, hasta: Date.now() + 60_000 };
   return valor;

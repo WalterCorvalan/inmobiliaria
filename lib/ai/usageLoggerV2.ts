@@ -1,11 +1,8 @@
-import { createClient } from "@supabase/supabase-js";
+import { clienteServicio, empresaActualOpcional } from "@/lib/empresa/db";
 
 // Igual que lib/ai/usageLogger.ts pero escribiendo en la base nueva (nova) —
 // panel-v2 tiene su propio uso_ia_anthropic, separado del de v1.
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE2_URL!,
-  process.env.SUPABASE2_SERVICE_ROLE_KEY!
-);
+const supabaseAdmin = { from: (tabla: string) => clienteServicio().from(tabla) };
 
 // Uso que informa una respuesta de la API (usage). Las búsquedas en internet y la caché se cobran aparte de los tokens
 // (lib/ai/costoIa.ts), así que se guardan también (14/10/2026).
@@ -30,7 +27,8 @@ export function usoDeRespuesta(usage: UsageApi): UsoIa {
 // modelo: el que respondió, para cobrar cada fila con su tarifa. Si faltan columnas (migraciones/sql_uso_ia_modelo.sql
 // o sql_uso_ia_busquedas.sql sin correr), se vuelve a guardar con las que seguro existen.
 export function registrarUsoAnthropicV2(origen: string, uso: UsoIa, modelo?: string) {
-  const basico = { origen, input_tokens: uso.inputTokens, output_tokens: uso.outputTokens };
+  // El gasto de IA se anota por empresa (para verlo en el panel superadmin y poder cobrarlo o ponerle tope).
+  const basico = { origen, input_tokens: uso.inputTokens, output_tokens: uso.outputTokens, empresa_id: empresaActualOpcional() };
   const completo = {
     ...basico, ...(modelo ? { modelo } : {}),
     busquedas_web: uso.busquedasWeb || 0, cache_escritura_tokens: uso.cacheEscrituraTokens || 0, cache_lectura_tokens: uso.cacheLecturaTokens || 0,
