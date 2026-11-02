@@ -71,7 +71,7 @@ function formatearResultadosStock(resultados: ResultadoStockV2[], esAlternativa:
   const hayMasQueLasMostradas = totalReal != null && totalReal > resultados.length;
   const avisoTotal = totalReal != null
     ? hayMasQueLasMostradas
-      ? `\nTotal real de coincidencias en stock: ${totalReal} (acá abajo se te muestran solo ${resultados.length}). Si el cliente pregunta "son todas?" o "cuántas tienen", la respuesta correcta es ${totalReal}, no ${resultados.length} — y ofrecele ver el resto en el catálogo: https://www.pfaffencars.com/catalogo. NUNCA digas "en total tengo ${resultados.length}" — sería falso.`
+      ? `\nTotal real de coincidencias en stock: ${totalReal} (acá abajo se te muestran solo ${resultados.length}). Si el cliente pregunta "son todas?" o "cuántas tienen", la respuesta correcta es ${totalReal}, no ${resultados.length} — y ofrecele ver el resto con un asesor. NUNCA digas "en total tengo ${resultados.length}" — sería falso.`
       : `\nTotal real de coincidencias en stock: ${totalReal} (son todas, ya te las mostraron todas acá abajo).`
     : "";
   const lista = resultados
@@ -140,7 +140,7 @@ export function formatearFinanciacion(info: FinanciacionInfo, esRedSocial = fals
 - Tope sobre usados: ${formatearRangoTopes(info.topes)} del valor del auto.
 - Tope sobre 0km: ${info.tope0km}%.
 - Además contamos con todas las financiaciones del mercado (${CREDITOS_BANCARIOS}), con las que se llega al ${TOPE_CREDITO_BANCARIO_PCT}% del vehículo.
-${esWeb ? `- CÓMO CONTESTAR UNA PREGUNTA DE FINANCIACIÓN O CRÉDITO (decisión de Walter del 31/10/2026), en DOS pasos:
+${esWeb ? `- CÓMO CONTESTAR UNA PREGUNTA DE FINANCIACIÓN O CRÉDITO, en DOS pasos:
   1) Si todavía no sabés qué auto quiere financiar, contestá exactamente esto (podés sumar el saludo si es el primer mensaje): "${respuestaFinanciacionWeb(info)}". Nada más: sin link a la web, sin pedir datos todavía.
   2) Cuando ya sabés el auto (lo dijo ahora o antes, o es el que está mirando; alcanza con el modelo, ej. "un Corolla"): cerrá el mensaje con estas palabras exactas: "${PEDIDO_DATOS_WEB}". Si ya te dio alguno de esos datos, pedí solo los que faltan. Completá "nombre", "telefono" y "cuil" en "datos_detectados" apenas los diga.
   Con el nombre, el teléfono y el CUIL en mano, marcá "handoff" true con "resumen_handoff" = "Quiere financiar <auto>. Ya pasó nombre, teléfono y CUIL: armarle los números y contactarlo". Nunca handoff true en el mismo mensaje en que pedís los datos.
@@ -182,11 +182,7 @@ function formatearSucursales(sucursales: SucursalInfo[]): string {
 // "quién me atiende" o "quién es el dueño" — nunca para prometer que ESA
 // persona puntual va a responder (la asignación real de vendedor es
 // automática y separada de esto).
-const EQUIPO_PFAFFEN = `\nEQUIPO PFAFFEN CARS (dato real, usalo si preguntan quién los atiende o info del equipo — no prometas que te va a atender una persona específica, la asignación de vendedor es automática):
-- Vendedores: Julián y Federico.
-- Encargado Casa Central: Gabriel Pfaffen.
-- Encargado Don Torcuato: Lucas Gatti.
-- Dueño: Sergio Pfaffen.`;
+
 
 // Texto exacto del menú de bienvenida — el LLM a veces lo parafrasea (por
 // ejemplo devuelve "4) Hablar con un asesor" en vez de "4) Seguros", un
@@ -197,7 +193,7 @@ const EQUIPO_PFAFFEN = `\nEQUIPO PFAFFEN CARS (dato real, usalo si preguntan qui
 // "Seguros" como 4ta opción (la permuta se sigue entendiendo igual si el
 // cliente la pide por texto directo, solo deja de estar en el menú).
 export function menuBienvenidaV2(): string {
-  return `✨ BIENVENIDO A PFAFFEN CARS
+  return `✨ BIENVENIDO
 
 LA FORMA MÁS CONFIABLE DE COMPRAR O VENDER TU AUTO.
 
@@ -220,7 +216,7 @@ Protegé tu vehículo.`;
 }
 
 export function buildSystemPromptV2(vehiculoInfo?: string, resultadosStock?: ResultadoStockV2[], nombreBot?: string, resultadosSonAlternativa?: boolean, sucursales?: SucursalInfo[], sugerirCierre?: boolean, categoriaSolicitada?: string | null, totalRealStock?: number, tono?: string | null, esInstagram?: boolean, financiacion?: FinanciacionInfo): string {
-  return `${nombreBot ? `Te llamás ${nombreBot}, el` : "Sos el"} asistente virtual oficial de Pfaffen Cars, concesionaria de vehículos 0km y usados.
+  return `${nombreBot ? `Te llamás ${nombreBot}, el` : "Sos el"} asistente virtual oficial de la empresa.
 
 ${bloqueEstiloYTono(tono)}
 MENSAJE DE BIENVENIDA
@@ -235,7 +231,6 @@ ${vehiculoInfo ? `El cliente está consultando sobre: ${vehiculoInfo}` : ""}
 ${resultadosStock ? formatearResultadosStock(resultadosStock, !!resultadosSonAlternativa, categoriaSolicitada, totalRealStock) : ""}
 ${sucursales ? formatearSucursales(sucursales) : ""}
 ${financiacion ? formatearFinanciacion(financiacion, esInstagram, !!nombreBot) : ""}
-${EQUIPO_PFAFFEN}
 ${bloqueSitioWeb(nombreBot)}
 ${bloqueCierreSugerido(sugerirCierre)}
 

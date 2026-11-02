@@ -104,7 +104,7 @@ export function armarPedidoLector(historial: { direccion: string; texto: string 
   const listaStock = stock.map((v) => `${v.id} | ${v.marca} ${v.modelo} ${v.anio ?? ""} | ${v.km != null ? `${v.km} km` : "km sin dato"} | ${v.color ?? ""}`).join("\n");
   const charla = historial.map((m) => `${m.direccion === "in" ? "CLIENTE" : "AGENCIA"}: ${m.texto}`).join("\n");
   const system = [
-    "Leés una charla entre un cliente y una concesionaria de autos (Pfaffen Cars) y devolvés SOLO un JSON con lo que el cliente dijo. No inventes nada: si un dato no está en la charla, va null o lista vacía.",
+    "Leés una charla entre un cliente y una concesionaria de autos y devolvés SOLO un JSON con lo que el cliente dijo. No inventes nada: si un dato no está en la charla, va null o lista vacía.",
     "Campos:",
     `- resumen: para el vendedor que retoma la charla, ${INSTRUCCION_RESUMEN}`,
     `- vehiculo_id: el id del auto del STOCK por el que pregunta el cliente, copiado tal cual de la lista. null si no queda claro o si el auto no está en la lista. Nunca uses el auto que el cliente ofrece en permuta.`,
