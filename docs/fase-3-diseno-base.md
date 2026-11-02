@@ -35,7 +35,12 @@ Hoy todos buscan "todos los perfiles" y "la configuración", sin empresa. Si se 
 
 Se llevan y se rehacen con empresa: `asignacion_auto_en_tabla`, `asignar_lead_ronda_general` (trigger de inserción en las 4 tablas de conversaciones), `proximo_vendedor_ronda` (bloqueo y turnos por empresa; la zona horaria sale de la empresa), `asignar_vendedor_ronda_{whatsapp,instagram,rodi}` y sus `_por_sucursal` (los nombres se mantienen porque el código los llama), `asignar_vendedor_por_vehiculo_{whatsapp,instagram,rodi}` (pasarán a propiedad), `avanzar_estado_lead_*`, `{whatsapp,instagram,messenger,rodi}_notificar_handoff` y `_notificar_mensaje_entrante`, `leads_ultima_direccion`, `visitas_horarios_ocupados`, `repartir_leads_sin_asignar`, `marcar_lead_convertido`, `marcar_lead_rodi_convertido`, `sync_pipeline_desde_{whatsapp,instagram}`, `clientes_notificar_convertido`, `limpiar_conversaciones_rodi_sin_datos`.
 
-Faltan sus definiciones (se piden a Walter): `soy_admin`, `proteger_columnas_perfiles`, `rate_limit_check`, `log_primer_contacto_cliente` y la tabla `lead_ronda_turnos`.
+Definiciones recibidas (2/11/2026):
+- `soy_admin()` es "tiene rol admin o director". En la app nueva pasa a `soy_dueno()` y además exige que sea de la misma empresa.
+- `proteger_columnas_perfiles` es un trigger que impide que un usuario no administrador cambie sus roles, su estado o su comisión (hoy la política deja a cada uno editar su propio perfil). **En la app nueva tiene que impedir también cambiar `empresa_id`**: sin eso, un usuario podría pasarse a otra empresa editando su propio perfil. Solo el superadmin puede mover a alguien de empresa.
+- `lead_ronda_turnos` tiene solo `vendedor_id` y `ultima_asignacion`. Gana `empresa_id`.
+- `log_primer_contacto_cliente` escribe en `cliente_actividades` (módulo de clientes, fuera de la v1): no se copia.
+- `rate_limit_check` no está en esa base (el código cae a un contador en memoria). La app nueva trae su propia tabla y función de límite de pedidos por IP, con prefijo por empresa donde se pueda.
 
 Se dejan afuera (son de otros módulos): comisiones, ventas, premios, tiers, peritajes, liquidaciones, caja, reclamos, chat interno, reportes, pedidos, consignaciones y `promover_lead_a_cliente`.
 Código muerto de Pfaffen que no se copia: `asignar_vendedor_conversacion_nueva*` (ningún trigger las usa).
