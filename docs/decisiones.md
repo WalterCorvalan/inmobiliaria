@@ -16,5 +16,6 @@ Lo que decidió Walter. Si una decisión cambia, se actualiza la fila con la fec
 | Nombre de la app | Provisorio: "Inmobiliaria CRM". Se cambia antes de venderla (cambian solo textos y dominio). Dominio: pendiente. | 2/11/2026 |
 | Orígenes de cliente | Lista cerrada: Zonaprop, Argenprop, MercadoLibre, Instagram, Facebook, Messenger, WhatsApp, Web, Oficina, Llamada, Otro. No se agrega ni se saca ninguno sin que lo pida Walter. Un test la congela. | 2/11/2026 |
 | Cobro | Todavía sin definir. La base se arma sin límites por plan; si después se cobra por asesor o por mensajes, se suma un contador. | 2/11/2026 |
-| Canales de la primera versión | WhatsApp y el chat de la web. Instagram y Messenger después del piloto. | 2/11/2026 |
+| Alcance de la primera versión | Leads y todos los canales de chat (WhatsApp, Instagram, Messenger y el chat de la web). Reemplaza la decisión anterior "solo WhatsApp y chat de la web". Las demás funciones del CRM (señas, ventas, expedientes, etc.) quedan para después. | 2/11/2026 |
+| Método: copiar y generalizar | No se reescribe todo: se corta y pega desde `pfaffenauto-web` y después se reemplaza y generaliza para cualquier inmobiliaria. Lo que se copia es solo código, nunca datos ni claves. Mapa en `docs/extraccion-leads-y-chats.md`. | 2/11/2026 |
 | App de Meta | Una app por empresa, creada en su propia cuenta (sin aprobación especial de Meta). Los secretos de cada app se guardan cifrados por empresa, no en Vercel. | 2/11/2026 |
