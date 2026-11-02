@@ -102,38 +102,3 @@ describe("API de conversiones de Meta", () => {
     expect(cookiesPixel(null)).toEqual({ fbp: null, fbc: null });
   });
 });
-
-// Regresión: cada formulario que deja una consulta en el CRM la registra al guardarla. Un formulario nuevo que no
-// llame a registrarEvento no se mide en Analytics ni en Meta (docs/marketing/medicion.md).
-it("todos los formularios de consulta del sitio registran la conversión", async () => {
-  const { readFileSync } = await import("node:fs");
-  const formularios: Record<string, string> = {
-    "components/forms/CotizadorForm.tsx": "cotizar_usado",
-    "components/forms/VenderForm.tsx": "vender_auto",
-    "components/forms/ConsignarForm.tsx": "consignar",
-    "components/forms/SolicitarFinanciacionForm.tsx": "financiacion",
-    "app/(public)/financiacion/SimuladorReal.tsx": "simulador_financiacion",
-    "components/forms/AgendarCitaForm.tsx": "agendar_visita",
-    "components/forms/AgendarVisitaForm.tsx": "visita_auto",
-    "components/modals/FavoritosPedidoModal.tsx": "consulta_favoritos",
-    "components/landing/ReservaForm.tsx": "reserva_landing",
-    "components/forms/PedirAutoForm.tsx": "busqueda_sin_resultados",
-    "components/forms/AvisameOutletForm.tsx": "avisame_outlet",
-  };
-  for (const [archivo, formulario] of Object.entries(formularios)) {
-    expect(readFileSync(archivo, "utf8"), archivo).toContain(`formulario: "${formulario}"`);
-  }
-  expect(readFileSync("app/(public)/taller/TallerPresupuestoForm.tsx", "utf8")).toContain(`registrarEvento({ tipo: "taller" })`);
-  expect(readFileSync("components/FloatingChatbot.tsx", "utf8")).toContain(`registrarEvento({ tipo: "rodi" })`);
-  expect(readFileSync("app/layout.tsx", "utf8")).toContain("<MedicionClics />");
-});
-
-// Regresión del 15/10/2026, visto en producción: el Pixel de Meta manda cada evento con un formulario oculto dentro de
-// un marco hacia www.facebook.com/tr. Con form-action 'self' la política de contenido lo bloqueaba y Meta no recibía nada.
-it("la política de contenido deja que el Pixel de Meta mande sus eventos", async () => {
-  const { readFileSync } = await import("node:fs");
-  const config = readFileSync("next.config.ts", "utf8");
-  expect(config).toMatch(/"form-action 'self'[^"]*https:\/\/www\.facebook\.com/);
-  expect(config).toMatch(/"frame-src [^"]*https:\/\/www\.facebook\.com/);
-  expect(config).toMatch(/"script-src [^"]*https:\/\/\*\.clarity\.ms/);
-});

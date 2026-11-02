@@ -7,11 +7,7 @@ import { useTecladoAbierto } from "@/components/panel/useTecladoAbierto";
 import NotificationBell from "@/components/panel/NotificationBell";
 import AvisoNotificacionesPush from "@/components/panel/AvisoNotificacionesPush";
 import ToastHost from "@/components/panel/ToastHost";
-import QuickActionsButton from "@/components/panel/QuickActionsButton";
-import TopTicker from "@/components/panel/TopTicker";
-import { ROL_A_SECTOR, MODULOS_ROL_TALLER, esSoloTaller } from "@/lib/panel/permisosModulos";
-import { veMiDia } from "@/lib/panel/miDia";
-import NuevoIngresoAviso from "@/components/panel/NuevoIngresoAviso";
+import { ROL_A_SECTOR } from "@/lib/panel/permisosModulos";
 import { supabase2 } from "@/lib/supabase/client";
 import {
   LogOut,
@@ -30,363 +26,34 @@ import { m } from "framer-motion";
 import { CURVA } from "@/components/ui/movimiento";
 import { CLASE_MODO_CLARO, clasesModoOscuro, temaOscuroValido, EVENTO_TEMA_OSCURO, type TemaOscuro } from "@/lib/panel/temasOscuros";
 
-// Grupos calcados del índice del manual del CRM viejo — todo lo que todavía
-// no construimos queda listado pero deshabilitado, para que el mapa completo
-// se vea desde ahora y cada módulo se "prenda" cuando lo hagamos.
-// Grupos reorganizados según el nuevo índice del panel Principal.
-// Marketing ya está habilitado apuntando a /panel/marketing.
-// Grupos calcados del esquema principal solicitado
-// Accesos rápidos de la bottom nav en mobile — el resto de los módulos
-// sigue disponible detrás del hamburger (sidebar completa).
+// Menú de la v1: Leads y los canales de chat, más la configuración de cada canal.
+// Todo item necesita "modulo" para que la visibilidad por sector (visibilidad_sector) pueda apagarlo.
+// Accesos rápidos de la barra de abajo en el celular; el resto queda detrás del menú.
 const NAV_MOBILE: { href: string; label: string; icon: string }[] = [
-  { href: "/panel/stock", label: "Stock", icon: "/icons/panel/stock.png" },
   { href: "/panel/leads", label: "Leads", icon: "/icons/panel/leads.png" },
-  // Cotizaciones en vez de Clientes (Walter, 19/10/2026).
-  { href: "/panel/cotizaciones", label: "Cotizaciones", icon: "/icons/panel/cotizaciones.png" },
-  { href: "/panel/ventas", label: "Ventas", icon: "/icons/panel/ventas.png" },
   { href: "/panel/whatsapp", label: "WhatsApp", icon: "/icons/panel/whatsapp.png" },
+  { href: "/panel/instagram", label: "Instagram", icon: "/icons/panel/instagram.png" },
+  { href: "/panel/messenger", label: "Messenger", icon: "/icons/panel/messenger.png" },
 ];
 
-// Todo item necesita "modulo" para que la visibilidad por sector
-// (visibilidad_sector) pueda apagarlo -- sin modulo, moduloVisible() lo
-// deja pasar para cualquier rol (ver itemVisible más abajo). Dashboard SÍ
-// puede apagarse por rol (solo admin/finanzas) -- el login manda siempre
-// a "/panel", así que hay un useEffect más abajo que reenvía a quien
-// no lo tenga habilitado al primer módulo que sí vea.
 const GRUPOS: {
   titulo: string;
   items: { href?: string; label: string; icon: string; modulo?: string }[];
 }[] = [
   {
-    titulo: "Inicio",
-    items: [
-      {
-        href: "/panel",
-        label: "Dashboard",
-        icon: "/icons/panel/dashboard.png",
-        modulo: "dashboard",
-      },
-      {
-        href: "/panel/reportes",
-        label: "Reportes",
-        icon: "/icons/panel/reportes.png",
-        modulo: "reportes",
-      },
-      {
-        href: "/panel/calendario",
-        label: "Calendario",
-        icon: "/icons/panel/calendario.png",
-        modulo: "calendario",
-      },
-      // Mi día: el módulo del vendedor (Walter, 27/10/2026). Solo lo ve quien usa Mi día (veMiDia, lib/panel/miDia.ts);
-      // el resto tiene Mi Espacio.
-      {
-        href: "/panel/mi-dia",
-        label: "Mi día",
-        icon: "/icons/panel/mi-dia.png",
-        modulo: "mi_dia",
-      },
-      {
-        href: "/panel/mi-espacio",
-        label: "Mi Espacio",
-        icon: "/icons/panel/mi-espacio.png",
-        modulo: "mi_espacio",
-      },
-      {
-        href: "/panel/mi-perfil",
-        label: "Mi Perfil",
-        icon: "/icons/panel/mi-perfil.png",
-        modulo: "mi_perfil",
-      },
-    ],
-  },
-  {
-    titulo: "Ventas",
+    titulo: "Leads y mensajes",
     items: [
       { href: "/panel/leads", label: "Leads", icon: "/icons/panel/leads.png", modulo: "leads" },
-      {
-        href: "/panel/visitas",
-        label: "Visitas",
-        icon: "/icons/panel/visitas.png",
-        modulo: "visitas",
-      },
-      {
-        href: "/panel/cotizaciones",
-        label: "Cotizaciones",
-        icon: "/icons/panel/cotizaciones.png",
-        modulo: "cotizaciones",
-      },
-      {
-        href: "/panel/financiaciones",
-        label: "Financiación y seguros",
-        icon: "/icons/panel/financiaciones.png",
-        modulo: "financiaciones",
-      },
-      {
-        href: "/panel/senas",
-        label: "Señas",
-        icon: "/icons/panel/senas.png",
-        modulo: "senas",
-      },
-      {
-        href: "/panel/ventas",
-        label: "Ventas",
-        icon: "/icons/panel/ventas.png",
-        modulo: "ventas",
-      },
-      {
-        href: "/panel/mis-ventas",
-        label: "Mis ventas",
-        icon: "/icons/panel/mis-ventas.png",
-        modulo: "mis_ventas",
-      },
-    ],
-  },
-  {
-    titulo: "Autos",
-    items: [
-      { href: "/panel/stock", label: "Stock", icon: "/icons/panel/stock.png", modulo: "stock" },
-      {
-        href: "/panel/consignaciones",
-        label: "Consignaciones",
-        icon: "/icons/panel/consignaciones.png",
-        modulo: "consignaciones",
-      },
-      {
-        href: "/panel/peritajes",
-        label: "Peritajes",
-        icon: "/icons/panel/peritajes.png",
-        modulo: "peritajes",
-      },
-      {
-        href: "/panel/taller",
-        label: "Taller",
-        icon: "/icons/panel/taller.png",
-        modulo: "taller",
-      },
-      { label: "Service", icon: "/icons/panel/service.png", modulo: "service" },
-      {
-        href: "/panel/pedidos",
-        label: "Pedidos",
-        icon: "/icons/panel/pedidos.png",
-        modulo: "pedidos",
-      },
-    ],
-  },
-  {
-    titulo: "Mensajes",
-    items: [
-      {
-        href: "/panel/whatsapp",
-        label: "WhatsApp",
-        icon: "/icons/panel/whatsapp.png",
-        modulo: "whatsapp",
-      },
-      {
-        href: "/panel/instagram",
-        label: "Instagram",
-        icon: "/icons/panel/instagram.png",
-        modulo: "instagram",
-      },
-      {
-        href: "/panel/messenger",
-        label: "Messenger",
-        icon: "/icons/panel/messenger.png",
-        modulo: "messenger",
-      },
-      {
-        href: "/panel/rodi",
-        label: "Paffy (chat web)",
-        icon: "/icons/panel/rodi.png",
-        modulo: "rodi",
-      },
-      {
-        href: "/panel/mensajes",
-        label: "Mensajes internos",
-        icon: "/icons/panel/mensajes.png",
-        modulo: "mensajes",
-      },
-      { label: "Correos", icon: "/icons/panel/correos.png", modulo: "correos" },
-    ],
-  },
-  {
-    titulo: "Clientes",
-    items: [
-      {
-        href: "/panel/clientes",
-        label: "Clientes",
-        icon: "/icons/panel/clientes.png",
-        modulo: "clientes",
-      },
-      {
-        href: "/panel/dormidos",
-        label: "Dormidos",
-        icon: "/icons/panel/dormidos.png",
-        modulo: "dormidos",
-      },
-      {
-        href: "/panel/recontactos",
-        label: "Recontactos",
-        icon: "/icons/panel/recontactos.png",
-        modulo: "recontactos",
-      },
-      {
-        href: "/panel/postventa",
-        label: "Postventa",
-        icon: "/icons/panel/postventa.png",
-        modulo: "postventa",
-      },
-      {
-        href: "/panel/reclamos",
-        label: "Reclamos",
-        icon: "/icons/panel/reclamos.png",
-        modulo: "reclamos",
-      },
-      { href: "/panel/nps", label: "NPS", icon: "/icons/panel/nps.png", modulo: "nps" },
-    ],
-  },
-  {
-    titulo: "Papeles",
-    items: [
-      {
-        href: "/panel/expedientes",
-        label: "Expedientes",
-        icon: "/icons/panel/expedientes.png",
-        modulo: "expedientes",
-      },
-      {
-        href: "/panel/gestoria",
-        label: "Gestoría",
-        icon: "/icons/panel/gestoria.png",
-        modulo: "gestoria",
-      },
-      {
-        href: "/panel/infracciones",
-        label: "Infracciones",
-        icon: "/icons/panel/infracciones.png",
-        modulo: "infracciones",
-      },
-    ],
-  },
-  {
-    titulo: "Plata",
-    items: [
-      {
-        href: "/panel/finanzas",
-        label: "Finanzas",
-        icon: "/icons/panel/finanzas.png",
-        modulo: "finanzas",
-      },
-      {
-        href: "/panel/cobros",
-        label: "Cobros",
-        icon: "/icons/panel/cobros.png",
-        modulo: "cobros",
-      },
-      {
-        href: "/panel/liquidaciones",
-        label: "Transferencias",
-        icon: "/icons/panel/liquidaciones.png",
-        modulo: "liquidaciones",
-      },
-      {
-        href: "/panel/comisiones",
-        label: "Mis Comisiones",
-        icon: "/icons/panel/comisiones.png",
-        modulo: "comisiones",
-      },
-      {
-        href: "/panel/facturacion",
-        label: "Facturación",
-        icon: "/icons/panel/facturacion.png",
-        modulo: "facturacion",
-      },
-    ],
-  },
-  {
-    titulo: "Marketing y análisis",
-    items: [
-      {
-        href: "/panel/marketing", // entra al Dashboard (app/panel/marketing/page.tsx) y queda marcado en todas las pestañas
-        label: "Marketing",
-        icon: "/icons/panel/marketing.png",
-        modulo: "marketing",
-      },
-      {
-        href: "/panel/contenido-sitio/entregas",
-        label: "Contenido del Sitio",
-        icon: "/icons/panel/contenido-sitio.png",
-        modulo: "contenido_sitio",
-      },
-      { href: "/panel/oportunidades", label: "Oportunidades", icon: "/icons/panel/oportunidades.png", modulo: "oportunidades" },
-      {
-        href: "/panel/alertas",
-        label: "Alertas",
-        icon: "/icons/panel/alertas.png",
-        modulo: "alertas",
-      },
-    ],
-  },
-  {
-    titulo: "Equipo",
-    items: [
-      {
-        href: "/panel/postulaciones",
-        label: "Postulaciones",
-        icon: "/icons/panel/postulaciones.png",
-        modulo: "postulaciones",
-      },
-      {
-        href: "/panel/sueldos/liquidador",
-        label: "Liquidador de Sueldos",
-        icon: "/icons/panel/liquidador-sueldos.png",
-        modulo: "liquidador_sueldos",
-      },
-      {
-        href: "/panel/sueldos/equipo",
-        label: "Dashboard de Equipo",
-        icon: "/icons/panel/categorias-empleados.png",
-        modulo: "liquidador_sueldos",
-      },
-      {
-        href: "/panel/sueldos/categorias",
-        label: "Categorías del convenio",
-        icon: "/icons/panel/convenio.png",
-        modulo: "categorias_empleados",
-      },
+      { href: "/panel/whatsapp", label: "WhatsApp", icon: "/icons/panel/whatsapp.png", modulo: "whatsapp" },
+      { href: "/panel/instagram", label: "Instagram", icon: "/icons/panel/instagram.png", modulo: "instagram" },
+      { href: "/panel/messenger", label: "Messenger", icon: "/icons/panel/messenger.png", modulo: "messenger" },
+      { href: "/panel/rodi", label: "Chat de la web", icon: "/icons/panel/rodi.png", modulo: "rodi" },
     ],
   },
   {
     titulo: "Sistema",
     items: [
-      {
-        href: "/panel/configuracion",
-        label: "Configuración",
-        icon: "/icons/panel/configuracion.png",
-        modulo: "configuracion",
-      },
-      // Visible para todos por defecto (sin fila en visibilidad_sector); se puede apagar por sector en Configuración → Empresa → Módulos.
-      { href: "/panel/ayuda", label: "Ayuda", icon: "/icons/panel/ayuda.png", modulo: "ayuda" },
-      {
-        href: "/panel/telefonos",
-        label: "Teléfonos útiles",
-        icon: "/icons/panel/telefonos.png",
-        modulo: "telefonos_utiles",
-      },
-      { label: "Sugerencias", icon: "/icons/panel/sugerencias.png", modulo: "sugerencias" },
-      { href: "/panel/papelera", label: "Papelera", icon: "/icons/panel/papelera.png", modulo: "papelera" },
-      {
-        href: "/panel/errores",
-        label: "Errores del sistema",
-        icon: "/icons/panel/errores.png",
-        modulo: "errores_sistema",
-      },
-      {
-        href: "/panel/logs",
-        label: "Registro de Cambios",
-        icon: "/icons/panel/registro-cambios.png",
-        modulo: "logs",
-      },
+      { href: "/panel/configuracion/whatsapp", label: "Configuración", icon: "/icons/panel/configuracion.png", modulo: "configuracion" },
     ],
   },
 ];
@@ -395,17 +62,11 @@ const ROL_LABEL: Record<string, string> = {
   admin: "Administrador",
   encargado: "Encargado",
   ventas: "Ventas",
-  finanzas: "Finanzas",
-  gestoria: "Gestoría",
 };
 const ROL_COLOR: Record<string, string> = {
   admin: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
   encargado: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
   ventas: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
-  finanzas:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
-  gestoria:
-    "bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300",
 };
 
 // Datos que el servidor ya trajo en paralelo antes de mandar la página (ver layout.tsx). Con esto el menú sale armado
@@ -577,7 +238,6 @@ export default function PanelLayoutClient({
     if (esAdmin || !modulo) return true;
     if (modulosActivos[modulo] === false) return false;
     // Rol taller solo: Stock y Taller (lib/panel/permisosModulos.ts, misma regla que puedeVerModulo en el servidor).
-    if (esSoloTaller(roles)) return MODULOS_ROL_TALLER.includes(modulo) || visibilidadPorModulo[modulo]?.[ROL_A_SECTOR.taller] === true;
 
     // Clientes siempre visible para todos los roles salvo taller, sin
     // depender de que "Visibilidad por sector" esté bien configurado --
@@ -643,26 +303,14 @@ export default function PanelLayoutClient({
   const itemVisible = (item: { href?: string; modulo?: string }) => {
     if (item.href === "/panel/comisiones" && !comisionesActivas)
       return false;
-    if (item.modulo === "mi_dia") return veMiDia(roles);
     return moduloVisible(item.modulo);
   };
 
-  // El login manda siempre a "/panel" (Dashboard) sin importar el rol --
-  // ahora que Dashboard puede estar apagado para un rol (solo admin/finanzas
-  // lo ven), a alguien sin acceso lo mandaríamos directo a la pantalla de
-  // "Módulo no habilitado" apenas entra. En vez de eso, lo reenviamos solo
-  // ahí al primer módulo que sí tenga habilitado.
+  // El login manda siempre a "/panel": no hay Dashboard en la v1, se va directo a Leads.
   useEffect(() => {
     if (!miId || pathname !== "/panel") return;
-    if (moduloVisible("dashboard")) return;
-    const primerVisible = GRUPOS.flatMap((g) => g.items).find(
-      (item) => item.href && item.href !== "/panel" && itemVisible(item),
-    );
-    if (primerVisible?.href) router.replace(primerVisible.href);
-    // Módulos y visibilidad también cuentan: llegan después de los roles (o con el refresh del login) y si no se re-evalúa
-    // quien no ve el Dashboard se quedaría en una pantalla en blanco.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [miId, pathname, roles.join(","), modulosActivos, visibilidadPorModulo]);
+    router.replace("/panel/leads");
+  }, [miId, pathname, router]);
 
   // Toast de alertas urgentes en vivo (se cierra solo a los 10s, o con
   // click) — el contador de la campana lo maneja NotificationBell aparte.
@@ -934,8 +582,6 @@ export default function PanelLayoutClient({
               />
             </div>
 
-            <TopTicker puedeVerCaja={esAdmin || roles.includes("finanzas") || roles.includes("director")} />
-
             <button
               onClick={toggleDarkMode}
               className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-300 shrink-0"
@@ -1013,10 +659,8 @@ export default function PanelLayoutClient({
         </div>
       )}
 
-      <QuickActionsButton />
       <MensajesBubble />
       {/* Cartel de auto nuevo en stock: para el equipo comercial (no taller solo). */}
-      {roles.some((r) => ["admin", "encargado", "ventas", "director"].includes(r)) && <NuevoIngresoAviso miId={miId} />}
       <MobileNavProgress />
       <AtrasCierraModales />
       <ToastHost />
