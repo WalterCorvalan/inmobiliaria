@@ -20,8 +20,11 @@ export function textoFueraDeHorarioPorDefecto(inicio: number, fin: number): stri
 
 const HORA = 3600_000;
 
-export function horaArgentina(ahora: Date = new Date()): number {
-  return Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/Argentina/Buenos_Aires", hour: "numeric", hourCycle: "h23" }).format(ahora));
+export const ZONA_POR_DEFECTO = "America/Argentina/Buenos_Aires";
+
+// Hora de la zona de la empresa (por defecto Argentina): nunca la del servidor.
+export function horaArgentina(ahora: Date = new Date(), zona: string = ZONA_POR_DEFECTO): number {
+  return Number(new Intl.DateTimeFormat("en-US", { timeZone: zona, hour: "numeric", hourCycle: "h23" }).format(ahora));
 }
 
 // Horario guardado en whatsapp_configuracion (horario_inicio / horario_fin); si falta o es inválido, 7 a 23.
@@ -32,8 +35,8 @@ export function horarioDeConfig(config: { horario_inicio?: number | null; horari
   return HORARIO_BOTS_POR_DEFECTO;
 }
 
-export function estaEnHorario(horario: { inicio: number; fin: number }, ahora: Date = new Date()): boolean {
-  const h = horaArgentina(ahora);
+export function estaEnHorario(horario: { inicio: number; fin: number }, ahora: Date = new Date(), zona: string = ZONA_POR_DEFECTO): boolean {
+  const h = horaArgentina(ahora, zona);
   return h >= horario.inicio && h < horario.fin;
 }
 

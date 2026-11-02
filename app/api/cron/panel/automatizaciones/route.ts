@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { zonaActual, supabaseEmpresa as supabase, paraCadaEmpresa } from "@/lib/empresa/db";
 import { sendTextMessage } from "@/lib/meta/client";
 import { decrypt } from "@/lib/crypto";
 import { crearAlerta } from "@/lib/panel/alertas";
@@ -13,13 +13,9 @@ import { estaEnHorario, horarioDeConfig } from "@/lib/panel/horarioBots";
 // patrón que el resto de panel-v2), no la tabla aparte automatizaciones_wa
 // de v1.
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE2_URL!,
-  process.env.SUPABASE2_SERVICE_ROLE_KEY!
-);
 
 async function tokenWhatsapp(): Promise<{ phoneNumberId: string; token: string } | null> {
-  const { data: config } = await supabase.from("whatsapp_configuracion").select("*").eq("id", true).maybeSingle();
+  const { data: config } = await supabase.from("whatsapp_configuracion").select("*").maybeSingle();
   if (!config?.listo || !config.token_cifrado || !config.token_iv || !config.token_tag || !config.phone_number_id) return null;
   return { phoneNumberId: config.phone_number_id, token: decrypt(config.token_cifrado, config.token_iv, config.token_tag) };
 }
@@ -144,8 +140,8 @@ async function escalarLeadsCalientesSinAtenderDM(canal: CanalDM): Promise<number
 }
 
 async function nudgeSinRespuestaDM(canal: CanalDM): Promise<number> {
-  const { data: configWa } = await supabase.from("whatsapp_configuracion").select("horario_inicio, horario_fin").eq("id", true).maybeSingle();
-  if (!estaEnHorario(horarioDeConfig(configWa))) return 0;
+  const { data: configWa } = await supabase.from("whatsapp_configuracion").select("horario_inicio, horario_fin").maybeSingle();
+  if (!estaEnHorario(horarioDeConfig(configWa), new Date(), zonaActual())) return 0;
   const ahora = Date.now();
   const hace2h = new Date(ahora - 2 * 3600 * 1000).toISOString();
   const { data: candidatas } = await supabase
@@ -180,13 +176,7 @@ async function reactivarHandoffViejoDM(canal: CanalDM): Promise<number> {
   return data?.length || 0;
 }
 
-export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const token = url.searchParams.get("token");
-  if (!process.env.CRON_SECRET || token !== process.env.CRON_SECRET) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
+async function trabajoDeLaEmpresa(req: Request): Promise<Response> {
   const [leadsCalientes, nudges, handoffReactivados] = await Promise.all([
     escalarLeadsCalientesSinAtender(),
     nudgeSinRespuesta(),
@@ -205,4 +195,13 @@ export async function GET(req: Request) {
   }
 
   return Response.json({ ok: true, leadsCalientes, nudges, handoffReactivados, ...dm });
+}
+
+
+// Las tareas automáticas recorren todas las empresas activas; cada una corre con sus datos, su horario y su zona horaria.
+export async function GET(req: Request) {
+  const token = new URL(req.url).searchParams.get("token");
+  if (!process.env.CRON_SECRET || token !== process.env.CRON_SECRET) return new Response("Unauthorized", { status: 401 });
+  const empresas = await paraCadaEmpresa(async () => (await trabajoDeLaEmpresa(req)).json());
+  return Response.json({ ok: true, empresas });
 }

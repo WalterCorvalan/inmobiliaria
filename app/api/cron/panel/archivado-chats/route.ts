@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { supabaseEmpresa as supabase, paraCadaEmpresa } from "@/lib/empresa/db";
 import { registrarError } from "@/lib/panel/logger";
 
 // Corre 1 vez por día vía pg_cron. Pedido de la reunión del 22/9: archivar
@@ -9,10 +9,6 @@ import { registrarError } from "@/lib/panel/logger";
 
 const DIAS_INACTIVIDAD = 20;
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE2_URL!,
-  process.env.SUPABASE2_SERVICE_ROLE_KEY!
-);
 
 async function archivarInactivas(tabla: "whatsapp_conversaciones" | "instagram_conversaciones") {
   const limite = new Date();
@@ -32,17 +28,20 @@ async function archivarInactivas(tabla: "whatsapp_conversaciones" | "instagram_c
   return data?.length || 0;
 }
 
-export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const token = url.searchParams.get("token");
-  if (!process.env.CRON_SECRET || token !== process.env.CRON_SECRET) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
+async function trabajoDeLaEmpresa(req: Request): Promise<Response> {
   const [whatsapp, instagram] = await Promise.all([
     archivarInactivas("whatsapp_conversaciones"),
     archivarInactivas("instagram_conversaciones"),
   ]);
 
   return Response.json({ ok: true, archivadas: { whatsapp, instagram } });
+}
+
+
+// Las tareas automáticas recorren todas las empresas activas; cada una corre con sus datos, su horario y su zona horaria.
+export async function GET(req: Request) {
+  const token = new URL(req.url).searchParams.get("token");
+  if (!process.env.CRON_SECRET || token !== process.env.CRON_SECRET) return new Response("Unauthorized", { status: 401 });
+  const empresas = await paraCadaEmpresa(async () => (await trabajoDeLaEmpresa(req)).json());
+  return Response.json({ ok: true, empresas });
 }

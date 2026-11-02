@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { supabaseEmpresa as supabase, paraCadaEmpresa } from "@/lib/empresa/db";
 import { crearAlerta } from "@/lib/panel/alertas";
 import { registrarError } from "@/lib/panel/logger";
 import { enviarPush, pushConfigurado } from "@/lib/push";
@@ -14,7 +14,6 @@ import {
 //  2. Los avisos de nivel alto sin leer vuelven a sonar en el celular (sin sumar nada a la campanita). Al encargado
 //     no se le avisa (Walter, 30/10/2026).
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE2_URL!, process.env.SUPABASE2_SERVICE_ROLE_KEY!);
 
 const horaAr = (fecha: Date) => fecha.toLocaleTimeString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
@@ -118,12 +117,18 @@ async function repetirAvisos(ahora: Date): Promise<number> {
   return repetidos;
 }
 
-export async function GET(req: Request) {
-  const token = new URL(req.url).searchParams.get("token");
-  if (!process.env.CRON_SECRET || token !== process.env.CRON_SECRET) return new Response("Unauthorized", { status: 401 });
-
+async function trabajoDeLaEmpresa(req: Request): Promise<Response> {
   const ahora = new Date();
   const creados = await avisarSinContestar(ahora);
   const repetidos = await repetirAvisos(ahora);
   return Response.json({ ok: true, creados, repetidos });
+}
+
+
+// Las tareas automáticas recorren todas las empresas activas; cada una corre con sus datos, su horario y su zona horaria.
+export async function GET(req: Request) {
+  const token = new URL(req.url).searchParams.get("token");
+  if (!process.env.CRON_SECRET || token !== process.env.CRON_SECRET) return new Response("Unauthorized", { status: 401 });
+  const empresas = await paraCadaEmpresa(async () => (await trabajoDeLaEmpresa(req)).json());
+  return Response.json({ ok: true, empresas });
 }

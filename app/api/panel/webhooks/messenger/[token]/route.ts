@@ -14,7 +14,7 @@ import { horarioDeConfig, estaEnHorario, debeAvisarFueraDeHorario, textoFueraDeH
 import { enviarTextoBot } from "@/lib/panel/enviarMensajeBot";
 import { subirArchivoR2, r2Configurado } from "@/lib/storage/r2";
 import { RESPUESTA_FALLBACK } from "@/lib/panel/textosBot";
-import { supabaseEmpresa as supabase, dentroDeEmpresa, empresaPorTokenDeWebhook } from "@/lib/empresa/db";
+import { zonaActual, supabaseEmpresa as supabase, dentroDeEmpresa, empresaPorTokenDeWebhook } from "@/lib/empresa/db";
 import { verificarFirmaDeMeta } from "@/lib/empresa/credenciales";
 
 // Webhook de Meta para el Facebook Messenger de la página -- mismo patrón
@@ -40,8 +40,9 @@ export const maxDuration = 60;
 
 export async function GET(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const empresaId = await empresaPorTokenDeWebhook("messenger", token);
-  if (!empresaId) return new Response("Not found", { status: 404 });
+  const empresa = await empresaPorTokenDeWebhook("messenger", token);
+  if (!empresa) return new Response("Not found", { status: 404 });
+  const empresaId = empresa.id;
 
   const url = new URL(req.url);
   const mode = url.searchParams.get("hub.mode");
@@ -59,8 +60,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   if (!limite.ok) return new Response("Too many requests", { status: 429 });
 
   const { token } = await params;
-  const empresaId = await empresaPorTokenDeWebhook("messenger", token);
-  if (!empresaId) return new Response("Not found", { status: 404 });
+  const empresa = await empresaPorTokenDeWebhook("messenger", token);
+  if (!empresa) return new Response("Not found", { status: 404 });
+  const empresaId = empresa.id;
 
   const rawBody = await req.text();
 
@@ -76,7 +78,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     return Response.json({ received: true });
   }
   try {
-    await dentroDeEmpresa(empresaId, () => procesarEvento(payload));
+    await dentroDeEmpresa(empresaId, () => procesarEvento(payload), empresa.zona);
   } catch (err) {
     registrarError("webhook-messenger:procesar-evento", err);
   }
@@ -286,7 +288,7 @@ async function avisarFueraDeHorario(conversacionId: string) {
 }
 
 async function ejecutarAgente(conversacionId: string, psid: string, mensajeId: string) {
-  if (!estaEnHorario(await horarioBots())) { await avisarFueraDeHorario(conversacionId); return; }
+  if (!estaEnHorario(await horarioBots(), new Date(), zonaActual())) { await avisarFueraDeHorario(conversacionId); return; }
 
   const { data: conversacionActual } = await supabase.from("messenger_conversaciones").select("ai_habilitada, contacto_id, vehiculo_id, vendedor_id").eq("id", conversacionId).single();
   if (conversacionActual?.ai_habilitada === false) return;

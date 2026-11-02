@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { supabaseEmpresa as supabase, paraCadaEmpresa } from "@/lib/empresa/db";
 import { crearAlerta } from "@/lib/panel/alertas";
 import { registrarError } from "@/lib/panel/logger";
 import { HORAS_AVISO, estadoVentana, horasVentana, textoRestante } from "@/lib/panel/ventana24h";
@@ -8,7 +8,6 @@ import { HORAS_AVISO, estadoVentana, horasVentana, textoRestante } from "@/lib/p
 // vendedor con un cliente que le escribió y espera respuesta, cuando faltan 3 hs o menos para que se cierre la ventana,
 // le llega un aviso a la campanita (y al celular) que dice hasta qué hora le puede contestar. Uno solo por charla.
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE2_URL!, process.env.SUPABASE2_SERVICE_ROLE_KEY!);
 
 const CANALES = [
   { canal: "whatsapp", nombre: "WhatsApp", tabla: "whatsapp_conversaciones", mensajes: "whatsapp_mensajes", link: "/panel/whatsapp" },
@@ -18,10 +17,7 @@ const CANALES = [
 
 const TIPO = "ventana_24h";
 
-export async function GET(req: Request) {
-  const token = new URL(req.url).searchParams.get("token");
-  if (!process.env.CRON_SECRET || token !== process.env.CRON_SECRET) return new Response("Unauthorized", { status: 401 });
-
+async function trabajoDeLaEmpresa(req: Request): Promise<Response> {
   const ahora = new Date();
   let enviados = 0;
 
@@ -68,4 +64,13 @@ export async function GET(req: Request) {
   }
 
   return Response.json({ ok: true, enviados });
+}
+
+
+// Las tareas automáticas recorren todas las empresas activas; cada una corre con sus datos, su horario y su zona horaria.
+export async function GET(req: Request) {
+  const token = new URL(req.url).searchParams.get("token");
+  if (!process.env.CRON_SECRET || token !== process.env.CRON_SECRET) return new Response("Unauthorized", { status: 401 });
+  const empresas = await paraCadaEmpresa(async () => (await trabajoDeLaEmpresa(req)).json());
+  return Response.json({ ok: true, empresas });
 }

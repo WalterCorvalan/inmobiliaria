@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { supabaseEmpresa as supabase, paraCadaEmpresa } from "@/lib/empresa/db";
 import { decrypt } from "@/lib/crypto";
 import { crearAlerta } from "@/lib/panel/alertas";
 import { registrarError } from "@/lib/panel/logger";
@@ -12,7 +12,6 @@ import {
 // Un problema no se vuelve a avisar hasta pasadas HORAS_ENTRE_AVISOS, para no llenar la campanita.
 const HORAS_ENTRE_AVISOS = 12;
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE2_URL!, process.env.SUPABASE2_SERVICE_ROLE_KEY!);
 const GRAPH = `${process.env.META_GRAPH_BASE_URL ?? "https://graph.facebook.com"}/${process.env.META_GRAPH_API_VERSION ?? "v25.0"}`;
 const GRAPH_INSTAGRAM = `https://graph.instagram.com/${process.env.META_GRAPH_API_VERSION ?? "v25.0"}`;
 
@@ -38,7 +37,7 @@ function descifrar(c: FilaConfig | null): string | null {
 }
 
 async function hechosWhatsapp(): Promise<Hallazgo[]> {
-  const { data: c } = await supabase.from("whatsapp_configuracion").select("*").eq("id", true).maybeSingle();
+  const { data: c } = await supabase.from("whatsapp_configuracion").select("*").maybeSingle();
   const token = descifrar(c);
   if (!token || !c?.phone_number_id) return [];
 
@@ -67,14 +66,14 @@ async function hechosWhatsapp(): Promise<Hallazgo[]> {
 }
 
 async function hechosMessenger(): Promise<Hallazgo[]> {
-  const { data: c } = await supabase.from("messenger_configuracion").select("*").eq("id", true).maybeSingle();
+  const { data: c } = await supabase.from("messenger_configuracion").select("*").maybeSingle();
   const token = descifrar(c);
   if (!token || !c?.page_id) return [];
   return evaluarTokenCanal("Messenger", estadoTokenDeRespuesta(await consultar(`${GRAPH}/${c.page_id}?fields=id`, token)));
 }
 
 async function hechosInstagram(): Promise<Hallazgo[]> {
-  const { data: c } = await supabase.from("instagram_configuracion").select("*").eq("id", true).maybeSingle();
+  const { data: c } = await supabase.from("instagram_configuracion").select("*").maybeSingle();
   const token = descifrar(c);
   if (!token || !c?.ig_user_id) return [];
   // Hay tokens que solo valen en graph.instagram.com y otros solo en graph.facebook.com: es "vencido" solo si fallan los dos.
@@ -97,10 +96,7 @@ async function hechosWebhooks(): Promise<Hallazgo[]> {
   return evaluarWebhooks(porCanal);
 }
 
-export async function GET(req: Request) {
-  const token = new URL(req.url).searchParams.get("token");
-  if (!process.env.CRON_SECRET || token !== process.env.CRON_SECRET) return new Response("Unauthorized", { status: 401 });
-
+async function trabajoDeLaEmpresa(req: Request): Promise<Response> {
   try {
     // Cada revisión es independiente: si una falla no se pierden las demás.
     const resultados = await Promise.allSettled([hechosWhatsapp(), hechosMessenger(), hechosInstagram(), hechosWebhooks()]);
@@ -127,4 +123,13 @@ export async function GET(req: Request) {
     registrarError("cron/salud-integraciones", err);
     return Response.json({ error: "No se pudo revisar la salud de las integraciones." }, { status: 500 });
   }
+}
+
+
+// Las tareas automáticas recorren todas las empresas activas; cada una corre con sus datos, su horario y su zona horaria.
+export async function GET(req: Request) {
+  const token = new URL(req.url).searchParams.get("token");
+  if (!process.env.CRON_SECRET || token !== process.env.CRON_SECRET) return new Response("Unauthorized", { status: 401 });
+  const empresas = await paraCadaEmpresa(async () => (await trabajoDeLaEmpresa(req)).json());
+  return Response.json({ ok: true, empresas });
 }

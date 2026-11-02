@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { zonaActual, supabaseEmpresa as supabase, paraCadaEmpresa } from "@/lib/empresa/db";
 import { chatJsonV2, isAiConfiguredV2 } from "@/lib/ai/indexV2";
 import { registrarError } from "@/lib/panel/logger";
 import { asignacionPorAuto } from "@/lib/panel/asignacionPorAuto";
@@ -19,7 +19,6 @@ import {
 
 export const maxDuration = 120;
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE2_URL!, process.env.SUPABASE2_SERVICE_ROLE_KEY!);
 
 /** Charlas leídas por vuelta, en total: alcanza para el día a día y pone un techo al gasto de IA. */
 const POR_VUELTA = 8;
@@ -145,8 +144,8 @@ async function leer(c: Canal, conv: Conversacion, ultimo: string, stock: AutoSto
 // Si el cliente dejó de contestar, se le pasa a un vendedor (la sucursal que eligió, o la ronda) con un aviso. Sin IA.
 // last_message_at es el último mensaje del cliente. Fuera del horario de los bots no se asigna: espera a la mañana.
 async function asignarCharlasQuietas(ahora: Date): Promise<number> {
-  const { data: config } = await supabase.from("whatsapp_configuracion").select("horario_inicio, horario_fin").eq("id", true).maybeSingle();
-  if (!estaEnHorario(horarioDeConfig(config), ahora)) return 0;
+  const { data: config } = await supabase.from("whatsapp_configuracion").select("horario_inicio, horario_fin").maybeSingle();
+  if (!estaEnHorario(horarioDeConfig(config), ahora, zonaActual())) return 0;
   const { data, error } = await supabase.from("whatsapp_conversaciones").select("id, sucursal_id, last_message_at, charla_quieta_avisada_at")
     .is("vendedor_id", null).eq("ai_habilitada", true)
     .gte("last_message_at", new Date(ahora.getTime() - 2 * 864e5).toISOString())
@@ -173,9 +172,7 @@ async function asignarCharlasQuietas(ahora: Date): Promise<number> {
   return asignadas;
 }
 
-export async function GET(req: Request) {
-  const token = new URL(req.url).searchParams.get("token");
-  if (!process.env.CRON_SECRET || token !== process.env.CRON_SECRET) return new Response("Unauthorized", { status: 401 });
+async function trabajoDeLaEmpresa(req: Request): Promise<Response> {
   const ahora = new Date();
   let charlasAsignadas = 0;
   try {
@@ -211,4 +208,13 @@ export async function GET(req: Request) {
     }
   }
   return Response.json({ ok: true, intentos, leidas, porCanal, charlasAsignadas });
+}
+
+
+// Las tareas automáticas recorren todas las empresas activas; cada una corre con sus datos, su horario y su zona horaria.
+export async function GET(req: Request) {
+  const token = new URL(req.url).searchParams.get("token");
+  if (!process.env.CRON_SECRET || token !== process.env.CRON_SECRET) return new Response("Unauthorized", { status: 401 });
+  const empresas = await paraCadaEmpresa(async () => (await trabajoDeLaEmpresa(req)).json());
+  return Response.json({ ok: true, empresas });
 }

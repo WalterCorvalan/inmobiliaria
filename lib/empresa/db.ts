@@ -35,12 +35,18 @@ export function clienteServicio(): SupabaseClient {
   return base;
 }
 
-const almacen = new AsyncLocalStorage<{ empresaId: string }>();
+const ZONA_POR_DEFECTO = "America/Argentina/Buenos_Aires";
+const almacen = new AsyncLocalStorage<{ empresaId: string; zona: string }>();
 
 /** Corre `fn` con la empresa fijada: todo lo que haga con `supabaseEmpresa` queda acotado a ella. */
-export function dentroDeEmpresa<T>(empresaId: string, fn: () => T): T {
+export function dentroDeEmpresa<T>(empresaId: string, fn: () => T, zona?: string | null): T {
   if (!empresaId) throw new Error("dentroDeEmpresa: falta la empresa");
-  return almacen.run({ empresaId }, fn);
+  return almacen.run({ empresaId, zona: zona || ZONA_POR_DEFECTO }, fn);
+}
+
+/** Zona horaria de la empresa del pedido (por defecto Argentina). Todo horario se calcula con esta, nunca con la del servidor. */
+export function zonaActual(): string {
+  return almacen.getStore()?.zona ?? ZONA_POR_DEFECTO;
 }
 
 /** Empresa del pedido en curso, o null si no hay (por ejemplo en un registro de errores general). */
@@ -114,7 +120,7 @@ export async function paraCadaEmpresa<T>(trabajo: (empresa: EmpresaActiva) => Pr
   const salida: { empresa: string; resultado?: T; error?: string }[] = [];
   for (const empresa of await empresasActivas()) {
     try {
-      salida.push({ empresa: empresa.slug, resultado: await dentroDeEmpresa(empresa.id, () => trabajo(empresa)) });
+      salida.push({ empresa: empresa.slug, resultado: await dentroDeEmpresa(empresa.id, () => trabajo(empresa), empresa.zona_horaria) });
     } catch (err) {
       console.error(`[paraCadaEmpresa] ${empresa.slug}`, err);
       salida.push({ empresa: empresa.slug, error: err instanceof Error ? err.message : String(err) });
@@ -131,15 +137,16 @@ const CONFIG_POR_CANAL: Record<CanalConfig, { tabla: string; columnaToken: strin
 };
 
 /** La dirección del webhook lleva el verify token de la empresa: de ahí sale de quién es cada mensaje. Null si no existe o está suspendida. */
-export async function empresaPorTokenDeWebhook(canal: CanalConfig, token: string): Promise<string | null> {
+export async function empresaPorTokenDeWebhook(canal: CanalConfig, token: string): Promise<{ id: string; zona: string } | null> {
   if (!token || token.length < 16) return null;
   const { tabla, columnaToken } = CONFIG_POR_CANAL[canal];
   const c = clienteServicio();
   const { data } = await c.from(tabla).select("empresa_id").eq(columnaToken, token).maybeSingle();
   const empresaId = (data as { empresa_id?: string } | null)?.empresa_id;
   if (!empresaId) return null;
-  const { data: e } = await c.from("empresas").select("estado").eq("id", empresaId).maybeSingle();
-  return (e as { estado?: string } | null)?.estado === "activa" ? empresaId : null;
+  const { data: e } = await c.from("empresas").select("estado, zona_horaria").eq("id", empresaId).maybeSingle();
+  const fila = e as { estado?: string; zona_horaria?: string } | null;
+  return fila?.estado === "activa" ? { id: empresaId, zona: fila.zona_horaria || ZONA_POR_DEFECTO } : null;
 }
 
 /** Empresa a partir de su identificador público (slug), para el chat de la web, que no tiene sesión. Null si no existe o está suspendida. */

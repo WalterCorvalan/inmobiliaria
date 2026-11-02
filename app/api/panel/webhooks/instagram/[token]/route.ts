@@ -16,7 +16,7 @@ import { horarioDeConfig, estaEnHorario, debeAvisarFueraDeHorario, textoFueraDeH
 import { enviarTextoBot } from "@/lib/panel/enviarMensajeBot";
 import { subirArchivoR2, r2Configurado } from "@/lib/storage/r2";
 import { RESPUESTA_FALLBACK } from "@/lib/panel/textosBot";
-import { supabaseEmpresa as supabase, dentroDeEmpresa, empresaPorTokenDeWebhook } from "@/lib/empresa/db";
+import { zonaActual, supabaseEmpresa as supabase, dentroDeEmpresa, empresaPorTokenDeWebhook } from "@/lib/empresa/db";
 import { verificarFirmaDeMeta } from "@/lib/empresa/credenciales";
 
 // Webhook de Meta para el Instagram de panel (Conversaciones → Instagram),
@@ -56,8 +56,9 @@ async function buscarAutomatizacionPorComentario(texto: string): Promise<{ respu
 
 export async function GET(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const empresaId = await empresaPorTokenDeWebhook("instagram", token);
-  if (!empresaId) return new Response("Not found", { status: 404 });
+  const empresa = await empresaPorTokenDeWebhook("instagram", token);
+  if (!empresa) return new Response("Not found", { status: 404 });
+  const empresaId = empresa.id;
 
   const url = new URL(req.url);
   const mode = url.searchParams.get("hub.mode");
@@ -75,8 +76,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   if (!limite.ok) return new Response("Too many requests", { status: 429 });
 
   const { token } = await params;
-  const empresaId = await empresaPorTokenDeWebhook("instagram", token);
-  if (!empresaId) return new Response("Not found", { status: 404 });
+  const empresa = await empresaPorTokenDeWebhook("instagram", token);
+  if (!empresa) return new Response("Not found", { status: 404 });
+  const empresaId = empresa.id;
 
   const rawBody = await req.text();
 
@@ -95,7 +97,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     return Response.json({ received: true });
   }
   try {
-    await dentroDeEmpresa(empresaId, () => procesarEvento(payload));
+    await dentroDeEmpresa(empresaId, () => procesarEvento(payload), empresa.zona);
   } catch (err) {
     registrarError("webhook-ig-v2:procesar-evento", err);
   }
@@ -468,7 +470,7 @@ async function avisarFueraDeHorario(conversacionId: string) {
 // fuera de horario, y no repite si ya le escribimos en las últimas 24 horas
 // (quien reacciona a varias historias seguidas no recibe un mensaje por cada una).
 async function responderConTextoFijo(conversacionId: string, igUserId: string, respuesta: string) {
-  if (!estaEnHorario(await horarioBots())) return;
+  if (!estaEnHorario(await horarioBots(), new Date(), zonaActual())) return;
   const { data: conversacion } = await supabase.from("instagram_conversaciones").select("ai_habilitada").eq("id", conversacionId).single();
   if (conversacion?.ai_habilitada === false) return;
 
@@ -482,7 +484,7 @@ async function responderConTextoFijo(conversacionId: string, igUserId: string, r
 }
 
 async function ejecutarAgente(conversacionId: string, igUserId: string, mensajeId: string) {
-  if (!estaEnHorario(await horarioBots())) { await avisarFueraDeHorario(conversacionId); return; }
+  if (!estaEnHorario(await horarioBots(), new Date(), zonaActual())) { await avisarFueraDeHorario(conversacionId); return; }
 
   const { data: conversacionActual } = await supabase.from("instagram_conversaciones").select("ai_habilitada, contacto_id, vehiculo_id, vendedor_id").eq("id", conversacionId).single();
   if (conversacionActual?.ai_habilitada === false) return;

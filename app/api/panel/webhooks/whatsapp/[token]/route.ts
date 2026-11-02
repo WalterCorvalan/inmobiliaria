@@ -18,7 +18,7 @@ import { cargarPedidoDesdeChat } from "@/lib/panel/pedidoDesdeChat";
 import { completarVisitaRepetida } from "@/lib/panel/visitaRepetida";
 import { guardarPedidoDelBot } from "@/lib/panel/pedidoDelBot";
 import { RESPUESTA_FALLBACK } from "@/lib/panel/textosBot";
-import { supabaseEmpresa as supabase, dentroDeEmpresa, empresaPorTokenDeWebhook } from "@/lib/empresa/db";
+import { zonaActual, supabaseEmpresa as supabase, dentroDeEmpresa, empresaPorTokenDeWebhook } from "@/lib/empresa/db";
 import { verificarFirmaDeMeta } from "@/lib/empresa/credenciales";
 
 // Webhook de Meta para el WhatsApp de panel-v2 (Conversaciones → WhatsApp,
@@ -38,8 +38,9 @@ export const maxDuration = 60;
 
 export async function GET(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const empresaId = await empresaPorTokenDeWebhook("whatsapp", token);
-  if (!empresaId) return new Response("Not found", { status: 404 });
+  const empresa = await empresaPorTokenDeWebhook("whatsapp", token);
+  if (!empresa) return new Response("Not found", { status: 404 });
+  const empresaId = empresa.id;
 
   const url = new URL(req.url);
   const mode = url.searchParams.get("hub.mode");
@@ -60,8 +61,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   if (!limite.ok) return new Response("Too many requests", { status: 429 });
 
   const { token } = await params;
-  const empresaId = await empresaPorTokenDeWebhook("whatsapp", token);
-  if (!empresaId) return new Response("Not found", { status: 404 });
+  const empresa = await empresaPorTokenDeWebhook("whatsapp", token);
+  if (!empresa) return new Response("Not found", { status: 404 });
+  const empresaId = empresa.id;
 
   const rawBody = await req.text();
 
@@ -85,7 +87,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   // respuesta, así que "fire and forget" nunca llega a terminar y el
   // mensaje entrante se pierde sin guardarse.
   try {
-    await dentroDeEmpresa(empresaId, () => procesarEvento(payload));
+    await dentroDeEmpresa(empresaId, () => procesarEvento(payload), empresa.zona);
   } catch (err) {
     registrarError("webhook-v2:procesar-evento", err);
   }
@@ -347,7 +349,7 @@ async function ejecutarAgente(conversacionId: string, mensajeId: string) {
   // Horario de los bots (lib/panel/horarioBots.ts): fuera de horario, un solo aviso por noche; a las 9 el cron
   // /api/cron/panel/bots-apertura le escribe "ya estamos disponibles" a quien lo recibió.
   const horario = horarioDeConfig(config);
-  if (!estaEnHorario(horario)) {
+  if (!estaEnHorario(horario, new Date(), zonaActual())) {
     if (!debeAvisarFueraDeHorario(conversacionActual?.fuera_horario_avisado_at)) return;
     const avisoFueraHorario = (await buscarRespuestaFueraHorario(supabase)) || textoFueraDeHorarioPorDefecto(horario.inicio, horario.fin);
     await enviarMensajeFijo(conversacionId, avisoFueraHorario, config);
