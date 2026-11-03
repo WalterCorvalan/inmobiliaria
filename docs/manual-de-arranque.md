@@ -65,7 +65,7 @@ Solo el nombre y dónde se sacan; los valores los carga Walter en el lugar corre
 | Vercel | publicar | proyecto nuevo, a nombre de Walter |
 | Meta (app, secreto, tokens) | canales | por empresa, ver `docs/guia-conexion-canales.md` |
 
-Nombres exactos de las variables: `.env.example` del repositorio (si no existe, buscarlas con `grep process.env`).
+Nombres exactos de las variables: todavía no hay `.env.example` en el repositorio (pendiente). Mientras tanto, buscarlas con `grep -rn process.env app lib`.
 
 ## 7. Errores que ya tuvimos (no repetir)
 
@@ -94,6 +94,7 @@ Idea de Walter: lo mismo, más simple, con leads, canales y stock.
 3. Código para pegar el chat en la web de cada cliente.
 4. Memoria inicial del bot por empresa.
 5. Que los tokens cifrados no se puedan leer desde el navegador.
+6. Crear `.env.example` con los nombres de las variables, sin valores.
 
 Lista viva: `docs/pasada-2-estado.md`.
 
