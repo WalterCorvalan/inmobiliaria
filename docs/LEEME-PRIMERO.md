@@ -74,6 +74,8 @@ Resumen; el detalle está en `manual-de-arranque.md`.
 
 **Hecho y verificado con tests:** todo lo de arriba hasta el punto 7. `tsc` sin errores, 253 tests pasan, el lint no sube, ninguna consulta apunta a una tabla que no exista.
 
+**Actualización 6/11/2026:** se relevó en solo lectura la app de Meta de Pfaffen (Publicada, sin App Review, negocio verificado) y con eso se completaron `receta-agente-meta.md` y `guia-conexion-canales.md`. Walter decidió **no probar con una empresa nueva por ahora**: se replica lo que anda en Pfaffen y se corrige en el primer alta real.
+
 **NUNCA se probó contra un Supabase real ni contra Meta real.** La base se probó en memoria. Hasta que eso pase, la guía de canales y el manual figuran como "sin probar".
 
 **Regla firme:** no conectar ninguna inmobiliaria real hasta probar todo contra un Supabase real.

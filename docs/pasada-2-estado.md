@@ -74,4 +74,7 @@ Correr en Supabase, en orden: `sql_schema_migraciones`, `sql_001` a `sql_007`, y
 6. **Endurecimiento de credenciales**: el dueño puede leer los tokens cifrados desde el navegador; pasarlos a lectura solo del servidor.
 7. **Panel superadmin** (alta de empresas sin SQL): hoy la primera empresa se crea con el SQL de más arriba.
 
+8. **Meta (relevamiento del 6/11/2026, solo lectura):** `receta-agente-meta.md` y `guia-conexion-canales.md` ya tienen el estado real de la app de Pfaffen. Quedan por confirmar en el primer alta real: que una app nueva Publicada y sin App Review reciba mensajes del público; qué requisitos muestra Publicar en una app nueva; la sección de tokens y el webhook de Instagram (no se abrieron); y dos interruptores de Facebook para empresas. Walter decidió no probar con una empresa nueva por ahora.
+9. **ID de app de Instagram fijo en el código** y **secreto de la app de Meta como variable única**: siguen siendo lo que impide conectar una segunda empresa (pasan a ser por empresa en la pasada 3).
+
 Regla firme: no conectar ninguna inmobiliaria real hasta resolver el punto 1 y probar contra un Supabase real.
