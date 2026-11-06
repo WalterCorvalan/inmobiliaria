@@ -2,7 +2,7 @@
 
 Si abrís este proyecto desde un chat nuevo, **leé este archivo entero antes de tocar nada**. Resume la idea, lo que se decidió, cómo está construido, en qué estado está y cómo seguir. Es la puerta de entrada; el detalle está en los demás archivos de `docs/` (mapa al final).
 
-Última actualización: 5/11/2026.
+Última actualización: 6/11/2026.
 
 ## 1. Quién es Walter y cómo hay que hablarle
 
@@ -87,7 +87,7 @@ Resumen; el detalle está en `manual-de-arranque.md`.
 5. Memoria inicial del bot por empresa.
 6. Que el dueño no pueda leer los tokens cifrados desde el navegador.
 7. Crear `.env.example` con los nombres de las variables (no existe todavía).
-8. Fases posteriores del plan original: pantalla de configuración de empresa, usuarios y oficinas; propiedades; catálogo propio con dominio (Fase 14, solo si se decide). El plan original por fases no quedó escrito completo en el repositorio: lo que se sabe está en `fase-3-diseno-base.md`, `estado-pasada-1.md` y `pasada-2-estado.md`.
+8. Fases posteriores del plan original: pantalla de configuración de empresa, usuarios y oficinas; propiedades; catálogo propio con dominio (Fase 14, solo si se decide). El orden propuesto de módulos nuevos (Propiedades, Clientes, Visitas, etc.) está en `plan-modulos.md`. El plan original por fases no quedó escrito completo en el repositorio: lo que se sabe está en `fase-3-diseno-base.md`, `estado-pasada-1.md` y `pasada-2-estado.md`.
 
 La lista viva de pendientes es `pasada-2-estado.md`, sección "Lo que sigue pendiente".
 
@@ -110,6 +110,7 @@ La lista viva de pendientes es `pasada-2-estado.md`, sección "Lo que sigue pend
 | `docs/decisiones.md` | tabla de decisiones de Walter con fecha (lo que está acá no es un bug) |
 | `docs/manual-de-arranque.md` | receta para armar otro CRM con este método (ej: concesionaria) |
 | `docs/guia-conexion-canales.md` | conectar WhatsApp, Instagram y Messenger paso a paso |
+| `docs/plan-modulos.md` | qué módulos de Pfaffen sumar después de la v1, cuáles repensar y cuáles no copiar |
 | `docs/pasada-2-estado.md` | seguridad, cómo correr las migraciones, pendientes |
 | `docs/fase-3-diseno-base.md` | diseño de la base con empresa |
 | `docs/extraccion-leads-y-chats.md` | mapa de lo que se copió de Pfaffen y qué se partió |

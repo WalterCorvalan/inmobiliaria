@@ -30,3 +30,4 @@ Lo que decidió Walter. Si una decisión cambia, se actualiza la fila con la fec
 | App de Meta | Una app por empresa, creada en su propia cuenta (sin aprobación especial de Meta). Los secretos de cada app se guardan cifrados por empresa, no en Vercel. | 2/11/2026 |
 | Módulos por rol | Se sacó la configuración de "módulos apagados" y "visibilidad por sector". Dueño, encargado y asesor ven todos los módulos de la v1; qué leads ve cada uno lo definen las reglas de oficina y asesor. Se puede volver a hacer configurable más adelante. | 2/11/2026 |
 | Ranking de leads | Se sacó "Ventas" y "Cierre" del ranking por vendedor: dependían de la tabla de ventas, que no está en la v1. | 2/11/2026 |
+| Módulos después de la v1 | Se suman de a uno, copiando de Pfaffen y adaptando a inmobiliaria, sin ofrecer todo de entrada. Orden propuesto en `plan-modulos.md` (Propiedades primero); lo define el dolor de la inmobiliaria piloto. Es una propuesta a validar con Walter. | 6/11/2026 |
