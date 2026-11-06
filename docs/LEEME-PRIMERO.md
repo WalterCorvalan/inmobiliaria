@@ -110,6 +110,7 @@ La lista viva de pendientes es `pasada-2-estado.md`, sección "Lo que sigue pend
 | `docs/decisiones.md` | tabla de decisiones de Walter con fecha (lo que está acá no es un bug) |
 | `docs/manual-de-arranque.md` | receta para armar otro CRM con este método (ej: concesionaria) |
 | `docs/guia-conexion-canales.md` | conectar WhatsApp, Instagram y Messenger paso a paso |
+| `docs/receta-agente-meta.md` | guion para que un agente configure la app de Meta (estado esperado, pasos, paradas) |
 | `docs/plan-modulos.md` | qué módulos de Pfaffen sumar después de la v1, cuáles repensar y cuáles no copiar |
 | `docs/pasada-2-estado.md` | seguridad, cómo correr las migraciones, pendientes |
 | `docs/fase-3-diseno-base.md` | diseño de la base con empresa |
