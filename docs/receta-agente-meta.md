@@ -87,6 +87,16 @@ Cada paso: **dónde**, **qué hace**, **cómo sé que quedó bien**. Lo que dice
 11. **Publicar** la app (pasarla a modo Publicada). **A COMPLETAR** qué pide Meta para eso (privacidad, categoría, etc.).
 12. Recorrer el **Estado esperado** y entregar el informe "igual / distinto".
 
+## Atajos de navegación (direcciones directas)
+
+Visto en la app de Pfaffen. El agente puede ir directo en vez de buscar los menús; si la dirección no abre la pantalla esperada, vuelve a navegar por los menús y lo anota.
+
+| Pantalla | Dirección (reemplazar `APP_ID` y `BUSINESS_ID` por los de la empresa) |
+|---|---|
+| WhatsApp → Configuración (webhook) | `https://developers.facebook.com/apps/APP_ID/use_cases/customize/wa-settings/?use_case_enum=WHATSAPP_BUSINESS_MESSAGING&selected_tab=wa-settings&product_route=whatsapp-business&business_id=BUSINESS_ID` |
+
+El resto de las direcciones (Instagram, Messenger, Roles, Publicar) están **A COMPLETAR**: se anotan en la primera pasada de lectura.
+
 ## Para que sea repetible
 
 - Si algo se corrige en la primera conexión real, se corrige **acá** y en `guia-conexion-canales.md`, no solo en el chat.
