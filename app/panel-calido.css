@@ -1,0 +1,39 @@
+/* ===== Paleta cálida de inmobiliaria (Walter, 7/11/2026) =====
+   El panel nació con el azul y los grises fríos del CRM de autos de Pfaffen. Esto lo pasa a arena, ladrillo y oliva
+   sin tocar módulo por módulo, con la misma técnica de panel-marca.css y panel-tema-oscuro.css:
+   - El color de marca por defecto pasa a ladrillo. Si la empresa elige su color en Configuración, sigue mandando el suyo
+     (PanelLayoutClient lo pone en el style del mismo <div>, que gana sobre esta regla).
+   - Los grises de Tailwind (slate) se redefinen como grises cálidos, solo en modo claro. El oscuro no cambia acá.
+   - Fondo de página y tarjetas blancas en tonos crema. Referencia de diseño: docs/decisiones.md, fila "Diseño visual". */
+
+.panel-v2-root { --marca: #B4532F; }
+
+:not(.dark) > .panel-v2-root {
+  --color-slate-50: #faf6f0;
+  --color-slate-100: #f3ece1;
+  --color-slate-200: #e8dfd0;
+  --color-slate-300: #d6c9b5;
+  --color-slate-400: #a39787;
+  --color-slate-500: #857a6d;
+  --color-slate-600: #675d52;
+  --color-slate-700: #4d453c;
+  --color-slate-800: #352f28;
+  --color-slate-900: #2b241d;
+}
+/* Fondo de página (raíz del panel y bandejas) y tarjetas. */
+:not(.dark) > .panel-v2-root.bg-\[\#F8FAFC\],
+:not(.dark) > .panel-v2-root .bg-\[\#F8FAFC\],
+:not(.dark) > .panel-v2-root .bg-\[\#F0F2F5\] { background-color: #f3ede4; }
+:not(.dark) > .panel-v2-root .bg-white { background-color: #fffdf9; }
+
+/* El indigo se usa en el panel como segundo acento (menú activo, etiquetas, barras): pasa a la escala del ladrillo,
+   en claro y en oscuro (el oscuro usa los tonos 300 a 500, que se leen bien sobre fondo negro). */
+.panel-v2-root {
+  --color-indigo-50: #fbefe8; --color-indigo-100: #f6e1d6; --color-indigo-200: #ecc6b2; --color-indigo-300: #dfa485;
+  --color-indigo-400: #cf7d58; --color-indigo-500: #b4532f; --color-indigo-600: #9c4527; --color-indigo-700: #7d3519;
+  --color-indigo-800: #5f2912; --color-indigo-900: #461d0d;
+}
+
+/* Letras: Figtree para todo el panel y Fraunces en los títulos grandes. Si la fuente no carga queda la de siempre. */
+.panel-v2-root { font-family: var(--font-figtree), var(--font-jakarta), ui-sans-serif, system-ui, sans-serif; }
+.panel-v2-root h1, .panel-v2-root h2 { font-family: var(--font-fraunces), Georgia, serif; font-weight: 600; letter-spacing: -0.01em; }

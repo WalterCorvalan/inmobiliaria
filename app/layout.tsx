@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans, Figtree, Fraunces } from "next/font/google";
 import "./globals.css";
 import DialogosHost from "@/components/panel/Dialogos";
 import MovimientoDiferido from "@/components/MovimientoDiferido";
@@ -10,6 +10,10 @@ const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
   weight: ["300", "400", "500", "600", "700", "800"],
 });
+
+// Letras del panel con la paleta cálida (7/11/2026, ver app/panel-calido.css): Figtree para el texto y Fraunces para los títulos.
+const figtree = Figtree({ subsets: ["latin"], variable: "--font-figtree", weight: ["400", "500", "600", "700"] });
+const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", weight: ["500", "600"] });
 
 // El producto es un panel privado: no se indexa. El nombre visible de cada empresa sale de su configuración de marca.
 export const metadata: Metadata = {
@@ -24,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={jakarta.variable} suppressHydrationWarning>
+    <html lang="es" className={`${jakarta.variable} ${figtree.variable} ${fraunces.variable}`} suppressHydrationWarning>
       <body className="font-sans bg-background text-foreground antialiased flex flex-col min-h-screen">
         <MovimientoDiferido>
           {children}

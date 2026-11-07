@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./panel-marca.css";
 @import "./panel-tema-oscuro.css";
+@import "./panel-calido.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

@@ -488,7 +488,7 @@ export default function PanelLayoutClient({
               className={`flex items-center gap-2 px-1 ${colapsado ? "md:justify-center" : ""}`}
               title={colapsado ? nombre : undefined}
             >
-              <div className="w-7 h-7 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
+              <div className="w-7 h-7 rounded-full bg-[#0145F2] text-white flex items-center justify-center text-xs font-bold shrink-0">
                 {nombre.charAt(0).toUpperCase()}
               </div>
               <div className={`min-w-0 flex-1 ${colapsado ? "md:hidden" : ""}`}>
