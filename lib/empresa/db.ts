@@ -15,7 +15,7 @@ export const TABLAS_DE_EMPRESA: ReadonlySet<string> = new Set([
   "alertas", "chats_vistos", "clientes", "configuracion_empresa", "disponibilidad_vendedor", "espacio_notif_prefs", "eventos_lead",
   "instagram_automatizaciones_comentarios", "instagram_configuracion", "instagram_contactos", "instagram_conversaciones", "instagram_mensajes",
   "lead_ronda_turnos", "leads_manuales", "logs_errores", "messenger_configuracion", "messenger_contactos", "messenger_conversaciones",
-  "messenger_mensajes", "motivos_cierre", "perfiles", "push_subscriptions", "rodi_conversaciones", "rodi_mensajes", "sucursales", "tareas_lead",
+  "messenger_mensajes", "motivos_cierre", "perfiles", "propiedad_fotos", "propiedades", "push_subscriptions", "rodi_conversaciones", "rodi_mensajes", "sucursales", "tareas_lead",
   "uso_ia_anthropic", "visitas", "whatsapp_configuracion", "whatsapp_contactos", "whatsapp_conversaciones", "whatsapp_memoria", "whatsapp_mensajes",
   "whatsapp_plantillas", "whatsapp_templates",
 ]);

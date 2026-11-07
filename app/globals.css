@@ -2,6 +2,7 @@
 @import "./panel-marca.css";
 @import "./panel-tema-oscuro.css";
 @import "./panel-calido.css";
+@import "./inmo.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

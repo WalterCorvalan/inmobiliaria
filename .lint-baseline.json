@@ -1,9 +1,9 @@
 {
-  "total": 223,
+  "total": 221,
   "porRegla": {
     "@typescript-eslint/no-explicit-any": 147,
     "react-hooks/set-state-in-effect": 23,
-    "@next/next/no-img-element": 14,
+    "@next/next/no-img-element": 12,
     "react/no-unescaped-entities": 10,
     "@typescript-eslint/no-unused-vars": 9,
     "react-hooks/exhaustive-deps": 9,

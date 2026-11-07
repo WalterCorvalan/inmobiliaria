@@ -9,6 +9,7 @@ import ToastHost from "@/components/panel/ToastHost";
 import { puedeVerModulo } from "@/lib/panel/permisosModulos";
 import { supabase2 } from "@/lib/supabase/client";
 import {
+  Building2,
   LogOut,
   Menu,
   Moon,
@@ -16,6 +17,7 @@ import {
   Search,
   Sun,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -28,7 +30,8 @@ import { CLASE_MODO_CLARO, clasesModoOscuro, temaOscuroValido, EVENTO_TEMA_OSCUR
 // Menú de la v1: Leads y los canales de chat, más la configuración de cada canal.
 // Todo item necesita "modulo" para que la visibilidad por sector (visibilidad_sector) pueda apagarlo.
 // Accesos rápidos de la barra de abajo en el celular; el resto queda detrás del menú.
-const NAV_MOBILE: { href: string; label: string; icon: string }[] = [
+const NAV_MOBILE: { href: string; label: string; icon?: string; Icono?: LucideIcon }[] = [
+  { href: "/panel/propiedades", label: "Propiedades", Icono: Building2 },
   { href: "/panel/leads", label: "Leads", icon: "/icons/panel/leads.png" },
   { href: "/panel/whatsapp", label: "WhatsApp", icon: "/icons/panel/whatsapp.png" },
   { href: "/panel/instagram", label: "Instagram", icon: "/icons/panel/instagram.png" },
@@ -37,8 +40,14 @@ const NAV_MOBILE: { href: string; label: string; icon: string }[] = [
 
 const GRUPOS: {
   titulo: string;
-  items: { href?: string; label: string; icon: string; modulo?: string }[];
+  items: { href?: string; label: string; icon?: string; Icono?: LucideIcon; modulo?: string }[];
 }[] = [
+  {
+    titulo: "Cartera",
+    items: [
+      { href: "/panel/propiedades", label: "Propiedades", Icono: Building2, modulo: "propiedades" },
+    ],
+  },
   {
     titulo: "Leads y mensajes",
     items: [
@@ -56,6 +65,15 @@ const GRUPOS: {
     ],
   },
 ];
+
+// Ícono del menú: los de la v1 vieja son imágenes; los nuevos (Propiedades y lo que sigue) son íconos de línea.
+function IconoMenu({ item, className }: { item: { icon?: string; Icono?: LucideIcon }; className: string }) {
+  if (item.Icono) {
+    const Icono = item.Icono;
+    return <Icono className={className} aria-hidden="true" />;
+  }
+  return <img src={item.icon} alt="" className={`${className} object-contain`} />;
+}
 
 const ROL_LABEL: Record<string, string> = {
   admin: "Administrador",
@@ -439,7 +457,7 @@ export default function PanelLayoutClient({
                               title="Todavía no construido"
                               className={`flex items-center gap-3 py-2 mx-2 rounded-lg text-sm text-slate-300 dark:text-slate-600 cursor-not-allowed ${colapsado ? "md:justify-center px-4 md:px-0" : "px-4"}`}
                             >
-                              <img src={item.icon} alt="" className="w-5 h-5 shrink-0 object-contain opacity-50" />{" "}
+                              <IconoMenu item={item} className="w-5 h-5 shrink-0 opacity-50" />{" "}
                               <span className={`whitespace-nowrap ${colapsado ? "md:hidden" : ""}`}>
                                 {item.label}
                               </span>
@@ -469,7 +487,7 @@ export default function PanelLayoutClient({
                               {cargando ? (
                                 <RotateCw className="w-5 h-5 animate-spin shrink-0" />
                               ) : (
-                                <img src={item.icon} alt="" className="w-5 h-5 shrink-0 object-contain" />
+                                <IconoMenu item={item} className="w-5 h-5 shrink-0" />
                               )}{" "}
                               <span className={`whitespace-nowrap ${colapsado ? "md:hidden" : ""}`}>
                                 {item.label}
@@ -568,7 +586,7 @@ export default function PanelLayoutClient({
                 href={item.href}
                 className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold ${activo ? "text-[#0145F2] dark:text-[#5b8dff]" : "text-slate-500 dark:text-slate-400"}`}
               >
-                <img src={item.icon} alt="" className="w-5 h-5 object-contain" />
+                <IconoMenu item={item} className="w-5 h-5" />
                 {item.label}
               </Link>
             );

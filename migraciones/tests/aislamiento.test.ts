@@ -312,3 +312,46 @@ describe("reparto y avisos: nunca cruzan de empresa", () => {
     await como(U.asesorA1, async () => { await expect(db.query(`select repartir_leads_sin_asignar()`)).rejects.toThrow(/dueño/i); });
   });
 });
+
+describe("propiedades: cada empresa ve y toca solo las suyas", () => {
+  it("un asesor ve las propiedades y las fotos de su empresa y no las de otra", async () => {
+    const pa = await uno(`insert into propiedades (empresa_id, titulo, tipo, operacion, precio) values ('${A}', 'Depto Palermo', 'departamento', 'venta', 148000) returning id`);
+    const pb = await uno(`insert into propiedades (empresa_id, titulo, tipo, operacion, precio) values ('${B}', 'Casa Tigre', 'casa', 'venta', 320000) returning id`);
+    await db.exec(`insert into propiedad_fotos (empresa_id, propiedad_id, url, es_portada) values ('${A}', '${pa.id}', 'https://ejemplo.test/a.jpg', true), ('${B}', '${pb.id}', 'https://ejemplo.test/b.jpg', true)`);
+    await como(U.asesorA1, async () => {
+      expect((await filas(`select titulo from propiedades`)).map((r) => r.titulo)).toEqual(['Depto Palermo']);
+      expect((await filas(`select url from propiedad_fotos`)).map((r) => r.url)).toEqual(['https://ejemplo.test/a.jpg']);
+    });
+    await como(U.asesorB1, async () => {
+      expect((await filas(`select titulo from propiedades`)).map((r) => r.titulo)).toEqual(['Casa Tigre']);
+    });
+  });
+
+  it("nadie puede crear, cambiar ni borrar propiedades de otra empresa", async () => {
+    const pb = await uno(`select id from propiedades where empresa_id = '${B}' limit 1`);
+    await como(U.asesorA1, async () => {
+      await expect(db.query(`insert into propiedades (empresa_id, titulo) values ('${B}', 'Intrusa')`)).rejects.toThrow(/row-level security|policy/i);
+      await db.query(`update propiedades set titulo = 'Hackeada' where id = '${pb.id}'`);
+      await db.query(`delete from propiedades where id = '${pb.id}'`);
+    });
+    expect((await uno(`select titulo from propiedades where id = '${pb.id}'`)).titulo).toBe('Casa Tigre');
+  });
+
+  it("al crear una propiedad sin empresa se toma la del usuario, y el código no se repite dentro de una empresa", async () => {
+    await como(U.asesorA1, async () => {
+      const p = await uno(`insert into propiedades (titulo, codigo) values ('PH Caballito', 'PH-001') returning empresa_id`);
+      expect(p.empresa_id).toBe(A);
+      await expect(db.query(`insert into propiedades (titulo, codigo) values ('Otra', 'PH-001')`)).rejects.toThrow(/duplicate|unique|único/i);
+    });
+    await como(U.asesorB1, async () => {
+      await db.query(`insert into propiedades (titulo, codigo) values ('PH de B', 'PH-001')`);
+    });
+  });
+
+  it("al borrar una propiedad se borran sus fotos", async () => {
+    const p = await uno(`insert into propiedades (empresa_id, titulo) values ('${A}', 'Para borrar') returning id`);
+    await db.exec(`insert into propiedad_fotos (empresa_id, propiedad_id, url) values ('${A}', '${p.id}', 'https://ejemplo.test/x.jpg')`);
+    await db.exec(`delete from propiedades where id = '${p.id}'`);
+    expect((await filas(`select 1 from propiedad_fotos where propiedad_id = '${p.id}'`)).length).toBe(0);
+  });
+});
