@@ -30,6 +30,7 @@ import { CLASE_MODO_CLARO, clasesModoOscuro, temaOscuroValido, EVENTO_TEMA_OSCUR
 // Accesos rápidos de la barra de abajo en el celular; el resto queda detrás del menú.
 const NAV_MOBILE: { href: string; label: string; icon: string }[] = [
   { href: "/panel/leads", label: "Leads", icon: "/icons/panel/leads.png" },
+  { href: "/panel/propiedades", label: "Propiedades", icon: "/icons/panel/propiedades.svg" },
   { href: "/panel/whatsapp", label: "WhatsApp", icon: "/icons/panel/whatsapp.png" },
   { href: "/panel/instagram", label: "Instagram", icon: "/icons/panel/instagram.png" },
   { href: "/panel/messenger", label: "Messenger", icon: "/icons/panel/messenger.png" },
@@ -39,6 +40,12 @@ const GRUPOS: {
   titulo: string;
   items: { href?: string; label: string; icon: string; modulo?: string }[];
 }[] = [
+  {
+    titulo: "Propiedades",
+    items: [
+      { href: "/panel/propiedades", label: "Propiedades", icon: "/icons/panel/propiedades.svg", modulo: "propiedades" },
+    ],
+  },
   {
     titulo: "Leads y mensajes",
     items: [

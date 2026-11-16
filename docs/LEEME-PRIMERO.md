@@ -2,7 +2,7 @@
 
 Si abrís este proyecto desde un chat nuevo, **leé este archivo entero antes de tocar nada**. Resume la idea, lo que se decidió, cómo está construido, en qué estado está y cómo seguir. Es la puerta de entrada; el detalle está en los demás archivos de `docs/` (mapa al final).
 
-Última actualización: 16/11/2026.
+Última actualización: 17/11/2026.
 
 ## 1. Quién es Walter y cómo hay que hablarle
 
@@ -24,7 +24,7 @@ El producto, tal como lo definió, es una **micro app que centraliza los mensaje
 - **Resumen con IA** de cada charla.
 - **Reparto de leads entre asesores** (ronda), por **oficina**.
 - **Avisos** al equipo y **derivación** del bot a una persona.
-- **No se vende como un CRM completo.** Propiedades, visitas, pedidos, tasaciones, ventas, señas, expedientes, finanzas quedan fuera de la primera versión.
+- **No se vende como un CRM completo.** Se suma de a un módulo. Hecho: **Propiedades** (17/11/2026). Faltan visitas, clientes y seguimiento, reservas y operaciones, catálogo web propio. Pedidos, tasaciones, señas, expedientes y finanzas siguen fuera.
 
 Es un **SaaS multiempresa**: cada inmobiliaria usa la app de forma independiente (sus datos, su bot, sus claves, sus usuarios) sin ver nada de las otras. Más adelante habrá un **panel de superadmin** del equipo de la plataforma.
 
@@ -72,7 +72,7 @@ Resumen; el detalle está en `manual-de-arranque.md`.
 
 ## 6. Estado actual (5/11/2026)
 
-**Hecho y verificado con tests:** todo lo de arriba hasta el punto 7. `tsc` sin errores, 253 tests pasan, el lint no sube, ninguna consulta apunta a una tabla que no exista.
+**Hecho y verificado con tests:** todo lo de arriba hasta el punto 7, más el módulo **Propiedades** (tabla con seguridad por empresa, lista con filtros, alta y edición, fotos a R2, cambio de estado; ver `app/panel/propiedades/ARCHITECTURE.md`). `tsc` sin errores, 253 tests pasan, el lint no sube, ninguna consulta apunta a una tabla que no exista.
 
 **NUNCA se probó contra un Supabase real ni contra Meta real.** La base se probó en memoria. Hasta que eso pase, la guía de canales y el manual figuran como "sin probar".
 
@@ -80,8 +80,9 @@ Resumen; el detalle está en `manual-de-arranque.md`.
 
 ### Lo que sigue (en este orden sugerido)
 
-1. Walter crea el proyecto nuevo en Supabase y corre las migraciones en orden (ver `pasada-2-estado.md`, sección "Para correrlo en Supabase"). Después se prueba un recorrido real: entrar, conectar un canal, mandar un mensaje.
+1. Walter crea el proyecto nuevo en Supabase y corre las migraciones en orden (incluye `sql_009_propiedades`) (ver `pasada-2-estado.md`, sección "Para correrlo en Supabase"). Después se prueba un recorrido real: entrar, conectar un canal, mandar un mensaje.
 2. Corregir lo que aparezca en esa primera prueba (se anota en las guías).
+2b. **Siguiente módulo:** que el bot ofrezca propiedades y que el lead guarde la propiedad de interés; después Visitas.
 3. Panel de superadmin (hoy la primera empresa se crea con SQL).
 4. Código para pegar el chat en la web de cada inmobiliaria.
 5. Memoria inicial del bot por empresa.

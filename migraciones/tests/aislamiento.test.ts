@@ -312,3 +312,59 @@ describe("reparto y avisos: nunca cruzan de empresa", () => {
     await como(U.asesorA1, async () => { await expect(db.query(`select repartir_leads_sin_asignar()`)).rejects.toThrow(/dueño/i); });
   });
 });
+
+describe("propiedades: cada empresa las suyas", () => {
+  const OF_A = "a1000000-0000-0000-0000-000000000001";
+  const OF_B = "b1000000-0000-0000-0000-000000000001";
+  const alta = (extra = "") => `insert into propiedades (titulo, operacion, tipo ${extra ? ", " + extra.split("|")[0] : ""}) values ('Casa en venta', 'venta', 'casa' ${extra ? ", " + extra.split("|")[1] : ""})`;
+
+  it("un asesor carga una propiedad y queda en su empresa; la otra empresa no la ve", async () => {
+    await como(U.asesorA1, async () => {
+      await db.exec(alta());
+      expect((await uno(`select empresa_id, estado, moneda, publicada from propiedades`)).empresa_id).toBe(A);
+    });
+    await como(U.asesorB1, async () => expect((await filas(`select * from propiedades`)).length).toBe(0));
+    await como(U.asesorA1, async () => {
+      await expect(db.exec(`insert into propiedades (empresa_id, titulo, operacion, tipo) values ('${B}', 'Intruso', 'venta', 'casa')`)).rejects.toThrow(/row-level security/i);
+      expect((await filas(`update propiedades set titulo = 'x' where empresa_id = '${B}' returning id`)).length).toBe(0);
+    });
+  });
+
+  it("la oficina y el responsable tienen que ser de la misma empresa", async () => {
+    await como(U.asesorA1, async () => {
+      await expect(db.exec(alta(`sucursal_id|'${OF_B}'`))).rejects.toThrow(/oficina no es de la empresa/i);
+      await expect(db.exec(alta(`vendedor_id|'${U.asesorB1}'`))).rejects.toThrow(/responsable no es de la empresa/i);
+      await db.exec(alta(`sucursal_id, vendedor_id|'${OF_A}', '${U.asesorA2}'`));
+    });
+  });
+
+  it("el código interno no se repite dentro de una empresa, pero otra empresa puede usar el mismo", async () => {
+    await como(U.asesorA1, async () => {
+      await db.exec(alta(`codigo|'P-1'`));
+      await expect(db.exec(alta(`codigo|'p-1'`))).rejects.toThrow(/duplicate|unique/i);
+    });
+    await como(U.asesorB1, async () => { await db.exec(alta(`codigo|'P-1'`)); });
+  });
+
+  it("valores inválidos se rechazan (operación, estado, precio negativo, título vacío)", async () => {
+    await como(U.asesorA1, async () => {
+      await expect(db.exec(`insert into propiedades (titulo, operacion, tipo) values ('x', 'regalo', 'casa')`)).rejects.toThrow();
+      await expect(db.exec(`insert into propiedades (titulo, operacion, tipo, estado) values ('x', 'venta', 'casa', 'rota')`)).rejects.toThrow();
+      await expect(db.exec(`insert into propiedades (titulo, operacion, tipo, precio) values ('x', 'venta', 'casa', -5)`)).rejects.toThrow();
+      await expect(db.exec(`insert into propiedades (titulo, operacion, tipo) values ('   ', 'venta', 'casa')`)).rejects.toThrow();
+    });
+  });
+
+  it("no se puede mover una propiedad a otra empresa; solo dueño y encargado borran", async () => {
+    await como(U.asesorA1, async () => {
+      await expect(db.exec(`update propiedades set empresa_id = '${B}' where empresa_id = '${A}'`)).rejects.toThrow(/cambiar de empresa|row-level security/i);
+      expect((await filas(`delete from propiedades where empresa_id = '${A}' returning id`)).length).toBe(0);
+    });
+    await como(U.encargadoA, async () => {
+      expect((await filas(`delete from propiedades where codigo = 'P-1' returning id`)).length).toBe(1);
+    });
+    await como(U.duenoB, async () => {
+      expect((await filas(`delete from propiedades where empresa_id = '${A}' returning id`)).length).toBe(0);
+    });
+  });
+});

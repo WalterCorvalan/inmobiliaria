@@ -62,7 +62,7 @@ Pruebas:
 - `lib/empresa/db.test.ts`: el cliente atado a la empresa (filtros, altas, no se puede pisar la empresa, pedidos simultáneos no se mezclan).
 - `lib/empresa/guardia.test.ts`: falla si alguien usa la clave de servicio fuera de `lib/empresa`, crea su propio cliente, lee `id = true`, agrega una ruta de la API sin empresa o una tarea automática que no recorra las empresas.
 
-Correr en Supabase, en orden: `sql_schema_migraciones`, `sql_001` a `sql_007`, y después `sql_008` si se quieren las tareas programadas (requiere pg_cron y pg_net).
+Correr en Supabase, en orden: `sql_schema_migraciones`, `sql_001` a `sql_007`, `sql_009_propiedades` y, si se quieren las tareas programadas, `sql_008` (requiere pg_cron y pg_net).
 
 ## Lo que sigue pendiente
 
