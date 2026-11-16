@@ -78,3 +78,9 @@ Correr en Supabase, en orden: `sql_schema_migraciones`, `sql_001` a `sql_007`, y
 9. **ID de app de Instagram fijo en el código** y **secreto de la app de Meta como variable única**: siguen siendo lo que impide conectar una segunda empresa (pasan a ser por empresa en la pasada 3).
 
 Regla firme: no conectar ninguna inmobiliaria real hasta resolver el punto 1 y probar contra un Supabase real.
+
+### Demo (16/11/2026)
+
+- Crear la clave `DEMO_ANTHROPIC_API_KEY` en un espacio de trabajo de Anthropic con límite de USD 5 por mes y cargarla en Vercel.
+- Probar 20 charlas típicas en `/demo` y medir el costo por charla.
+- Ver `demo-simulador.md`.

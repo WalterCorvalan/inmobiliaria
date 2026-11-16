@@ -2,7 +2,7 @@
 
 Si abrís este proyecto desde un chat nuevo, **leé este archivo entero antes de tocar nada**. Resume la idea, lo que se decidió, cómo está construido, en qué estado está y cómo seguir. Es la puerta de entrada; el detalle está en los demás archivos de `docs/` (mapa al final).
 
-Última actualización: 6/11/2026.
+Última actualización: 16/11/2026.
 
 ## 1. Quién es Walter y cómo hay que hablarle
 
@@ -76,6 +76,8 @@ Resumen; el detalle está en `manual-de-arranque.md`.
 
 **Actualización 6/11/2026:** se relevó en solo lectura la app de Meta de Pfaffen (Publicada, sin App Review, negocio verificado) y con eso se completaron `receta-agente-meta.md` y `guia-conexion-canales.md`. Walter decidió **no probar con una empresa nueva por ahora**: se replica lo que anda en Pfaffen y se corrige en el primer alta real.
 
+**Actualización 16/11/2026:** se sumó la demo pública `/demo` (simulador de WhatsApp, Instagram y Messenger con el bot real, datos de ejemplo, resumen simulado, tope de USD 5). Detalle en `demo-simulador.md`. Falta cargar la clave de demo y probar respuestas reales.
+
 **NUNCA se probó contra un Supabase real ni contra Meta real.** La base se probó en memoria. Hasta que eso pase, la guía de canales y el manual figuran como "sin probar".
 
 **Regla firme:** no conectar ninguna inmobiliaria real hasta probar todo contra un Supabase real.
@@ -109,6 +111,7 @@ La lista viva de pendientes es `pasada-2-estado.md`, sección "Lo que sigue pend
 | Archivo | Para qué |
 |---|---|
 | `docs/LEEME-PRIMERO.md` | este manual: idea, decisiones, estado, cómo seguir |
+| `docs/demo-simulador.md` | la demo `/demo`: simulador de canales, datos de ejemplo, tope de gasto |
 | `docs/decisiones.md` | tabla de decisiones de Walter con fecha (lo que está acá no es un bug) |
 | `docs/manual-de-arranque.md` | receta para armar otro CRM con este método (ej: concesionaria) |
 | `docs/guia-conexion-canales.md` | conectar WhatsApp, Instagram y Messenger paso a paso |

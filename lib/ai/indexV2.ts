@@ -23,7 +23,7 @@ export function isAiConfiguredV2(): boolean {
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
-function extractJson(text: string): string {
+export function extractJson(text: string): string {
   const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fenceMatch) return fenceMatch[1].trim();
   const start = text.indexOf("{");
