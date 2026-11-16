@@ -25,3 +25,15 @@ describe("leads de ejemplo", () => {
     }
   });
 });
+
+describe("cada inmobiliaria con su configuración", () => {
+  it("el segundo negocio cambia nombre, tono y reglas en el prompt", async () => {
+    const { DEMO_INMOBILIARIA_2 } = await import("./inmobiliaria");
+    const p = promptDemo(DEMO_INMOBILIARIA_2, "whatsapp");
+    expect(p).toContain("Martínez & Asociados");
+    expect(p).toContain("tono formal y sobrio");
+    expect(p).toContain("NO se acepta seguro de caución");
+    expect(p).not.toContain("Lomas de Zamora");
+    expect(promptDemo(DEMO_INMOBILIARIA, "whatsapp")).toContain("seguro de caución");
+  });
+});

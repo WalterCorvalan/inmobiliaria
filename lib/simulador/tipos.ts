@@ -36,6 +36,8 @@ export type RubroDemo = {
   slug: string;
   nombreNegocio: string;
   nombreBot: string;
+  /** Cómo habla el bot de este negocio (cada empresa tiene el suyo). Sin valor: amable, profesional, claro y breve. */
+  tono?: string;
   descripcion: string;
   /** Respuestas fijas del negocio (horarios, requisitos, catálogo de ejemplo), igual que la memoria del bot real. */
   conocimiento: { categoria: string; respuesta: string }[];

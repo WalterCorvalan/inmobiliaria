@@ -12,6 +12,16 @@ Diseño compartido con dental-bot y automotora: ver `docs/simulador.md` en el re
 
 Direcciones: `/demo`, `/demo?canal=instagram`, `/demo?canal=messenger`.
 
+Hay **dos inmobiliarias de ejemplo** (se elige arriba a la izquierda, o `/demo?negocio=inmobiliaria-2`):
+
+| | Propiedades del Sur | Martínez & Asociados |
+|---|---|---|
+| Tono | amable, con emojis | formal y sobrio, sin emojis |
+| Oficinas | Belgrano y Lomas | solo Belgrano |
+| Garantía | propietaria o seguro de caución | solo propietaria de CABA |
+| Honorarios | 1 mes (alquiler), 3% (venta) | 4,15% (alquiler), 4% (venta) |
+| Sábados | de 9 a 13 | no atiende |
+
 ## Archivos
 
 | Archivo | Para qué |
@@ -25,10 +35,10 @@ Direcciones: `/demo`, `/demo?canal=instagram`, `/demo?canal=messenger`.
 
 Para mostrarla con el nombre de un cliente: cambiar `nombreNegocio` y `nombreBot` en `lib/simulador/inmobiliaria.ts`.
 
-## Tope de gasto: USD 5
+## Tope de gasto: USD 5 repartido entre los 3 productos
 
 1. **Clave:** la misma `ANTHROPIC_API_KEY` del bot, de un solo espacio de trabajo de Anthropic (Walter, 16/11/2026). Si algún día se quiere separar, se carga `DEMO_ANTHROPIC_API_KEY` y la demo usa esa.
-2. **Contador propio:** al llegar a USD 4,50 la demo deja de llamar a la IA y lo avisa. Cuenta en la memoria del servidor (se reinicia con cada deploy), por eso es aproximado.
+2. **Contador propio, por producto** (Walter, 16/11/2026): DentalBot, Inmobiliaria y Automotora tienen cada uno su tope. Por defecto **USD 1,50 por mes** (los tres suman USD 4,50, con margen dentro de los USD 5); se cambia con la variable `DEMO_TOPE_USD`. Al llegar, la demo deja de llamar a la IA y lo avisa. Cuenta en la memoria del servidor (se reinicia con cada deploy), por eso es aproximado.
 3. **Por visita:** 30 mensajes por charla, 60 mensajes por hora desde la misma conexión, mensajes de hasta 600 letras.
 
 Modelo: Claude Haiku 5.5 (`MODELO_BOTS`), con las instrucciones en caché.
@@ -42,3 +52,22 @@ Modelo: Claude Haiku 5.5 (`MODELO_BOTS`), con las instrucciones en caché.
 
 - Pantalla, cambio de canal, bandeja, ficha, "Resumir" y "Reiniciar" probados en el navegador (escritorio y celular), sin errores.
 - **Falta probar las respuestas reales del bot**: se prueba antes de lanzar (Walter, 16/11/2026).
+
+## Pruebas antes de lanzar (Walter, 16/11/2026)
+
+Cada negocio tiene su nombre, su forma de trabajar y su tono, y el bot tiene que respetarlos. Antes de mostrarle la demo a un cliente (o de conectar su canal real), se cargan **sus datos** en un negocio de ejemplo y se corren estas charlas en los 3 canales. Se prueba con **los dos negocios de ejemplo** para confirmar que el bot no mezcla la información de uno con la del otro.
+
+| # | Mensaje | Qué tiene que pasar |
+|---|---|---|
+| 1 | "Hola" | saluda con el nombre del negocio y del bot, una sola vez |
+| 2 | "¿Sigue el 2 ambientes de Belgrano?" | da código, precio y expensas tal como están cargados |
+| 3 | "¿Aceptan seguro de caución?" | Propiedades del Sur: sí. Martínez: no, solo garantía propietaria de CABA |
+| 4 | "¿Cuánto cobran de honorarios?" | el valor de cada negocio, sin mezclar |
+| 5 | "¿Atienden los sábados?" | Propiedades del Sur: sí, de 9 a 13. Martínez: no |
+| 6 | "Tienen algo en Palermo por 500 mil?" | dice que no tiene, no inventa propiedades |
+| 7 | "Quiero verlo el jueves a la mañana" | propone día y horario dentro del horario de la oficina |
+| 8 | "Te ofrezco 100 mil" (negociar) | deriva a un asesor y no promete nada |
+| 9 | Insulto | responde una vez con respeto y corta |
+| 10 | Mismo pedido en Instagram | no pide el nombre; ofrece seguir por WhatsApp |
+
+Anotar el costo de cada charla (sale en el contador de gasto) para fijar el precio del plan.

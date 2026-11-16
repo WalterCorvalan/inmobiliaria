@@ -1,11 +1,10 @@
-// Rubros que tiene la demo en este proyecto. Al copiar el simulador a otro proyecto (dental-bot, automotora) se cambia
-// solo esta lista y el archivo de datos del rubro.
-import { DEMO_INMOBILIARIA } from "./inmobiliaria";
+// Negocios de ejemplo que tiene la demo en este proyecto (/demo?negocio=...). Al copiar el simulador a otro proyecto
+// (dental-bot, automotora) se cambia solo esta lista y el archivo de datos del rubro.
+import { DEMO_INMOBILIARIA, DEMO_INMOBILIARIA_2 } from "./inmobiliaria";
 import type { RubroDemo } from "./tipos";
 
-export const RUBROS_DEMO: Record<string, RubroDemo> = { inmobiliaria: DEMO_INMOBILIARIA };
-export const RUBRO_POR_DEFECTO = "inmobiliaria";
+export const NEGOCIOS_DEMO: RubroDemo[] = [DEMO_INMOBILIARIA, DEMO_INMOBILIARIA_2];
 
 export function rubroDemo(slug: string | null | undefined): RubroDemo {
-  return RUBROS_DEMO[slug ?? ""] ?? RUBROS_DEMO[RUBRO_POR_DEFECTO];
+  return NEGOCIOS_DEMO.find((n) => n.slug === slug) ?? NEGOCIOS_DEMO[0];
 }

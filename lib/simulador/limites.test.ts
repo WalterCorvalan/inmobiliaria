@@ -1,16 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { crearContadorGasto, MAX_MENSAJES_POR_CHARLA, MENSAJE_TOPE_CHARLA, MENSAJE_TOPE_GASTO, revisarLimites, TOPE_GASTO_USD } from "./limites";
+import { crearContadorGasto, MAX_MENSAJES_POR_CHARLA, MENSAJE_TOPE_CHARLA, MENSAJE_TOPE_GASTO, revisarLimites, TOPE_GASTO_POR_DEFECTO_USD, topeGastoUsd } from "./limites";
 
 describe("revisarLimites", () => {
   it("deja pasar una charla normal", () => {
     expect(revisarLimites({ mensajesCliente: 3, gastoMesUsd: 0.2 })).toEqual({ ok: true });
   });
   it("corta al llegar al tope de gasto", () => {
-    expect(revisarLimites({ mensajesCliente: 1, gastoMesUsd: TOPE_GASTO_USD })).toEqual({ ok: false, mensaje: MENSAJE_TOPE_GASTO });
+    expect(revisarLimites({ mensajesCliente: 1, gastoMesUsd: 1.49, topeUsd: 1.5 })).toEqual({ ok: true });
+    expect(revisarLimites({ mensajesCliente: 1, gastoMesUsd: 1.5, topeUsd: 1.5 })).toEqual({ ok: false, mensaje: MENSAJE_TOPE_GASTO });
   });
   it("corta cuando la charla pasa el máximo de mensajes", () => {
     expect(revisarLimites({ mensajesCliente: MAX_MENSAJES_POR_CHARLA, gastoMesUsd: 0 })).toEqual({ ok: true });
     expect(revisarLimites({ mensajesCliente: MAX_MENSAJES_POR_CHARLA + 1, gastoMesUsd: 0 })).toEqual({ ok: false, mensaje: MENSAJE_TOPE_CHARLA });
+  });
+});
+
+describe("topeGastoUsd", () => {
+  it("USD 1,50 por producto si no se configura, o el valor de DEMO_TOPE_USD", () => {
+    expect(topeGastoUsd(undefined)).toBe(TOPE_GASTO_POR_DEFECTO_USD);
+    expect(topeGastoUsd("1")).toBe(1);
+    expect(topeGastoUsd("cualquier cosa")).toBe(TOPE_GASTO_POR_DEFECTO_USD);
+    expect(topeGastoUsd("0")).toBe(TOPE_GASTO_POR_DEFECTO_USD);
   });
 });
 

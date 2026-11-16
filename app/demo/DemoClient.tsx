@@ -36,7 +36,7 @@ const charlaVacia = (): Charla => ({ burbujas: [], datos: {}, calificacion: null
 const charlasVacias = (): Record<CanalDemo, Charla> => ({ whatsapp: charlaVacia(), instagram: charlaVacia(), messenger: charlaVacia() });
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export default function DemoClient({ rubro, canalInicial }: { rubro: RubroPublico; canalInicial: CanalDemo }) {
+export default function DemoClient({ rubro, canalInicial, negocios }: { rubro: RubroPublico; canalInicial: CanalDemo; negocios: { slug: string; nombre: string }[] }) {
   const [canal, setCanal] = useState<CanalDemo>(canalInicial);
   const [charlas, setCharlas] = useState(charlasVacias);
   const [texto, setTexto] = useState("");
@@ -109,7 +109,15 @@ export default function DemoClient({ rubro, canalInicial }: { rubro: RubroPublic
       <header className="sticky top-0 z-20 border-b border-black/5 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
-            <p className="truncate font-semibold">{rubro.nombreNegocio}</p>
+            {negocios.length > 1 ? (
+              // Mismo bot, otro negocio: cada empresa tiene su nombre, sus reglas y su tono.
+              <select aria-label="Negocio de ejemplo" value={rubro.slug} onChange={(e) => { window.location.search = `?negocio=${e.target.value}&canal=${canal}`; }}
+                className="max-w-full truncate rounded-md bg-transparent font-semibold outline-none">
+                {negocios.map((n) => <option key={n.slug} value={n.slug}>{n.nombre}</option>)}
+              </select>
+            ) : (
+              <p className="truncate font-semibold">{rubro.nombreNegocio}</p>
+            )}
             <p className="text-xs text-slate-500">Demo: el bot todavía no está conectado a tu número. Los datos son de ejemplo.</p>
           </div>
           <button onClick={reiniciar} className="flex shrink-0 items-center gap-1.5 rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">

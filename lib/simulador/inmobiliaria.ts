@@ -190,3 +190,28 @@ export const DEMO_INMOBILIARIA: RubroDemo = {
   sugerencias: ["Hola, ¿sigue disponible el 2 ambientes de Belgrano?", "Busco casa en zona sur hasta USD 130.000", "¿Qué piden para alquilar?", "Quiero tasar mi departamento"],
   queBusca: "propiedad",
 };
+
+// Segundo negocio de ejemplo: mismo producto, otra inmobiliaria con otras reglas y otro tono (Walter, 16/11/2026: cada
+// inmobiliaria tiene su nombre, su forma de trabajar y su tono; el bot se configura por empresa). Sirve para mostrar
+// que el bot cambia con la configuración y para las pruebas antes de lanzar.
+const PROPIEDADES_CABA = PROPIEDADES.split("\n").filter((l) => !/Lomas|Banfield|Temperley|Adrogué/.test(l)).join("\n");
+
+export const DEMO_INMOBILIARIA_2: RubroDemo = {
+  slug: "inmobiliaria-2",
+  nombreNegocio: "Martínez & Asociados",
+  nombreBot: "Asistente de Martínez & Asociados",
+  tono: "tono formal y sobrio, trato respetuoso, sin emojis",
+  descripcion: "Estudio inmobiliario familiar con una sola oficina en Belgrano. Trabaja solo CABA norte. Especialistas en ventas y alquileres con garantía propietaria.",
+  conocimiento: [
+    { categoria: "Propiedades disponibles (código · operación · descripción · precio)", respuesta: `\n${PROPIEDADES_CABA}` },
+    { categoria: "Requisitos y honorarios", respuesta: "Alquiler: contrato de 3 años, solo garantía propietaria de CABA (NO se acepta seguro de caución), recibo de sueldo. Honorarios: 4,15% del total del contrato (inquilino). Venta: honorarios 4% comprador. No se toman propiedades en parte de pago. Las mascotas las decide cada propietario: siempre se consulta." },
+    { categoria: "horarios_ubicacion", respuesta: "Lunes a viernes de 10 a 17. No se atiende sábados. Visitas solo con turno confirmado por un asesor." },
+  ],
+  sucursales: [
+    { nombre: "Oficina Belgrano", slug: "belgrano", direccion: "Av. Cabildo 2100, Belgrano, CABA", telefono_encargado: null, google_maps_url: null, encargado_nombre: "Laura Gómez", horario_texto: "Lunes a viernes de 10 a 17" },
+  ],
+  asesores: ["Laura Gómez", "Martín Ríos"],
+  leads: leads.filter((l) => !/Lomas|Banfield|Adrogué|zona sur|caución/i.test(l.resumen)).map((l) => ({ ...l, asesor: l.asesor === "Sofía Paz" ? "Laura Gómez" : l.asesor })),
+  sugerencias: ["Buenas tardes, ¿el 2 ambientes de Belgrano sigue disponible?", "¿Aceptan seguro de caución?", "¿Cuánto cobran de honorarios?", "¿Atienden los sábados?"],
+  queBusca: "propiedad",
+};

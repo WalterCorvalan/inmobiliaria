@@ -21,6 +21,7 @@ export function promptDemo(rubro: RubroDemo, canal: CanalDemo): string {
   return buildSystemPromptV2({
     empresa: { nombre: rubro.nombreNegocio, descripcion: rubro.descripcion, conocimiento: rubro.conocimiento },
     nombreBot: rubro.nombreBot,
+    tono: rubro.tono,
     sucursales: rubro.sucursales,
     esInstagram: canal === "instagram",
   });
