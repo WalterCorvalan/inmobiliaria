@@ -81,6 +81,6 @@ Regla firme: no conectar ninguna inmobiliaria real hasta resolver el punto 1 y p
 
 ### Demo (16/11/2026)
 
-- Crear la clave `DEMO_ANTHROPIC_API_KEY` en un espacio de trabajo de Anthropic con límite de USD 5 por mes y cargarla en Vercel.
+- La demo usa la misma `ANTHROPIC_API_KEY` del bot (un solo espacio de Anthropic, Walter 16/11/2026).
 - Probar 20 charlas típicas en `/demo` y medir el costo por charla.
 - Ver `demo-simulador.md`.

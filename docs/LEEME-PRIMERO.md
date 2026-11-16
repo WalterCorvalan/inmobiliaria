@@ -76,7 +76,7 @@ Resumen; el detalle está en `manual-de-arranque.md`.
 
 **Actualización 6/11/2026:** se relevó en solo lectura la app de Meta de Pfaffen (Publicada, sin App Review, negocio verificado) y con eso se completaron `receta-agente-meta.md` y `guia-conexion-canales.md`. Walter decidió **no probar con una empresa nueva por ahora**: se replica lo que anda en Pfaffen y se corrige en el primer alta real.
 
-**Actualización 16/11/2026:** se sumó la demo pública `/demo` (simulador de WhatsApp, Instagram y Messenger con el bot real, datos de ejemplo, resumen simulado, tope de USD 5). Detalle en `demo-simulador.md`. Falta cargar la clave de demo y probar respuestas reales.
+**Actualización 16/11/2026:** se sumó la demo pública `/demo` (simulador de WhatsApp, Instagram y Messenger con el bot real, datos de ejemplo, resumen simulado, tope de USD 5). Detalle en `demo-simulador.md`. Las respuestas reales del bot se prueban antes de lanzar.
 
 **NUNCA se probó contra un Supabase real ni contra Meta real.** La base se probó en memoria. Hasta que eso pase, la guía de canales y el manual figuran como "sin probar".
 

@@ -1,7 +1,7 @@
 // Conexión del simulador con el bot: el MISMO prompt y el MISMO formato de salida que usan los webhooks de WhatsApp,
 // Instagram y Messenger (lib/ai/promptsV2.ts, AgentReplySchemaV2), pero con la empresa de ejemplo del rubro y sin base:
-// no guarda la charla ni el uso de IA en Supabase. Usa su propia clave (DEMO_ANTHROPIC_API_KEY), de un espacio de trabajo
-// de Anthropic con tope de USD 5 por mes, para que la demo nunca gaste la plata del bot real.
+// no guarda la charla ni el uso de IA en Supabase. Usa DEMO_ANTHROPIC_API_KEY si existe; si no, la misma clave del bot
+// (ANTHROPIC_API_KEY): Walter, 16/11/2026, prefiere un solo espacio de Anthropic. El tope de USD 5 lo pone lib/simulador/limites.ts.
 import Anthropic from "@anthropic-ai/sdk";
 import { AgentReplySchemaV2, dividirRespuestaEnMensajes, type AgentReplyV2 } from "@/lib/ai/agenteV2";
 import { buildSystemPromptV2 } from "@/lib/ai/promptsV2";
@@ -9,8 +9,12 @@ import { extractJson } from "@/lib/ai/indexV2";
 import { costoFilaIaUsd, MODELO_BOTS } from "@/lib/ai/costoIa";
 import type { CanalDemo, MensajeDemo, RubroDemo } from "./tipos";
 
+function claveDemo(): string {
+  return process.env.DEMO_ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY || "";
+}
+
 export function demoConfigurada(): boolean {
-  return !!process.env.DEMO_ANTHROPIC_API_KEY;
+  return !!claveDemo();
 }
 
 export function promptDemo(rubro: RubroDemo, canal: CanalDemo): string {
@@ -25,7 +29,7 @@ export function promptDemo(rubro: RubroDemo, canal: CanalDemo): string {
 export type RespuestaDemo = { ok: true; data: AgentReplyV2; mensajes: string[]; costoUsd: number } | { ok: false; error: string; costoUsd: number };
 
 export async function responderDemo(rubro: RubroDemo, canal: CanalDemo, historial: MensajeDemo[]): Promise<RespuestaDemo> {
-  const cliente = new Anthropic({ apiKey: process.env.DEMO_ANTHROPIC_API_KEY || "" });
+  const cliente = new Anthropic({ apiKey: claveDemo() });
   const system = promptDemo(rubro, canal);
   let costoUsd = 0;
   let ultimoError = "";

@@ -1,7 +1,8 @@
 // Control de gasto de la demo (dental-bot docs/simulador.md, sección 4). Tres capas:
-// 1) Tope duro en Anthropic: la clave DEMO_ANTHROPIC_API_KEY sale de un espacio de trabajo propio con límite de USD 5 por mes.
+// 1) Tope de Anthropic: por ahora un solo espacio de trabajo para todo (Walter, 16/11/2026); el límite de gasto de ese
+//    espacio cubre a la demo y al bot real juntos.
 // 2) Este contador: al llegar a TOPE_GASTO_USD la demo deja de llamar a la IA. Vive en la memoria del servidor (cada
-//    instancia cuenta lo suyo y se reinicia con cada deploy): es una red extra, el tope que manda es el de Anthropic.
+//    instancia cuenta lo suyo y se reinicia con cada deploy), así que es aproximado.
 // 3) Límites por visita: mensajes por charla y charlas por hora desde la misma conexión.
 
 export const TOPE_GASTO_USD = 4.5;

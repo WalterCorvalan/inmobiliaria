@@ -27,18 +27,18 @@ Para mostrarla con el nombre de un cliente: cambiar `nombreNegocio` y `nombreBot
 
 ## Tope de gasto: USD 5
 
-1. **Clave propia para la demo:** `DEMO_ANTHROPIC_API_KEY`, sacada de un espacio de trabajo (workspace) aparte en la consola de Anthropic, con **límite de gasto de USD 5 por mes**. Ese es el tope que manda.
-2. **Contador propio:** al llegar a USD 4,50 la demo deja de llamar a la IA y lo avisa. Cuenta en la memoria del servidor (se reinicia con cada deploy), por eso es solo una red extra.
+1. **Clave:** la misma `ANTHROPIC_API_KEY` del bot, de un solo espacio de trabajo de Anthropic (Walter, 16/11/2026). Si algún día se quiere separar, se carga `DEMO_ANTHROPIC_API_KEY` y la demo usa esa.
+2. **Contador propio:** al llegar a USD 4,50 la demo deja de llamar a la IA y lo avisa. Cuenta en la memoria del servidor (se reinicia con cada deploy), por eso es aproximado.
 3. **Por visita:** 30 mensajes por charla, 60 mensajes por hora desde la misma conexión, mensajes de hasta 600 letras.
 
 Modelo: Claude Haiku 5.5 (`MODELO_BOTS`), con las instrucciones en caché.
 
 ## Para ponerla en línea
 
-- Variables: `DEMO_ANTHROPIC_API_KEY` (la de la demo). El resto del proyecto pide `NEXT_PUBLIC_SUPABASE2_URL` y `SUPABASE2_SERVICE_ROLE_KEY` al arrancar (`lib/panel/logger.ts`); la demo no usa la base, pero el servidor no arranca sin esas dos.
+- Variables: `ANTHROPIC_API_KEY`. El resto del proyecto pide `NEXT_PUBLIC_SUPABASE2_URL` y `SUPABASE2_SERVICE_ROLE_KEY` al arrancar (`lib/panel/logger.ts`); la demo no usa la base, pero el servidor no arranca sin esas dos.
 - Sin la clave, la demo funciona igual pero el bot contesta "La demo todavía no tiene la IA configurada".
 
 ## Probado
 
 - Pantalla, cambio de canal, bandeja, ficha, "Resumir" y "Reiniciar" probados en el navegador (escritorio y celular), sin errores.
-- **Falta probar las respuestas reales del bot**: no había clave de demo en esta sesión.
+- **Falta probar las respuestas reales del bot**: se prueba antes de lanzar (Walter, 16/11/2026).

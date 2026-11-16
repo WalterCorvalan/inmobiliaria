@@ -33,7 +33,7 @@ export async function chatDemo(entrada: unknown): Promise<RespuestaChatDemo> {
 
   const control = revisarLimites({ mensajesCliente: historial.filter((m) => m.role === "user").length, gastoMesUsd: contadorGasto.delMes() });
   if (!control.ok) return { mensajes: [control.mensaje] };
-  if (!demoConfigurada()) return { mensajes: ["La demo todavía no tiene la IA configurada (falta DEMO_ANTHROPIC_API_KEY)."] };
+  if (!demoConfigurada()) return { mensajes: ["La demo todavía no tiene la IA configurada (falta ANTHROPIC_API_KEY)."] };
 
   const r = await responderDemo(rubroDemo(pedido.data.rubro), canal, historial);
   contadorGasto.sumar(r.costoUsd);
