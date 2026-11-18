@@ -69,10 +69,10 @@ Correr en Supabase, en orden: `sql_schema_migraciones`, `sql_001` a `sql_007`, y
 1. ~~**Catálogo en los chats**~~ **Hecho (2/11/2026).** Ya no queda ninguna consulta a tablas que la base nueva no tenga (se comparó cada `.from("…")` del código contra las migraciones). Se sacó: vehículos, pedidos, consignaciones, ventas, test drives, señas, presupuestos, peritajes, tasaciones, mensajes internos y los módulos configurables por sector (ahora lo que ve cada rol sale de `lib/panel/permisosModulos.ts`, función pura con test). Sigue sin probarse contra un Supabase real: es lo próximo.
 2. **Nunca se corrió contra un Supabase real**: la base se probó en memoria. Tampoco se probó `programar_tareas` (pg_cron no existe en la base en memoria).
 3. **Firma de Instagram**: si Meta firma con un secreto distinto al cargado, el webhook rechaza y deja el error en "Errores del sistema". Cargar entonces el otro secreto (hay dos campos).
-4. **Datos iniciales**: falta la memoria del bot por empresa (respuestas fijas); las empresas nuevas arrancan con las genéricas de fuera de horario y apertura.
-5. **Código para pegar el chat en la web de cada inmobiliaria** (Fase 6): hoy el chat toma el identificador de una variable.
+4. ~~**Datos iniciales**~~ (hecho 18/11/2026, `lib/panel/memoriaInicial.ts`): falta la memoria del bot por empresa (respuestas fijas); las empresas nuevas arrancan con las genéricas de fuera de horario y apertura.
+5. ~~**Código para pegar el chat en la web de cada inmobiliaria** (Fase 6)~~ hecho 18/11/2026: `public/chat-web.js` + `/chat/<empresa>`.
 6. **Endurecimiento de credenciales**: el dueño puede leer los tokens cifrados desde el navegador; pasarlos a lectura solo del servidor.
-7. **Panel superadmin** (alta de empresas sin SQL): hoy la primera empresa se crea con el SQL de más arriba.
+7. ~~**Panel superadmin**~~ hecho 18/11/2026 (`/superadmin`): hoy la primera empresa se crea con el SQL de más arriba.
 
 8. **Meta (relevamiento del 6/11/2026, solo lectura):** `receta-agente-meta.md` y `guia-conexion-canales.md` ya tienen el estado real de la app de Pfaffen. Quedan por confirmar en el primer alta real: que una app nueva Publicada y sin App Review reciba mensajes del público; qué requisitos muestra Publicar en una app nueva; la sección de tokens y el webhook de Instagram (no se abrieron); y dos interruptores de Facebook para empresas. Walter decidió no probar con una empresa nueva por ahora.
 9. **ID de app de Instagram fijo en el código** y **secreto de la app de Meta como variable única**: siguen siendo lo que impide conectar una segunda empresa (pasan a ser por empresa en la pasada 3).

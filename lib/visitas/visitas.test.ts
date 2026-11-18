@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { agruparPorDia, diasDeSemana, etiquetaSemana, filtrarVisitas, inicioDeSemana, linkConfirmarPorWhatsapp, minutosDeHorario, visitasEnConflicto, type Visita } from "./visitas";
+import { textoRecordatorio, agruparPorDia, diasDeSemana, etiquetaSemana, filtrarVisitas, inicioDeSemana, linkConfirmarPorWhatsapp, minutosDeHorario, visitasEnConflicto, type Visita } from "./visitas";
 
 const v = (p: Partial<Visita>): Visita => ({
   id: "1", nombre_cliente: "Ana Pérez", telefono_cliente: "1144445555", fecha_visita: "2026-11-19", horario_visita: "10:00", sucursal: "Belgrano",
@@ -42,5 +42,9 @@ describe("agenda de visitas", () => {
     expect(l?.startsWith("https://wa.me/5491144445555?text=")).toBe(true);
     expect(decodeURIComponent(l!)).toContain("Hola Ana");
     expect(linkConfirmarPorWhatsapp(v({ telefono_cliente: "sin dato" }), "X")).toBeNull();
+  });
+
+  it("arma el recordatorio para el asesor", () => {
+    expect(textoRecordatorio(v({ propiedad_codigo: "A103" }))).toBe("📅 Mañana a las 10:00: visita de Ana Pérez (Belgrano), propiedad A103. Confirmala con el cliente desde Visitas.");
   });
 });

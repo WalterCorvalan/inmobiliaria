@@ -13,7 +13,7 @@ export const AgentReplySchemaV2 = z.object({
   handoff: z.boolean(),
   pausar_sin_notificar: z.boolean().optional(),
   resumen_handoff: z.string().nullable(),
-  intencion: z.enum(["CONSULTA", "VISITA", "NEGOCIAR", "HABLAR_CON_ASESOR", "OTRA_CONSULTA"]).nullable(),
+  intencion: z.enum(["CONSULTA", "VISITA", "TASACION", "NEGOCIAR", "HABLAR_CON_ASESOR", "OTRA_CONSULTA"]).nullable(),
   calificacion: z.enum(["caliente", "tibio", "frio"]).nullable(),
   datos_detectados: z.object({
     nombre: z.string().nullable(),

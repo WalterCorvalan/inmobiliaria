@@ -44,7 +44,7 @@ describe("el servidor nunca consulta sin una empresa", () => {
 
   it("las tareas automáticas piden la clave de las tareas y recorren las empresas", () => {
     const crons = archivos(join(RAIZ, "app/api/cron"), (r) => /route\.ts$/.test(r));
-    expect(crons.length).toBe(7);
+    expect(crons.length).toBe(8); // 8 desde el 18/11/2026: se sumó recordatorio-visitas
     for (const r of crons) {
       const t = leer(r);
       expect(t, r).toContain("CRON_SECRET");

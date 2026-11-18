@@ -129,3 +129,10 @@ export function linkConfirmarPorWhatsapp(v: Pick<Visita, "telefono_cliente" | "n
   const texto = `Hola ${nombre}, te escribimos de ${negocio} para confirmar tu visita del ${etiquetaDia(v.fecha_visita)} a las ${v.horario_visita}${v.sucursal && v.sucursal !== "Sin especificar" ? ` (${v.sucursal})` : ""}. ¿Nos confirmás?`;
   return `https://wa.me/${d}?text=${encodeURIComponent(texto)}`;
 }
+
+/** Texto del aviso al asesor la tarde anterior a la visita. */
+export function textoRecordatorio(v: Pick<Visita, "nombre_cliente" | "horario_visita" | "sucursal" | "propiedad_codigo">): string {
+  const donde = v.sucursal && v.sucursal !== "Sin especificar" ? ` (${v.sucursal})` : "";
+  const prop = v.propiedad_codigo ? `, propiedad ${v.propiedad_codigo}` : "";
+  return `📅 Mañana a las ${v.horario_visita}: visita de ${v.nombre_cliente}${donde}${prop}. Confirmala con el cliente desde Visitas.`;
+}
