@@ -17,6 +17,16 @@ const CSP = [
   "frame-ancestors 'self'",
 ].join("; ");
 
+// El chat de la web (/chat/<empresa>) se muestra DENTRO de la web de cada inmobiliaria (iframe que agrega public/chat-web.js):
+// esa página sí se deja enmarcar desde cualquier sitio. Todo lo demás (panel incluido) sigue sin poder enmarcarse.
+const CSP_CHAT = CSP.replace("frame-ancestors 'self'", "frame-ancestors *");
+const CABECERAS_COMUNES = [
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+];
+
 const nextConfig: NextConfig = {
   // No anunciar con qué está hecho el sitio (cabecera X-Powered-By).
   poweredByHeader: false,
@@ -37,18 +47,24 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/:path*",
+        source: "/((?!chat/).*)",
         headers: [
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+          ...CABECERAS_COMUNES,
           ...(process.env.NODE_ENV === "production"
             ? [{ key: "Content-Security-Policy", value: CSP }]
             : []),
         ],
       },
+      {
+        source: "/chat/:path*",
+        headers: [
+          ...CABECERAS_COMUNES,
+          ...(process.env.NODE_ENV === "production" ? [{ key: "Content-Security-Policy", value: CSP_CHAT }] : []),
+        ],
+      },
+      // El script que pega cada inmobiliaria en su web: se puede cargar desde cualquier sitio y se renueva cada hora.
+      { source: "/chat-web.js", headers: [{ key: "Cache-Control", value: "public, max-age=3600" }, { key: "Access-Control-Allow-Origin", value: "*" }] },
       // Íconos del menú del panel (29/10/2026): el navegador los guarda una semana en vez de pedirlos en cada página.
       // Si se cambia un ícono, puede tardar hasta una semana en verse nuevo: conviene cambiarle el nombre al archivo.
       {

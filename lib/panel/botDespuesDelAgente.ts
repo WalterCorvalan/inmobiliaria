@@ -94,6 +94,7 @@ export async function procesarDerivacion(supabase: SupabaseClient, canal: CanalD
       horario_visita: datos_detectados.horario_visita,
       sucursal: sucursalVisita,
       estado: "Pendiente",
+      propiedad_codigo: datos_detectados.propiedad_codigo || null,
       vendedor_id: vendedorAsignado,
     });
     if (error) registrarError(`bot:${canal}:crear-visita`, error, { conversacionId });
