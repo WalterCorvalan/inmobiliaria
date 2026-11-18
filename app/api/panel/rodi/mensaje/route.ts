@@ -264,6 +264,7 @@ async function procesarMensaje({ sessionId, texto, origenPagina, nombre, telefon
         horario_visita: datos_detectados.horario_visita,
         sucursal: sucursalVisita,
         estado: "Pendiente",
+        propiedad_codigo: datos_detectados.propiedad_codigo || null,
         vendedor_id: vendedorAsignado,
       });
       if (errorVisita) registrarError("api/panel/rodi/mensaje:crear-visita", errorVisita);

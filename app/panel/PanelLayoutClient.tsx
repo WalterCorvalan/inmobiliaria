@@ -10,6 +10,7 @@ import { puedeVerModulo } from "@/lib/panel/permisosModulos";
 import { supabase2 } from "@/lib/supabase/client";
 import {
   Building2,
+  CalendarDays,
   LogOut,
   Menu,
   Moon,
@@ -46,6 +47,7 @@ const GRUPOS: {
     titulo: "Cartera",
     items: [
       { href: "/panel/propiedades", label: "Propiedades", Icono: Building2, modulo: "propiedades" },
+      { href: "/panel/visitas", label: "Visitas", Icono: CalendarDays, modulo: "visitas" },
     ],
   },
   {
@@ -61,7 +63,7 @@ const GRUPOS: {
   {
     titulo: "Sistema",
     items: [
-      { href: "/panel/configuracion/whatsapp", label: "Configuración", icon: "/icons/panel/configuracion.png", modulo: "configuracion" },
+      { href: "/panel/configuracion/empresa", label: "Configuración", icon: "/icons/panel/configuracion.png", modulo: "configuracion" },
     ],
   },
 ];

@@ -16,6 +16,7 @@ export const SCHEMA_SALIDA = `Respondé SIEMPRE en este formato JSON exacto, sin
     "plazo": null o string — para cuándo lo necesita,
     "zona": null o string — identificador (slug) de la sucursal elegida, tal como figura en la lista de SUCURSALES,
     "dia_visita": null o string — fecha puntual confirmada (ej: "lunes 14"), no solo el día de la semana,
-    "horario_visita": null o string — horario confirmado dentro del horario de la sucursal
+    "horario_visita": null o string — horario confirmado dentro del horario de la sucursal,
+    "propiedad_codigo": null o string — código exacto de la propiedad que eligió o por la que pregunta (de la lista de PROPIEDADES)
   }
 }`;

@@ -4,6 +4,7 @@ import { calendarioParaBot } from "@/lib/fechas";
 import { bloqueEstiloYTono } from "./promptV2/estiloYTono";
 import { bloqueReglas } from "./promptV2/reglas";
 import { SCHEMA_SALIDA } from "./promptV2/schemaSalida";
+import { bloquePropiedades, type PropiedadParaBot } from "./promptV2/propiedades";
 
 export const SEPARADOR_MENSAJES = "|||";
 
@@ -51,8 +52,10 @@ function formatearEmpresa(e: EmpresaParaBot): string {
 
 export function buildSystemPromptV2(o: {
   empresa: EmpresaParaBot; nombreBot?: string; sucursales?: SucursalInfo[]; sugerirCierre?: boolean; tono?: string | null; esInstagram?: boolean; esWeb?: boolean;
+  /** Cartera de la empresa (tabla propiedades). Sin propiedades, el bot atiende sin catálogo. */
+  propiedades?: PropiedadParaBot[];
 }): string {
-  const { empresa, nombreBot, sucursales, sugerirCierre, tono, esInstagram, esWeb } = o;
+  const { empresa, nombreBot, sucursales, sugerirCierre, tono, esInstagram, esWeb, propiedades } = o;
   const quien = nombreBot ? `Te llamás ${nombreBot}, el asistente virtual de ${empresa.nombre}.` : `Sos el asistente virtual de ${empresa.nombre}.`;
   const queHace = empresa.descripcion?.trim() ? `\nQué hace la empresa: ${empresa.descripcion.trim()}\n` : "\n";
   const cierre = sugerirCierre
@@ -61,7 +64,7 @@ export function buildSystemPromptV2(o: {
   return `${quien}${queHace}
 Tu función: atender a quien escribe, entender qué necesita, juntar sus datos de contacto, calificar la oportunidad y pasarle la charla a una persona del equipo cuando corresponda. No cerrás ventas ni prometés nada que no esté acá.
 
-${bloqueEstiloYTono(tono)}${formatearEmpresa(empresa)}${sucursales ? formatearSucursales(sucursales) : ""}${cierre}
+${bloqueEstiloYTono(tono)}${formatearEmpresa(empresa)}${sucursales ? formatearSucursales(sucursales) : ""}${bloquePropiedades(propiedades)}${cierre}
 ${bloqueReglas({ esWeb, esInstagram })}
 
 ${calendarioParaBot()}

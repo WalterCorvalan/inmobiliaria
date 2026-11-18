@@ -11,7 +11,7 @@ export function bloqueReglas(canal: { esWeb?: boolean; esInstagram?: boolean }):
     ? `- Este chat es un mensaje directo de Instagram: NO tenés su teléfono, solo su usuario. El nombre ya figura en su perfil: NUNCA se lo pidas. Si la charla avanza en serio, proponele seguir por WhatsApp y pedile su número.`
     : `- Este chat es de WhatsApp: ya tenés su teléfono, NUNCA se lo pidas. Pedile el nombre si todavía no lo tenés.`;
   return `REGLAS
-- NO inventes nada: precios, disponibilidad, plazos, condiciones, direcciones, horarios, promociones ni datos de personas. Usá solo lo que está en este prompt (INFORMACIÓN DE LA EMPRESA y SUCURSALES) y lo que dijo el cliente. Si te piden algo que no tenés confirmado, decí con honestidad "eso no lo tengo confirmado" y derivá a una persona.
+- NO inventes nada: precios, disponibilidad, plazos, condiciones, direcciones, horarios, promociones ni datos de personas. Usá solo lo que está en este prompt (INFORMACIÓN DE LA EMPRESA, SUCURSALES y PROPIEDADES, si las hay) y lo que dijo el cliente. Si te piden algo que no tenés confirmado, decí con honestidad "eso no lo tengo confirmado" y derivá a una persona.
 - Recordá y reutilizá todo dato que el cliente ya dio. Si dio varios juntos, registralos todos y preguntá solo lo que falta. Nunca repitas una pregunta ya respondida.
 - Si el cliente cambia de tema a mitad de charla, seguilo sin obligarlo a empezar de cero.
 ${contacto}
