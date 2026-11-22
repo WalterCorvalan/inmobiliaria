@@ -27,13 +27,15 @@ export async function chatDemo(entrada: unknown): Promise<RespuestaChatDemo> {
   const ultimo = historial[historial.length - 1];
   if (ultimo.role !== "user" || ultimo.content.length > MAX_CARACTERES_MENSAJE) return { mensajes: ["Ese mensaje es muy largo para la demo."] };
 
-  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  const h = await headers();
+  // Cloudflare manda la IP real en cf-connecting-ip; x-forwarded-for queda para otros servidores.
+  const ip = h.get("cf-connecting-ip") ?? h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
   const limite = await rateLimit(ip ? `demo:${ip}` : null, { limite: MAX_PEDIDOS_POR_HORA, ventanaMs: 60 * 60 * 1000, proyecto: "v2" });
   if (!limite.ok) return { mensajes: ["Mandaste muchos mensajes seguidos. Probá de nuevo en un rato."] };
 
   const control = revisarLimites({ mensajesCliente: historial.filter((m) => m.role === "user").length, gastoMesUsd: contadorGasto.delMes() });
   if (!control.ok) return { mensajes: [control.mensaje] };
-  if (!demoConfigurada()) return { mensajes: ["La demo todavía no tiene la IA configurada (falta ANTHROPIC_API_KEY)."] };
+  if (!demoConfigurada()) return { mensajes: ["¡Hola! Gracias por probar la demo. 🙌", "En este momento el asistente está en mantenimiento y no puede contestar. Volvé a probar en un rato."] };
 
   const r = await responderDemo(rubroDemo(pedido.data.rubro), canal, historial);
   contadorGasto.sumar(r.costoUsd);

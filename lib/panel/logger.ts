@@ -1,12 +1,15 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { empresaActualOpcional } from "@/lib/empresa/db";
 
 // Mismo patrón que lib/logger.ts (v1), apuntando a nova. Best-effort: si el
 // insert falla no rompe el flujo que lo llamó.
-const supabaseLogs = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE2_URL!,
-  process.env.SUPABASE2_SERVICE_ROLE_KEY!
-);
+// Se crea recién al primer uso: sin las variables de Supabase (demo publicada sin base) no rompe al cargar.
+let clienteLogs: SupabaseClient | null = null;
+function supabaseLogsOpcional() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE2_URL || !process.env.SUPABASE2_SERVICE_ROLE_KEY) return null;
+  clienteLogs ??= createClient(process.env.NEXT_PUBLIC_SUPABASE2_URL, process.env.SUPABASE2_SERVICE_ROLE_KEY);
+  return clienteLogs;
+}
 
 // Devuelve la promesa del guardado: la mayoría la ignora (best-effort), pero
 // un webhook que corta con return justo después conviene que la espere, si no
@@ -30,6 +33,8 @@ export function registrarError(origen: string, error: unknown, contexto?: Record
     hint: error && typeof error === "object" && "hint" in error ? (error as any).hint : undefined,
   };
 
+  const supabaseLogs = supabaseLogsOpcional();
+  if (!supabaseLogs) return Promise.resolve();
   return Promise.resolve(
     supabaseLogs
       .from("logs_errores")

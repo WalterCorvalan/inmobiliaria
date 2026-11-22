@@ -12,6 +12,9 @@ import { createClient } from "@/lib/supabase/server";
 // (caso documentado de Google Search); esto lo cierra a nivel de metadata.
 // Con el teclado del celular abierto, la pantalla se achica para quedar arriba de las teclas (en vez de que el teclado tape
 // o deje franjas en blanco).
+// Siempre al pedir (nunca al armar el sitio): el panel necesita la base, y la demo se publica antes de conectarla.
+export const dynamic = "force-dynamic";
+
 export const viewport: Viewport = { width: "device-width", initialScale: 1, interactiveWidget: "resizes-content" };
 
 export const metadata: Metadata = {
