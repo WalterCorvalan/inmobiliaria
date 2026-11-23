@@ -23,7 +23,7 @@ const PROPIEDADES: P[] = [
 
 const RUBRO: RubroDatosDemo = {
   negocio: {
-    nombre: "Inmobiliaria del Parque", color: "#B4532A", domicilio: "Av. Cabildo 2150, Belgrano, CABA", telefono: "5491155550100", email: "hola@delparque.demo", web: "delparque.demo", instagram: "@delparque.propiedades", bot: "Sofi",
+    nombre: "Propiedades del Sur", color: "#B4532A", domicilio: "Av. Cabildo 2150, Belgrano, CABA", telefono: "5491155550100", email: "hola@propiedadesdelsur.demo", web: "propiedadesdelsur.demo", instagram: "@propiedadesdelsur", bot: "Lucía",
     descripcion: "Inmobiliaria con oficinas en Belgrano y Lomas de Zamora. Alquileres y ventas de departamentos, casas, PH, locales y lotes. Tasaciones sin cargo.",
   },
   equipo: [
@@ -39,7 +39,7 @@ const RUBRO: RubroDatosDemo = {
   ],
   motivosCierre: ["Alquiló o compró en otro lado", "No le alcanza el presupuesto", "Dejó de responder", "No tiene garantía"],
   memoria: [
-    { categoria: "saludo", palabras: ["hola", "buenas"], respuesta: "¡Hola! Soy Sofi, de Inmobiliaria del Parque. ¿Buscás alquilar, comprar o tasar?" },
+    { categoria: "saludo", palabras: ["hola", "buenas"], respuesta: "¡Hola! Soy Lucía, de Propiedades del Sur. ¿Buscás alquilar, comprar o tasar?" },
     { categoria: "horarios_ubicacion", palabras: ["horario", "dirección", "dónde están"], respuesta: "Estamos en Av. Cabildo 2150 (Belgrano) y en Laprida 450 (Lomas). Lunes a viernes de 9 a 19 y sábados de 10 a 14." },
     { categoria: "pagos_financiacion", palabras: ["garantía", "requisitos", "seguro de caución"], respuesta: "Para alquilar pedimos garantía propietaria o seguro de caución, recibo de sueldo y un mes de depósito." },
     { categoria: "datos_empresa", palabras: ["tasación", "tasar"], respuesta: "Las tasaciones son sin cargo. Te paso con un asesor para coordinar la visita." },
