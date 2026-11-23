@@ -84,3 +84,6 @@ Regla firme: no conectar ninguna inmobiliaria real hasta resolver el punto 1 y p
 - La demo usa la misma `ANTHROPIC_API_KEY` del bot (un solo espacio de Anthropic, Walter 16/11/2026).
 - Probar 20 charlas típicas en `/demo` y medir el costo por charla.
 - Ver `demo-simulador.md`.
+- Seguridad (23/11/2026): el historial de la demo tiene tope de 20.000 caracteres en total. Falta: el contador de gasto
+  del mes vive en memoria de cada copia del Worker (en Cloudflare se reinicia seguido); el tope real es el límite de gasto
+  del espacio de Anthropic, que Walter tiene que tener puesto. Para un contador fijo, pasarlo a una tabla o a D1.

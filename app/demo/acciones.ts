@@ -8,6 +8,8 @@ import { contadorGasto, MAX_CARACTERES_MENSAJE, MAX_PEDIDOS_POR_HORA, revisarLim
 import { rubroDemo } from "@/lib/simulador/rubros";
 import { CANALES_DEMO, type Calificacion, type DatosLead } from "@/lib/simulador/tipos";
 
+const MAX_CARACTERES_HISTORIAL = 20000;
+
 // Simulador de canales: recibe la charla entera (vive solo en el navegador) y devuelve la respuesta del bot.
 // No guarda nada en la base ni manda mensajes reales. Es una acción de servidor y no una ruta de app/api porque no
 // pertenece a ninguna empresa (las rutas de app/api tienen que correr dentro de una: lib/empresa/guardia.test.ts).
@@ -23,6 +25,10 @@ export type RespuestaChatDemo = { mensajes: string[]; handoff?: boolean; calific
 export async function chatDemo(entrada: unknown): Promise<RespuestaChatDemo> {
   const pedido = Pedido.safeParse(entrada);
   if (!pedido.success) return { mensajes: ["Perdón, no te entendí. ¿Me lo repetís?"] };
+  // Tope de largo total: el historial lo manda el navegador y cada carácter se paga en la IA.
+  if (pedido.data.historial.reduce((n, m) => n + m.content.length, 0) > MAX_CARACTERES_HISTORIAL) {
+    return { mensajes: ["Esta charla de prueba ya es muy larga. Tocá \"Reiniciar demo\" para empezar otra."] };
+  }
   const { canal, historial } = pedido.data;
   const ultimo = historial[historial.length - 1];
   if (ultimo.role !== "user" || ultimo.content.length > MAX_CARACTERES_MENSAJE) return { mensajes: ["Ese mensaje es muy largo para la demo."] };
