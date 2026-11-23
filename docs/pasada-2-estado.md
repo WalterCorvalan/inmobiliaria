@@ -84,3 +84,8 @@ Regla firme: no conectar ninguna inmobiliaria real hasta resolver el punto 1 y p
 - La demo usa la misma `ANTHROPIC_API_KEY` del bot (un solo espacio de Anthropic, Walter 16/11/2026).
 - Probar 20 charlas típicas en `/demo` y medir el costo por charla.
 - Ver `demo-simulador.md`.
+
+### Modo demo del panel (23/11/2026)
+
+- `lib/demo/`: base de mentira con datos de ejemplo; se prende sola mientras no haya Supabase. Las rutas `/api/panel/*` responden de mentira (no hablan con Meta).
+- Al conectar Supabase de verdad, la demo pública del panel deja de existir en ese mismo sitio: si se quiere mantener, publicar un segundo Worker sin las variables de Supabase (o con `NEXT_PUBLIC_MODO_DEMO=1`).

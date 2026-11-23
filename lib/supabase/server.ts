@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { cache } from "react";
+import { esModoDemo } from "@/lib/demo/modo";
+import { crearClienteDemo } from "@/lib/demo/cliente";
 
 // Server client de la DB de panel-v2 — mismo patrón que lib/supabase/server.ts
 // pero apuntando al proyecto Supabase nuevo (env vars NEXT_PUBLIC_SUPABASE2_*).
@@ -33,7 +35,9 @@ async function crearCliente() {
 // cambió a algo menos seguro. Fuera de un dibujo (rutas de API) cache() no guarda nada y cada llamada consulta como antes.
 const usuarioDelPedido = cache(async () => (await crearCliente()).auth.getUser());
 
-export async function createClient() {
+export async function createClient(): Promise<Awaited<ReturnType<typeof crearCliente>>> {
+  // MODO DEMO (sin base conectada): cada pedido arranca con los datos de ejemplo limpios (lib/demo/).
+  if (esModoDemo()) return crearClienteDemo();
   const cliente = await crearCliente();
   const getUserOriginal = cliente.auth.getUser.bind(cliente.auth);
   cliente.auth.getUser = ((jwt?: string) => (jwt ? getUserOriginal(jwt) : usuarioDelPedido())) as typeof cliente.auth.getUser;
