@@ -5,6 +5,8 @@ import AtrasCierraModales from "@/components/panel/AtrasCierraModales";
 import { useTecladoAbierto } from "@/components/panel/useTecladoAbierto";
 import NotificationBell from "@/components/panel/NotificationBell";
 import AvisoNotificacionesPush from "@/components/panel/AvisoNotificacionesPush";
+import FranjaDemo from "@/components/demo/FranjaDemo";
+import { esModoDemo } from "@/lib/demo/modo";
 import ToastHost from "@/components/panel/ToastHost";
 import { puedeVerModulo } from "@/lib/panel/permisosModulos";
 import { supabase2 } from "@/lib/supabase/client";
@@ -570,7 +572,7 @@ export default function PanelLayoutClient({
               </div>
             )}
             {/* Cambio de módulo: el contenido viejo se desvanece mientras entra el nuevo (View Transitions, ver globals.css). El menú y la barra de arriba no se mueven. */}
-            <AvisoNotificacionesPush />
+            {esModoDemo() ? <FranjaDemo /> : <AvisoNotificacionesPush />}
             <ViewTransition key={pathname} name="panel-contenido" share="auto" enter="auto" exit="auto" default="none">
               {children}
             </ViewTransition>

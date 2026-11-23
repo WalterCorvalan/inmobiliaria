@@ -87,3 +87,8 @@ Regla firme: no conectar ninguna inmobiliaria real hasta resolver el punto 1 y p
 - Seguridad (23/11/2026): el historial de la demo tiene tope de 20.000 caracteres en total. Falta: el contador de gasto
   del mes vive en memoria de cada copia del Worker (en Cloudflare se reinicia seguido); el tope real es el límite de gasto
   del espacio de Anthropic, que Walter tiene que tener puesto. Para un contador fijo, pasarlo a una tabla o a D1.
+
+### Modo demo del panel (23/11/2026)
+
+- `lib/demo/`: base de mentira con datos de ejemplo; se prende sola mientras no haya Supabase. Las rutas `/api/panel/*` responden de mentira (no hablan con Meta).
+- Al conectar Supabase de verdad, la demo pública del panel deja de existir en ese mismo sitio: si se quiere mantener, publicar un segundo Worker sin las variables de Supabase (o con `NEXT_PUBLIC_MODO_DEMO=1`).

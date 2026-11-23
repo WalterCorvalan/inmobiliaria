@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { esModoDemo } from '@/lib/demo/modo'
+import { respuestaApiDemo } from '@/lib/demo/apiDemo'
 
 function esRutaPanel(pathname: string) {
   return pathname === '/panel' || pathname.startsWith('/panel/');
@@ -53,6 +55,18 @@ async function proxyPanel(request: NextRequest) {
 }
 
 export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  // MODO DEMO (sin base conectada, lib/demo/): el panel se abre sin login y las rutas /api del panel responden de mentira.
+  if (esModoDemo()) {
+    if (pathname.startsWith('/api/')) return respuestaApiDemo(request);
+    if (pathname === '/panel/login' || pathname === '/panel') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/panel/leads';
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next({ request });
+  }
+  if (pathname.startsWith('/api/')) return NextResponse.next({ request });
   if (esRutaPanel(request.nextUrl.pathname)) {
     return proxyPanel(request);
   }
@@ -62,5 +76,5 @@ export async function proxy(request: NextRequest) {
 // Solo el panel necesita el chequeo de sesión: la web pública no pasa por el proxy (antes corría en cada página pública
 // sin hacer nada, y sumaba una vuelta en cada visita).
 export const config = {
-  matcher: ["/panel", "/panel/:path*"],
+  matcher: ["/panel", "/panel/:path*", "/api/panel/:path*", "/api/cron/:path*"],
 };

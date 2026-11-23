@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { RotateCcw, Send, Sparkles, ChevronLeft, CheckCheck } from "lucide-react";
+import { RotateCcw, Send, Sparkles, ChevronLeft, CheckCheck, LayoutDashboard, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { MODULOS_DEMO } from "@/lib/demo/modulos";
 import { chatDemo, type RespuestaChatDemo } from "./acciones";
 import ResumenResaltado from "@/components/panel/conversaciones/ResumenResaltado";
 import { combinarDatos, resumenDesdeDatos } from "@/lib/simulador/resumenPlantilla";
@@ -120,9 +122,14 @@ export default function DemoClient({ rubro, canalInicial, negocios }: { rubro: R
             )}
             <p className="text-xs text-slate-500">Demo: el bot todavía no está conectado a tu número. Los datos son de ejemplo.</p>
           </div>
-          <button onClick={reiniciar} className="flex shrink-0 items-center gap-1.5 rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
-            <RotateCcw size={14} /> Reiniciar demo
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button onClick={reiniciar} className="hidden items-center gap-1.5 rounded-full border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 sm:flex">
+              <RotateCcw size={14} /> Reiniciar
+            </button>
+            <Link href="/panel/leads" className="flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">
+              <LayoutDashboard size={14} /> Ver el sistema completo
+            </Link>
+          </div>
         </div>
         <div className="mx-auto flex max-w-6xl gap-2 px-4 pb-2 lg:hidden">
           {(["chat", "panel"] as const).map((v) => (
@@ -234,6 +241,20 @@ export default function DemoClient({ rubro, canalInicial, negocios }: { rubro: R
           )}
         </section>
       </main>
+
+      {/* Todos los módulos del sistema, con datos de ejemplo y sin usuario (Walter, 23/11/2026). */}
+      <section className="mx-auto max-w-6xl px-4 pb-10">
+        <h2 className="text-lg font-semibold">Mirá todo el sistema por dentro</h2>
+        <p className="mb-3 text-sm text-slate-600">Además del bot, tu equipo trabaja con estos módulos. Entrá a cualquiera: tiene datos de ejemplo y no hace falta usuario.</p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {MODULOS_DEMO.map((m) => (
+            <Link key={m.href} href={m.href} className="group rounded-2xl border border-black/5 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+              <p className="flex items-center justify-between font-semibold">{m.nombre} <ArrowRight size={16} className="text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-slate-700" /></p>
+              <p className="mt-1 text-sm text-slate-600">{m.detalle}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
