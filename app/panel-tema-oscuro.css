@@ -36,22 +36,10 @@
 .dark.tema-oscuro .panel-v2-root { --marca: var(--t-acento, #0145F2); }
 .dark.tema-oscuro .panel-v2-root .bg-\[\#0145F2\] { color: var(--t-acento-texto, #ffffff); }
 
-/* ===== Modo claro: Softcars (clásico). Walter 26/10/2026; desde el 27/10/2026 es el modo claro de todos =====
-   Los colores del sistema viejo (Softcars): fondo gris claro, encabezados celeste grisáceo, letra negra, títulos azul
-   oscuro y los nombres de los datos en bordó. Con el modo oscuro apagado el panel lleva "tema-softcars"
-   (CLASE_MODO_CLARO en lib/panel/temasOscuros.ts). Los botones siguen con el color de la empresa. */
-.tema-softcars {
-  /* Grises de Tailwind: los suaves con tinte celeste, las letras más oscuras para que se lean. */
-  --color-slate-50: #EEF1F7; --color-slate-100: #E2E7F1; --color-slate-200: #B8C4DC; --color-slate-300: #9AA8C4;
-  --color-slate-400: #4A4A4A; --color-slate-500: #333333; --color-slate-600: #222222; --color-slate-700: #111111;
-  --color-slate-800: #000000; --color-slate-900: #000000;
-}
-.tema-softcars .bg-\[\#F8FAFC\] { background-color: #E6E6E6; }
-/* Encabezados de tabla como el listado del Softcars. */
-.tema-softcars thead tr, .tema-softcars thead th { background-color: #C5CFE3; color: #000000; }
-/* Títulos en azul oscuro y nombres de los datos (ficha, formularios) en bordó. */
-.tema-softcars h1, .tema-softcars h2 { color: #1F3A6E; }
-.tema-softcars dt, .tema-softcars label { color: #A00000; }
+/* ===== Modo claro =====
+   Hasta el 25/11/2026 el modo claro copiaba el sistema viejo Softcars (grises celestes, títulos azul oscuro, etiquetas
+   en bordó). Rediseño del 25/11/2026 (Walter: "la gente compra por los ojos"): el modo claro es el limpio de
+   app/panel-limpio.css (grises slate de Tailwind). La clase "tema-softcars" se sigue poniendo pero ya no cambia nada. */
 
 /* ===== Softcars oscuro (Walter, 26/10/2026, reemplaza a "Bordó"): el Softcars de noche. Botones con el color de la empresa. ===== */
 .dark.tema-softcars-oscuro { --t-fondo: #1E2430; --t-tarjeta: #272F3E; --t-tarjeta-2: #2F3A4D; }

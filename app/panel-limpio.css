@@ -1,0 +1,24 @@
+/* ===== Aspecto del panel (25/11/2026): limpio, como el panel completo de Pfaffen =====
+   Walter (25/11/2026) pidió dejar el estilo "planilla de taller" (arena, ladrillo, oliva, letras condensadas): se veía
+   básico y con colores mezclados. Ahora: fondo gris muy claro, tarjetas blancas, grises fríos de Tailwind (slate),
+   Plus Jakarta Sans en todo y UN solo color de acento, el de la marca de la empresa (--marca, Configuración > Empresa).
+   - El índigo de Tailwind se usa en el panel como acento (menú activo, etiquetas, barras): se calcula desde --marca, así
+     todo el panel queda del color de la empresa sin tocar módulo por módulo. */
+
+.panel-v2-root {
+  --color-indigo-50: color-mix(in srgb, var(--marca) 7%, white);
+  --color-indigo-100: color-mix(in srgb, var(--marca) 14%, white);
+  --color-indigo-200: color-mix(in srgb, var(--marca) 28%, white);
+  --color-indigo-300: color-mix(in srgb, var(--marca) 48%, white);
+  --color-indigo-400: color-mix(in srgb, var(--marca) 70%, white);
+  --color-indigo-500: color-mix(in srgb, var(--marca) 88%, white);
+  --color-indigo-600: var(--marca);
+  --color-indigo-700: color-mix(in srgb, var(--marca) 85%, black);
+  --color-indigo-800: color-mix(in srgb, var(--marca) 70%, black);
+  --color-indigo-900: color-mix(in srgb, var(--marca) 55%, black);
+  font-family: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+}
+.panel-v2-root h1, .panel-v2-root h2 { font-family: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif; letter-spacing: -0.015em; }
+
+/* Barra de abajo del celular: sobre la zona del gesto de inicio del teléfono. */
+.panel-nav-abajo { padding-bottom: env(safe-area-inset-bottom); }

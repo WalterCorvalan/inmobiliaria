@@ -5,24 +5,23 @@ import AtrasCierraModales from "@/components/panel/AtrasCierraModales";
 import { useTecladoAbierto } from "@/components/panel/useTecladoAbierto";
 import NotificationBell from "@/components/panel/NotificationBell";
 import AvisoNotificacionesPush from "@/components/panel/AvisoNotificacionesPush";
-import FranjaDemo from "@/components/demo/FranjaDemo";
 import { esModoDemo } from "@/lib/demo/modo";
 import ToastHost from "@/components/panel/ToastHost";
 import { puedeVerModulo } from "@/lib/panel/permisosModulos";
 import { supabase2 } from "@/lib/supabase/client";
 import {
-  Building2,
-  CalendarDays,
+  ChevronRight,
   LogOut,
   Menu,
   Moon,
   RotateCw,
-  Search,
   Sun,
   X,
-  type LucideIcon,
+  LayoutGrid,
+  MessageCircle,
 } from "lucide-react";
 import Link from "next/link";
+import IconoPanel from "@/components/panel/IconoPanel";
 import { usePathname, useRouter } from "next/navigation";
 import { destinoAlerta } from "@/lib/panel/destinoAlerta";
 import { useEffect, useRef, useState, ViewTransition } from "react";
@@ -30,64 +29,59 @@ import { m } from "framer-motion";
 import { CURVA } from "@/components/ui/movimiento";
 import { CLASE_MODO_CLARO, clasesModoOscuro, temaOscuroValido, EVENTO_TEMA_OSCURO, type TemaOscuro } from "@/lib/panel/temasOscuros";
 
-// Menú de la v1: Leads y los canales de chat, más la configuración de cada canal.
+// Menú (rediseño 25/11/2026, pedido de Walter: "que se entienda"). Grupos por tarea del día: Inicio, la cartera (propiedades y
+// visitas), los mensajes de cada canal y los ajustes. Íconos: los mismos dibujos en color del panel completo de Pfaffen.
 // Todo item necesita "modulo" para que la visibilidad por sector (visibilidad_sector) pueda apagarlo.
-// Accesos rápidos de la barra de abajo en el celular; el resto queda detrás del menú.
-const NAV_MOBILE: { href: string; label: string; icon?: string; Icono?: LucideIcon }[] = [
-  { href: "/panel/propiedades", label: "Propiedades", Icono: Building2 },
-  { href: "/panel/leads", label: "Leads", icon: "/icons/panel/leads.png" },
-  { href: "/panel/whatsapp", label: "WhatsApp", icon: "/icons/panel/whatsapp.png" },
-  { href: "/panel/instagram", label: "Instagram", icon: "/icons/panel/instagram.png" },
-  { href: "/panel/messenger", label: "Messenger", icon: "/icons/panel/messenger.png" },
-];
+type ItemMenu = { href: string; label: string; icon: string; modulo?: string; /** Rutas que lo marcan como activo, si no es su href. */ prefijo?: string };
 
-const GRUPOS: {
-  titulo: string;
-  items: { href?: string; label: string; icon?: string; Icono?: LucideIcon; modulo?: string }[];
-}[] = [
+const INICIO: ItemMenu = { href: "/panel", label: "Inicio", icon: "/icons/panel/dashboard.png", modulo: "inicio" };
+
+const GRUPOS: { titulo: string; items: ItemMenu[] }[] = [
+  { titulo: "", items: [INICIO] },
+  {
+    titulo: "Ventas",
+    items: [
+      { href: "/panel/leads", label: "Leads", icon: "/icons/panel/leads.png", modulo: "leads" },
+      { href: "/panel/visitas", label: "Visitas", icon: "/icons/panel/calendario.png", modulo: "visitas" },
+    ],
+  },
   {
     titulo: "Cartera",
     items: [
-      { href: "/panel/propiedades", label: "Propiedades", Icono: Building2, modulo: "propiedades" },
-      { href: "/panel/visitas", label: "Visitas", Icono: CalendarDays, modulo: "visitas" },
+      { href: "/panel/propiedades", label: "Propiedades", icon: "/icons/panel/consignaciones.png", modulo: "propiedades" },
     ],
   },
   {
-    titulo: "Leads y mensajes",
+    titulo: "Mensajes",
     items: [
-      { href: "/panel/leads", label: "Leads", icon: "/icons/panel/leads.png", modulo: "leads" },
       { href: "/panel/whatsapp", label: "WhatsApp", icon: "/icons/panel/whatsapp.png", modulo: "whatsapp" },
       { href: "/panel/instagram", label: "Instagram", icon: "/icons/panel/instagram.png", modulo: "instagram" },
       { href: "/panel/messenger", label: "Messenger", icon: "/icons/panel/messenger.png", modulo: "messenger" },
-      { href: "/panel/rodi", label: "Chat de la web", icon: "/icons/panel/rodi.png", modulo: "rodi" },
+      { href: "/panel/rodi", label: "Chat de la web", icon: "/icons/panel/contenido-sitio.png", modulo: "rodi" },
     ],
   },
   {
-    titulo: "Sistema",
+    titulo: "Ajustes",
     items: [
-      { href: "/panel/configuracion/empresa", label: "Configuración", icon: "/icons/panel/configuracion.png", modulo: "configuracion" },
+      { href: "/panel/configuracion/empresa", prefijo: "/panel/configuracion", label: "Configuración", icon: "/icons/panel/configuracion.png", modulo: "configuracion" },
     ],
   },
 ];
 
-// Ícono del menú: los de la v1 vieja son imágenes; los nuevos (Propiedades y lo que sigue) son íconos de línea.
-function IconoMenu({ item, className }: { item: { icon?: string; Icono?: LucideIcon }; className: string }) {
-  if (item.Icono) {
-    const Icono = item.Icono;
-    return <Icono className={className} aria-hidden="true" />;
-  }
-  return <img src={item.icon} alt="" className={`${className} object-contain`} />;
-}
+// Barra de abajo del celular: lo que se usa todo el día. El resto (canales, ajustes) está en "Menú".
+const NAV_MOBILE: ItemMenu[] = [
+  INICIO,
+  { href: "/panel/leads", label: "Leads", icon: "/icons/panel/leads.png" },
+  { href: "/panel/propiedades", label: "Propiedades", icon: "/icons/panel/consignaciones.png" },
+  { href: "/panel/visitas", label: "Agenda", icon: "/icons/panel/calendario.png" },
+];
+
+const esActivo = (href: string, ruta: string | null, prefijo?: string) => (href === "/panel" ? ruta === "/panel" : !!ruta?.startsWith(prefijo ?? href));
 
 const ROL_LABEL: Record<string, string> = {
   admin: "Administrador",
   encargado: "Encargado",
   ventas: "Ventas",
-};
-const ROL_COLOR: Record<string, string> = {
-  admin: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
-  encargado: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
-  ventas: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
 };
 
 // Datos que el servidor ya trajo en paralelo antes de mandar la página (ver layout.tsx). Con esto el menú sale armado
@@ -137,7 +131,16 @@ export default function PanelLayoutClient({
   // de abrir/cerrar, que se sacó (Walter, 27/10/2026). Cerrado, las pantallas usan todo el ancho. En el celular no cuenta.
   const [menuAbierto, setMenuAbierto] = useState(false);
   const esperaMenu = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const colapsado = !menuAbierto;
+  // Pantallas grandes (1280 px o más): el menú queda siempre abierto con los nombres (rediseño 25/11/2026).
+  const [anchoGrande, setAnchoGrande] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1280px)");
+    const aplicar = () => setAnchoGrande(mq.matches);
+    aplicar();
+    mq.addEventListener("change", aplicar);
+    return () => mq.removeEventListener("change", aplicar);
+  }, []);
+  const colapsado = !menuAbierto && !anchoGrande;
   const moverMenu = (abrir: boolean) => {
     if (esperaMenu.current) clearTimeout(esperaMenu.current);
     // Un instante antes de abrir, para que cruzar el mouse rápido por el borde no lo abra.
@@ -275,12 +278,6 @@ export default function PanelLayoutClient({
     return moduloVisible(item.modulo);
   };
 
-  // El login manda siempre a "/panel": no hay Dashboard en la v1, se va directo a Leads.
-  useEffect(() => {
-    if (!miId || pathname !== "/panel") return;
-    router.replace("/panel/leads");
-  }, [miId, pathname, router]);
-
   // Toast de alertas urgentes en vivo (se cierra solo a los 10s, o con
   // click) — el contador de la campana lo maneja NotificationBell aparte.
   useEffect(() => {
@@ -336,19 +333,8 @@ export default function PanelLayoutClient({
 
   // Guard de acceso directo por URL: un módulo apagado o sin visibilidad
   // para el sector del usuario no debe abrirse solo porque conoce el link.
-  const itemDeLaRuta = GRUPOS.flatMap((g) => g.items).find(
-    (item) =>
-      item.href &&
-      (item.href === "/panel"
-        ? pathname === item.href
-        : pathname?.startsWith(item.href)),
-  );
+  const itemDeLaRuta = GRUPOS.flatMap((g) => g.items).find((item) => esActivo(item.href, pathname, item.prefijo));
   if (miId && itemDeLaRuta && !itemVisible(itemDeLaRuta)) {
-    // "/panel" (Dashboard) es a donde manda el login sin importar el
-    // rol -- si no lo tiene habilitado, el useEffect de arriba ya lo está
-    // reenviando a otro lado; no mostrar el cartel de bloqueo acá, solo
-    // parpadearía un instante antes de la redirección.
-    if (pathname === "/panel") return null;
     return (
       <div className="min-h-screen flex items-center justify-center text-center p-6">
         <div>
@@ -364,237 +350,213 @@ export default function PanelLayoutClient({
   }
 
   const rolPrincipal = roles[0] || "";
+  const demo = esModoDemo();
+  const tituloPagina = itemDeLaRuta?.label ?? "Panel";
+  const gruposVisibles = GRUPOS.map((g) => ({ ...g, items: g.items.filter(itemVisible) })).filter((g) => g.items.length > 0);
+
+  // Lista del menú: la usa la barra lateral de la compu (angosta o abierta) y el menú del celular (siempre abierta).
+  const listaMenu = (angosto: boolean, celular: boolean) => (
+    <nav aria-label="Secciones del panel" className="flex-1 overflow-y-auto px-3 py-3 custom-scrollbar">
+      {gruposVisibles.map((grupo, gi) => (
+        <div key={grupo.titulo || gi} className={gi > 0 ? "mt-4" : ""}>
+          {grupo.titulo && (
+            angosto
+              ? <div className="mx-2 mb-2 border-t border-slate-100 dark:border-white/5" />
+              : <p className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400 dark:text-slate-500">{grupo.titulo}</p>
+          )}
+          <div className="space-y-0.5">
+            {grupo.items.map((item) => {
+              const activo = esActivo(item.href, pathname, item.prefijo);
+              const cargando = navegandoA === item.href && !activo;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  title={angosto ? item.label : undefined}
+                  aria-current={activo ? "page" : undefined}
+                  onClick={() => { setIsOpen(false); if (!activo) setNavegandoA(item.href); }}
+                  className={`relative flex items-center gap-3 rounded-xl ${celular ? "py-3" : "py-2.5"} ${angosto ? "justify-center px-0" : "px-3"} text-[14px] transition-colors active:scale-[0.98] ${
+                    activo
+                      ? "font-bold text-indigo-700 dark:text-indigo-300"
+                      : "font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/5 dark:hover:text-white"
+                  }`}
+                >
+                  {activo && <m.span layoutId={celular ? "menu-activo-cel" : "menu-activo"} transition={{ duration: 0.16, ease: CURVA }} className="absolute inset-0 rounded-xl bg-indigo-50 ring-1 ring-indigo-100 dark:bg-indigo-500/15 dark:ring-indigo-400/20" />}
+                  <span className="relative flex items-center gap-3 min-w-0">
+                    {cargando
+                      ? <RotateCw className="w-[22px] h-[22px] animate-spin shrink-0 text-slate-400" />
+                      : <IconoPanel src={item.icon} alt="" className="w-[22px] h-[22px]  shrink-0" />}
+                    {!angosto && <span className="truncate">{item.label}</span>}
+                  </span>
+                  {celular && !activo && <ChevronRight className="relative ml-auto w-4 h-4 text-slate-300 dark:text-slate-600" aria-hidden="true" />}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </nav>
+  );
+
+  const marcaEmpresa = (angosto: boolean) => (
+    <Link href="/" target="_blank" title="Ver la web pública" className={`flex items-center gap-3 min-w-0 ${angosto ? "justify-center" : ""}`}>
+      <IconoPanel src={branding.logoUrl || "/logo-placeholder.svg"} alt="" className="w-9 h-9 rounded-xl object-cover shrink-0 ring-1 ring-slate-200 dark:ring-white/10" />
+      {!angosto && (
+        <div className="min-w-0">
+          <p className="text-[15px] font-extrabold leading-tight tracking-tight truncate">{nombreEmpresa}</p>
+          <p className="text-[11px] font-medium text-slate-400 leading-tight mt-0.5">Panel de ventas</p>
+        </div>
+      )}
+    </Link>
+  );
+
+  const usuario = (angosto: boolean) => (
+    <div className={`flex items-center gap-3 ${angosto ? "justify-center" : ""}`} title={angosto ? nombre : undefined}>
+      <div className="w-9 h-9 rounded-full bg-[#0145F2] text-white flex items-center justify-center text-sm font-bold shrink-0">
+        {nombre.charAt(0).toUpperCase()}
+      </div>
+      {!angosto && (
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-bold truncate">{nombre}</p>
+          <p className="text-[11px] text-slate-400 truncate">{ROL_LABEL[rolPrincipal] || rolPrincipal || "Equipo"}</p>
+        </div>
+      )}
+      {!angosto && (
+        <button onClick={handleLogout} title="Cerrar sesión" aria-label="Cerrar sesión" className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors">
+          <LogOut className="w-4 h-4" />
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <div className={darkMode ? clasesModoOscuro(temaOscuro) : CLASE_MODO_CLARO}>
       {/* Celular: el panel ocupa la pantalla con fixed inset-0, igual que la barra de abajo (fixed bottom-0). Con h-dvh, en
-          navegadores como Vivaldi el alto quedaba más corto que la pantalla y aparecía un espacio vacío entre el campo para
-          escribir y los accesos directos (captura de Walter del 18/10/2026, /panel/instagram).
-          data-sin-atras: con ese fixed inset-0, AtrasCierraModales tomaba el panel entero por una ventana abierta y agregaba
-          una entrada al historial al cargar, sin que el usuario tocara nada; el celular salta esas entradas, y "atrás" con
-          un formulario abierto (Nueva orden de Taller) se iba de la pantalla en vez de cerrarlo (Walter, 27/10/2026). */}
-      <div data-sin-atras style={branding.color ? ({ "--marca": branding.color } as React.CSSProperties) : undefined} className="panel-v2-root flex fixed inset-0 md:static md:h-dvh w-full bg-[#F8FAFC] dark:bg-[#0A0A0A] text-slate-900 dark:text-slate-100 overflow-hidden print:static print:h-auto print:overflow-visible print:block">
-        <div className="md:hidden print:hidden fixed top-0 left-0 right-0 h-14 bg-white dark:bg-[#111] border-b border-slate-200 dark:border-white/10 flex items-center gap-2 px-3 z-50">
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="shrink-0 p-1 text-slate-600 dark:text-slate-300"
-          >
-            {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-          <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-            <input
-              disabled
-              placeholder="Buscar clientes, patentes..."
-              title="El buscador global se conecta cuando construyamos esos módulos"
-              className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full py-1.5 pl-9 pr-3 text-[12px] outline-none text-slate-900 dark:text-white placeholder:text-slate-400 disabled:cursor-not-allowed"
-            />
-          </div>
-          <button
-            onClick={toggleDarkMode}
-            className="shrink-0 p-1.5 rounded-lg text-slate-500 dark:text-slate-300"
-            title={darkMode ? "Modo claro" : "Modo oscuro"}
-          >
-            {darkMode ? (
-              <Sun className="w-4 h-4" />
-            ) : (
-              <Moon className="w-4 h-4" />
-            )}
-          </button>
-          <NotificationBell miId={miId || ""} />
-        </div>
+          navegadores como Vivaldi el alto quedaba más corto que la pantalla (captura de Walter del 18/10/2026).
+          data-sin-atras: con ese fixed inset-0, AtrasCierraModales tomaba el panel entero por una ventana abierta. */}
+      <div data-sin-atras style={branding.color ? ({ "--marca": branding.color } as React.CSSProperties) : undefined} className="panel-v2-root flex fixed inset-0 md:static md:h-dvh w-full bg-[#F6F7F9] dark:bg-[#0A0A0A] text-slate-900 dark:text-slate-100 overflow-hidden print:static print:h-auto print:overflow-visible print:block">
 
-        {/* Celular: tocar fuera del menú lo cierra (y deslizar el menú hacia la izquierda también) */}
-        {isOpen && <div className="md:hidden print:hidden fixed inset-x-0 bottom-0 top-14 bg-black/40 z-30" onClick={() => setIsOpen(false)} aria-hidden="true" />}
-
-        {/* SIDEBAR */}
+        {/* COMPU: barra lateral. En pantallas grandes, abierta con nombres; en las medianas, solo íconos y se abre al pasar el mouse. */}
         <aside
           onMouseEnter={() => moverMenu(true)}
           onMouseLeave={() => moverMenu(false)}
-          onTouchStart={(e) => { swipeInicioX.current = e.touches[0]?.clientX ?? null; }}
-          onTouchEnd={(e) => {
-            const inicio = swipeInicioX.current; swipeInicioX.current = null;
-            const fin = e.changedTouches[0]?.clientX;
-            if (isOpen && inicio !== null && fin !== undefined && inicio - fin > 60) setIsOpen(false);
-          }}
-          className={`print:hidden fixed md:relative top-14 md:top-0 left-0 h-[calc(100dvh-3.5rem)] md:h-full ${colapsado ? "md:w-[68px]" : "md:w-[230px]"} w-[230px] bg-white dark:bg-[#111] border-r border-slate-200 dark:border-white/10 flex flex-col shrink-0 transform transition-[width,transform] duration-150 ease-out z-40 ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
+          className={`hidden md:flex print:hidden relative h-full ${colapsado ? "w-[76px]" : "w-[252px]"} bg-white dark:bg-[#111] border-r border-slate-200/80 dark:border-white/10 flex-col shrink-0 transition-[width] duration-150 ease-out z-40`}
         >
-          <div
-            className={`h-[60px] flex items-center gap-2 border-b border-slate-200 dark:border-white/10 shrink-0 ${colapsado ? "md:justify-center md:px-2 px-4" : "px-4"}`}
-          >
-            <Link href="/" target="_blank" title="Ver la web pública" className="flex items-center gap-2 min-w-0">
-              <img src={branding.logoUrl || "/logo-placeholder.svg"} alt={nombreEmpresa} className={`rounded-lg object-cover shrink-0 transition-[width,height] duration-150 ease-out ${colapsado ? "w-8 h-8 md:w-11 md:h-11" : "w-8 h-8"}`} />
-              <div className={colapsado ? "md:hidden" : ""}>
-                <p className="text-sm font-bold leading-none">Panel</p>
-                <p className="text-[10px] text-slate-400 leading-none mt-0.5">
-                  {nombreEmpresa}
-                </p>
-              </div>
-            </Link>
+          <div className={`h-16 flex items-center border-b border-slate-100 dark:border-white/5 shrink-0 ${colapsado ? "justify-center px-2" : "px-5"}`}>
+            {marcaEmpresa(colapsado)}
           </div>
-
-          <nav className="flex-1 overflow-y-auto py-2 custom-scrollbar">
-            {GRUPOS.map(
-              (grupo) =>
-                grupo.items.some((item) => itemVisible(item)) && (
-                  <div key={grupo.titulo} className="mb-1">
-                    <p
-                      className={`px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 ${colapsado ? "md:hidden" : ""}`}
-                    >
-                      {grupo.titulo}
-                    </p>
-                    {colapsado && (
-                      <div className="hidden md:block mx-3 my-1.5 border-t border-slate-100 dark:border-white/5 first:mt-0" />
-                    )}
-                    {grupo.items
-                      .filter((item) => itemVisible(item))
-                      .map((item) => {
-                        const activo =
-                          item.href &&
-                          (item.href === "/panel"
-                            ? pathname === item.href
-                            : pathname?.startsWith(item.href));
-                        if (!item.href) {
-                          return (
-                            <div
-                              key={item.label}
-                              title="Todavía no construido"
-                              className={`flex items-center gap-3 py-2 mx-2 rounded-lg text-sm text-slate-300 dark:text-slate-600 cursor-not-allowed ${colapsado ? "md:justify-center px-4 md:px-0" : "px-4"}`}
-                            >
-                              <IconoMenu item={item} className="w-5 h-5 shrink-0 opacity-50" />{" "}
-                              <span className={`whitespace-nowrap ${colapsado ? "md:hidden" : ""}`}>
-                                {item.label}
-                              </span>
-                            </div>
-                          );
-                        }
-                        const cargando = navegandoA === item.href && !activo;
-                        return (
-                          <Link
-                            key={item.label}
-                            href={item.href}
-                            title={colapsado ? item.label : undefined}
-                            onClick={() => {
-                              setIsOpen(false);
-                              if (!activo) setNavegandoA(item.href!);
-                            }}
-                            className={`relative flex items-center gap-3 py-2 mx-2 rounded-lg text-sm transition-all active:scale-[0.97] ${colapsado ? "md:justify-center px-4 md:px-0" : "px-4"} ${
-                              activo
-                                ? "text-indigo-700 dark:text-indigo-300 font-semibold"
-                                : cargando
-                                  ? "bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-300"
-                                  : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5"
-                            }`}
-                          >
-                            {activo && <m.span layoutId="menu-activo" transition={{ duration: 0.16, ease: CURVA }} className="absolute inset-0 rounded-lg border border-indigo-200 border-l-[3px] border-l-indigo-500 bg-indigo-50 dark:border-indigo-400/45 dark:border-l-indigo-400 dark:bg-indigo-500/10" />}
-                            <span className="relative flex items-center gap-3">
-                              {cargando ? (
-                                <RotateCw className="w-5 h-5 animate-spin shrink-0" />
-                              ) : (
-                                <IconoMenu item={item} className="w-5 h-5 shrink-0" />
-                              )}{" "}
-                              <span className={`whitespace-nowrap ${colapsado ? "md:hidden" : ""}`}>
-                                {item.label}
-                              </span>
-                            </span>
-                          </Link>
-                        );
-                      })}
-                  </div>
-                ),
-            )}
-          </nav>
-
-          <div className="border-t border-slate-200 dark:border-white/10 p-3 shrink-0 space-y-2">
-            <div
-              className={`flex items-center gap-2 px-1 ${colapsado ? "md:justify-center" : ""}`}
-              title={colapsado ? nombre : undefined}
-            >
-              <div className="w-7 h-7 rounded-full bg-[#0145F2] text-white flex items-center justify-center text-xs font-bold shrink-0">
-                {nombre.charAt(0).toUpperCase()}
-              </div>
-              <div className={`min-w-0 flex-1 ${colapsado ? "md:hidden" : ""}`}>
-                <p className="text-xs font-bold truncate">{nombre}</p>
-                {rolPrincipal && (
-                  <span
-                    className={`inline-block text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${ROL_COLOR[rolPrincipal] || "bg-slate-100 text-slate-600"}`}
-                  >
-                    {ROL_LABEL[rolPrincipal] || rolPrincipal}
-                  </span>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              title={colapsado ? "Cerrar sesión" : undefined}
-              className={`w-full flex items-center gap-2 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors ${colapsado ? "md:justify-center px-2" : "px-2"}`}
-            >
-              <LogOut className="w-3.5 h-3.5 shrink-0" />{" "}
-              <span className={colapsado ? "md:hidden" : ""}>
-                Cerrar sesión
-              </span>
-            </button>
+          {listaMenu(colapsado, false)}
+          <div className={`border-t border-slate-100 dark:border-white/5 shrink-0 ${colapsado ? "p-3" : "px-4 py-3"}`}>
+            {usuario(colapsado)}
           </div>
         </aside>
 
-        {/* CONTENIDO */}
-        <div className="flex-1 min-w-0 h-full flex flex-col pt-14 md:pt-0 print:pt-0 print:h-auto print:block">
-          {/* TOPBAR */}
-          <div className="hidden md:flex print:hidden items-center gap-3 px-4 py-2 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-[#111] shrink-0">
-            <div className="relative w-64 shrink-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-              <input
-                disabled
-                placeholder="Buscar clientes, patentes, etc..."
-                title="El buscador global se conecta cuando construyamos esos módulos"
-                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full py-1.5 pl-9 pr-3 text-[11px] outline-none text-slate-900 dark:text-white placeholder:text-slate-400 disabled:cursor-not-allowed"
-              />
+        {/* CELULAR: menú completo que entra desde la izquierda, por encima de todo, con fondo oscuro para cerrarlo. */}
+        <div className={`md:hidden print:hidden fixed inset-0 z-[60] ${isOpen ? "" : "pointer-events-none"}`} aria-hidden={!isOpen}>
+          <div className={`absolute inset-0 bg-slate-900/50 backdrop-blur-[2px] transition-opacity duration-200 ${isOpen ? "opacity-100" : "opacity-0"}`} onClick={() => setIsOpen(false)} />
+          <aside
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menú"
+            onTouchStart={(e) => { swipeInicioX.current = e.touches[0]?.clientX ?? null; }}
+            onTouchEnd={(e) => {
+              const inicio = swipeInicioX.current; swipeInicioX.current = null;
+              const fin = e.changedTouches[0]?.clientX;
+              if (isOpen && inicio !== null && fin !== undefined && inicio - fin > 60) setIsOpen(false);
+            }}
+            className={`absolute inset-y-0 left-0 w-[86%] max-w-[330px] bg-white dark:bg-[#111] shadow-2xl flex flex-col transition-transform duration-200 ease-out ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
+          >
+            <div className="h-16 flex items-center justify-between gap-2 pl-5 pr-3 border-b border-slate-100 dark:border-white/5 shrink-0">
+              {marcaEmpresa(false)}
+              <button onClick={() => setIsOpen(false)} aria-label="Cerrar menú" className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10">
+                <X className="w-5 h-5" />
+              </button>
             </div>
+            {listaMenu(false, true)}
+            <div className="border-t border-slate-100 dark:border-white/5 px-4 py-3 space-y-3 shrink-0 pb-[max(12px,env(safe-area-inset-bottom))]">
+              <button onClick={toggleDarkMode} className="w-full flex items-center gap-3 px-1 text-[14px] font-medium text-slate-600 dark:text-slate-300">
+                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                {darkMode ? "Modo claro" : "Modo oscuro"}
+              </button>
+              {usuario(false)}
+            </div>
+          </aside>
+        </div>
 
+        {/* CONTENIDO */}
+        <div className="flex-1 min-w-0 h-full flex flex-col print:h-auto print:block">
+          {/* Barra de arriba: en el celular, menú + nombre de la pantalla; en la compu, nombre de la pantalla y accesos. */}
+          <header className="print:hidden h-14 md:h-16 flex items-center gap-2 px-2 md:px-6 bg-white/95 dark:bg-[#111]/95 backdrop-blur border-b border-slate-200/80 dark:border-white/10 shrink-0 z-30">
+            <button onClick={() => setIsOpen(true)} aria-label="Abrir menú" className="md:hidden p-2.5 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10">
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <p className="md:hidden text-[11px] font-semibold text-slate-400 leading-none truncate">{nombreEmpresa}</p>
+              <h1 className="text-[17px] md:text-[20px] font-extrabold tracking-tight leading-tight truncate">{tituloPagina}</h1>
+            </div>
+            {demo && (
+              <Link href="/demo" className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-white/10 px-3.5 py-2 text-[13px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5">
+                <MessageCircle className="w-4 h-4 text-[#0145F2]" /> Probar el bot
+              </Link>
+            )}
             <button
               onClick={toggleDarkMode}
-              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-300 shrink-0"
+              className="hidden md:inline-flex p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-300"
               title={darkMode ? "Modo claro" : "Modo oscuro"}
+              aria-label={darkMode ? "Modo claro" : "Modo oscuro"}
             >
-              {darkMode ? (
-                <Sun className="w-4 h-4" />
-              ) : (
-                <Moon className="w-4 h-4" />
-              )}
+              {darkMode ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
             </button>
             <NotificationBell miId={miId || ""} />
-          </div>
+          </header>
 
-          <main className={`relative flex-1 min-w-0 overflow-y-auto bg-[#F8FAFC] dark:bg-[#0A0A0A] overscroll-y-contain ${tecladoAbierto ? "pb-0" : "pb-16"} md:pb-0 print:overflow-visible print:pb-0 print:bg-white`}>
+          {demo && (
+            <div className="print:hidden shrink-0 flex items-center gap-2 px-4 md:px-6 py-1.5 bg-amber-50 dark:bg-amber-500/10 border-b border-amber-200/70 dark:border-amber-500/20 text-[12px] text-amber-900 dark:text-amber-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" aria-hidden="true" />
+              <p className="truncate"><b className="font-semibold">Demo con datos de ejemplo.</b><span className="hidden sm:inline"> Probá todo: los cambios no se guardan.</span></p>
+              <Link href="/demo" className="sm:hidden ml-auto shrink-0 font-semibold underline underline-offset-2">Probar el bot</Link>
+            </div>
+          )}
+
+          <main className={`relative flex-1 min-w-0 overflow-y-auto bg-[#F6F7F9] dark:bg-[#0A0A0A] overscroll-y-contain ${tecladoAbierto ? "pb-0" : "pb-[calc(68px+env(safe-area-inset-bottom))]"} md:pb-0 print:overflow-visible print:pb-0 print:bg-white`}>
             {navegandoA && (
               <div className="absolute top-0 left-0 right-0 h-0.5 z-50 overflow-hidden bg-indigo-100 dark:bg-indigo-500/10">
                 <div className="h-full w-1/3 bg-indigo-600 dark:bg-indigo-400 animate-barra-carga" />
               </div>
             )}
-            {/* Cambio de módulo: el contenido viejo se desvanece mientras entra el nuevo (View Transitions, ver globals.css). El menú y la barra de arriba no se mueven. */}
-            {esModoDemo() ? <FranjaDemo /> : <AvisoNotificacionesPush />}
+            {!demo && <AvisoNotificacionesPush />}
+            {/* Cambio de módulo: el contenido viejo se desvanece mientras entra el nuevo (View Transitions, ver globals.css). */}
             <ViewTransition key={pathname} name="panel-contenido" share="auto" enter="auto" exit="auto" default="none">
               {children}
             </ViewTransition>
           </main>
         </div>
 
-        {/* BOTTOM NAV — accesos rápidos en mobile, la barra lateral completa
-            queda detrás del hamburger para lo demás. */}
-        <nav className={`md:hidden print:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-[#111] border-t border-slate-200 dark:border-white/10 items-stretch z-40 ${isOpen || tecladoAbierto ? "hidden" : "flex"}`}>
-          {NAV_MOBILE.map((item) => {
-            const activo = pathname === item.href;
+        {/* CELULAR: barra de abajo con lo de todos los días + "Menú" para el resto. */}
+        <nav aria-label="Accesos rápidos" className={`panel-nav-abajo md:hidden print:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-[#111]/95 backdrop-blur border-t border-slate-200 dark:border-white/10 z-40 ${tecladoAbierto ? "hidden" : "grid"} grid-cols-5`}>
+          {NAV_MOBILE.filter(itemVisible).map((item) => {
+            const activo = esActivo(item.href, pathname);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-semibold ${activo ? "text-[#0145F2] dark:text-[#5b8dff]" : "text-slate-500 dark:text-slate-400"}`}
+                aria-current={activo ? "page" : undefined}
+                onClick={() => { if (!activo) setNavegandoA(item.href); }}
+                className="flex flex-col items-center justify-center gap-1 h-[64px]"
               >
-                <IconoMenu item={item} className="w-5 h-5" />
-                {item.label}
+                <span className={`flex items-center justify-center w-12 h-7 rounded-full transition-colors ${activo ? "bg-indigo-100 dark:bg-indigo-500/20" : ""}`}>
+                  <IconoPanel src={item.icon} alt="" className="w-[22px] h-[22px]" />
+                </span>
+                <span className={`text-[11px] leading-none ${activo ? "font-bold text-indigo-700 dark:text-indigo-300" : "font-medium text-slate-500 dark:text-slate-400"}`}>{item.label}</span>
               </Link>
             );
           })}
+          <button onClick={() => setIsOpen(true)} className="flex flex-col items-center justify-center gap-1 h-[64px]" aria-label="Abrir menú con todas las secciones">
+            <span className="flex items-center justify-center w-12 h-7 rounded-full">
+              <LayoutGrid className="w-[21px] h-[21px] text-slate-600 dark:text-slate-300" />
+            </span>
+            <span className="text-[11px] leading-none font-medium text-slate-500 dark:text-slate-400">Menú</span>
+          </button>
         </nav>
       </div>
 

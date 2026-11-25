@@ -291,25 +291,25 @@ export default function LeadsUnificadosClient({ leadsIniciales, vendedores, sucu
 
   return (
     <div className="flex flex-col w-full h-full text-slate-800 dark:text-slate-200 overflow-hidden">
-      <div className={`shrink-0 items-center gap-2 px-2.5 py-2 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-[#111] overflow-x-auto ${seleccionado && modo === "lista" ? "hidden md:flex" : "flex"}`}>
-        <div className="shrink-0 flex items-center gap-0.5 rounded-xl bg-slate-100 dark:bg-white/5 p-0.5">
+      <div className={`shrink-0 flex-wrap md:flex-nowrap items-center gap-2 px-3 py-2.5 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-[#111] ${seleccionado && modo === "lista" ? "hidden md:flex" : "flex"}`}>
+        <div className="w-full md:w-auto shrink-0 flex items-center gap-0.5 rounded-xl bg-slate-100 dark:bg-white/5 p-1">
           {GRUPOS.map((g) => {
             const Icon = g.icon;
             const activo = g.id === grupoActual.id;
             return (
               <button key={g.id} onClick={() => !activo && setModo(g.modos[0].v)} aria-pressed={activo}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${activo ? "bg-white dark:bg-[#1c1c1f] text-slate-900 dark:text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"}`}>
+                className={`flex-1 md:flex-none justify-center flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-bold transition-colors ${activo ? "bg-white dark:bg-[#1c1c1f] text-slate-900 dark:text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"}`}>
                 <Icon className="w-3.5 h-3.5" /> {g.label}
               </button>
             );
           })}
         </div>
         {grupoActual.modos.length > 1 && (
-          <div className="shrink-0 flex items-center gap-1">
+          <div className="shrink-0 flex items-center gap-1 overflow-x-auto no-scrollbar max-w-full">
             {grupoActual.modos.map((t) => {
               const Icon = t.icon;
               return (
-                <button key={t.v} onClick={() => setModo(t.v)} className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${modo === t.v ? "bg-[#0145F2] text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5"}`}>
+                <button key={t.v} onClick={() => setModo(t.v)} className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12.5px] font-semibold transition-colors ${modo === t.v ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-300 dark:ring-indigo-400/30" : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5"}`}>
                   <Icon className="w-3.5 h-3.5" /> {t.label}
                 </button>
               );
@@ -330,15 +330,15 @@ export default function LeadsUnificadosClient({ leadsIniciales, vendedores, sucu
           (sidebar angosta, filas con avatar circular, sticky group headers) para que
           este módulo se sienta como una extensión natural del panel de WhatsApp. */}
       <div className={`w-full md:w-[360px] flex-col bg-white dark:bg-[#111] border-r border-slate-200 dark:border-white/10 shrink-0 ${seleccionado ? "hidden md:flex" : "flex"} ${bandejaColapsada ? "md:hidden" : ""}`}>
-        <div className="p-2.5 border-b border-slate-100 dark:border-white/10 shrink-0 space-y-2">
+        <div className="p-3 border-b border-slate-100 dark:border-white/10 shrink-0 space-y-2.5">
           <div className="flex items-center justify-between gap-2">
-            <h1 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><img src="/icons/panel/leads.png" alt="" className="w-6 h-6 object-contain shrink-0" /> Leads</h1>
+            {/* El nombre de la pantalla ya está en la barra de arriba (rediseño 25/11/2026): acá van los números. */}
+            <p className="text-[12.5px] text-slate-500 dark:text-slate-400"><b className="text-[15px] font-extrabold text-slate-900 dark:text-white tabular-nums">{leads.length}</b> leads · {nuevosHoy} hoy · {sinAsignar} sin asignar</p>
             <div className="flex items-center gap-1.5">
-              <button onClick={() => setShowNuevo(true)} className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-[#0145F2] hover:bg-[#0138c9] text-white rounded-xl boton-principal"><Plus className="w-4 h-4" /> Nuevo</button>
+              <button onClick={() => setShowNuevo(true)} className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-bold bg-[#0145F2] hover:bg-[#0138c9] text-white rounded-xl boton-principal"><Plus className="w-4 h-4" /> Nuevo</button>
               <button onClick={toggleBandeja} title="Ocultar bandeja" className="hidden md:flex shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10"><PanelLeftClose className="w-4 h-4" /></button>
             </div>
           </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">{leads.length} leads · {nuevosHoy} hoy · {sinAsignar} sin asignar</p>
           {avisosCarga.length > 0 && (
             <div className="text-[10px] font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-lg px-2 py-1.5 space-y-0.5">
               <p className="font-black uppercase tracking-widest">Algunos canales no cargaron bien</p>
@@ -348,30 +348,30 @@ export default function LeadsUnificadosClient({ leadsIniciales, vendedores, sucu
           {topeAlcanzado && <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg px-2 py-1">Se muestran los 1000 leads más recientes de cada canal; hay más antiguos que no se listan acá.</p>}
 
           <div className="flex gap-1.5">
-            <button onClick={() => setVista("sin_respuesta")} className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-[11px] font-bold rounded-lg transition-colors ${vista === "sin_respuesta" ? "bg-rose-600 text-white" : "bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"}`}>
+            <button onClick={() => setVista("sin_respuesta")} className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-[12px] font-bold rounded-xl transition-colors ${vista === "sin_respuesta" ? "bg-rose-600 text-white" : "bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"}`}>
               <Flame className="w-3.5 h-3.5" /> Sin respuesta {totalSinRespuesta > 0 && <span className={`text-[9px] font-black px-1 rounded-full ${vista === "sin_respuesta" ? "bg-white/20" : "bg-rose-500 text-white"}`}>{totalSinRespuesta}</span>}
             </button>
-            <button onClick={() => setVista("basura")} className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-[11px] font-bold rounded-lg transition-colors ${vista === "basura" ? "bg-slate-700 dark:bg-white/20 text-white" : "bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"}`}>
+            <button onClick={() => setVista("basura")} className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-[12px] font-bold rounded-xl transition-colors ${vista === "basura" ? "bg-slate-700 dark:bg-white/20 text-white" : "bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"}`}>
               <Trash2 className="w-3.5 h-3.5" /> Basura {totalBasura > 0 && <span className={`text-[9px] font-black px-1 rounded-full ${vista === "basura" ? "bg-white/20" : "bg-slate-400 text-white"}`}>{totalBasura}</span>}
             </button>
             {vista !== "normal" && <button onClick={() => setVista("normal")} className="shrink-0 px-2 py-1.5 text-[11px] font-bold rounded-lg bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500">✕</button>}
           </div>
 
           {vista === "normal" && (
-            <div className="flex flex-wrap gap-1">
+            <div className="-mx-3 px-3 flex gap-1.5 overflow-x-auto no-scrollbar">
               {(veTodos ? filtrosPorVendedor : ESTADOS).map((e) => (
-                <button key={e.value} onClick={() => setFiltroEstado(e.value)} className={`px-2 py-1 rounded-md text-[10px] font-bold border transition-colors ${filtroEstado === e.value ? "bg-slate-800 dark:bg-white text-white dark:text-slate-900 border-slate-800 dark:border-white" : "bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300"}`}>{e.label}</button>
+                <button key={e.value} onClick={() => setFiltroEstado(e.value)} className={`shrink-0 px-3 py-1.5 rounded-full text-[12px] font-semibold border transition-colors ${filtroEstado === e.value ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white" : "bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50"}`}>{e.label}</button>
               ))}
             </div>
           )}
 
           {vista === "normal" && (
-            <div className="flex items-center gap-1 text-[10px]">
-              <ArrowDownWideNarrow className="w-3 h-3 text-slate-400 shrink-0" />
-              <button onClick={() => setOrden("recientes")} className={`flex items-center gap-1 px-2 py-1 rounded-md font-bold border transition-colors ${orden === "recientes" ? "bg-[#0145F2] border-[#0145F2] text-white" : "bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500"}`}>
+            <div className="flex items-center gap-1.5 text-[12px]">
+              <ArrowDownWideNarrow className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <button onClick={() => setOrden("recientes")} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full font-semibold border transition-colors ${orden === "recientes" ? "bg-[#0145F2] border-[#0145F2] text-white" : "bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500"}`}>
                 <Clock3 className="w-3 h-3" /> Más recientes
               </button>
-              <button onClick={() => setOrden("prioridad")} className={`flex items-center gap-1 px-2 py-1 rounded-md font-bold border transition-colors ${orden === "prioridad" ? "bg-[#0145F2] border-[#0145F2] text-white" : "bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500"}`}>
+              <button onClick={() => setOrden("prioridad")} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full font-semibold border transition-colors ${orden === "prioridad" ? "bg-[#0145F2] border-[#0145F2] text-white" : "bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500"}`}>
                 <Zap className="w-3 h-3" /> A quién llamar primero
               </button>
             </div>
@@ -380,9 +380,9 @@ export default function LeadsUnificadosClient({ leadsIniciales, vendedores, sucu
           <div className="flex items-center gap-1.5">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-              <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar lead..." className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg py-1.5 pl-8 pr-3 text-xs outline-none focus:border-[#0145F2] dark:focus:border-sky-400 text-slate-900 dark:text-white placeholder:text-slate-400" />
+              <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar por nombre o teléfono" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-2 pl-8 pr-3 text-[13px] outline-none focus:border-[#0145F2] dark:focus:border-sky-400 text-slate-900 dark:text-white placeholder:text-slate-400" />
             </div>
-            <button onClick={() => setShowFiltros((v) => !v)} title="Más filtros" className={`shrink-0 p-1.5 rounded-lg transition-colors ${showFiltros ? "bg-slate-800 dark:bg-white/10 text-white" : "bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400"}`}>
+            <button onClick={() => setShowFiltros((v) => !v)} title="Más filtros" aria-label="Más filtros" className={`shrink-0 p-2 rounded-xl transition-colors ${showFiltros ? "bg-slate-800 dark:bg-white/10 text-white" : "bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400"}`}>
               <Filter className="w-3.5 h-3.5" />
             </button>
           </div>

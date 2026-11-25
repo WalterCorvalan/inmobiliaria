@@ -59,9 +59,9 @@ export async function proxy(request: NextRequest) {
   // MODO DEMO (sin base conectada, lib/demo/): el panel se abre sin login y las rutas /api del panel responden de mentira.
   if (esModoDemo()) {
     if (pathname.startsWith('/api/')) return respuestaApiDemo(request);
-    if (pathname === '/panel/login' || pathname === '/panel') {
+    if (pathname === '/panel/login') {
       const url = request.nextUrl.clone();
-      url.pathname = '/panel/leads';
+      url.pathname = '/panel';
       return NextResponse.redirect(url);
     }
     return NextResponse.next({ request });

@@ -1,4 +1,4 @@
-// Módulos que muestra la franja del MODO DEMO (components/demo/FranjaDemo.tsx) y la portada de /demo.
+// Módulos que muestra la portada de /demo (acceso a cada uno).
 export const MODULOS_DEMO: { nombre: string; href: string; detalle: string }[] = [
   { nombre: "Leads", href: "/panel/leads", detalle: "Todos los interesados de WhatsApp, Instagram, Messenger y la web en una lista, con temperatura y asesor" },
   { nombre: "Propiedades", href: "/panel/propiedades", detalle: "La cartera de venta y alquiler, con precio, estado y asesor" },
