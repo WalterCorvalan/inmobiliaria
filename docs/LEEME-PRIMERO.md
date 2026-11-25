@@ -2,7 +2,7 @@
 
 Si abrís este proyecto desde un chat nuevo, **leé este archivo entero antes de tocar nada**. Resume la idea, lo que se decidió, cómo está construido, en qué estado está y cómo seguir. Es la puerta de entrada; el detalle está en los demás archivos de `docs/` (mapa al final).
 
-Última actualización: 18/11/2026.
+Última actualización: 25/11/2026.
 
 ## 1. Quién es Walter y cómo hay que hablarle
 
@@ -87,6 +87,8 @@ Resumen; el detalle está en `manual-de-arranque.md`.
 - **Superadmin** (`/superadmin`): alta de inmobiliarias sin SQL, suspender y reactivar.
 - `.env.example` con todas las variables. Brief de 4 archivos: `docs/PRD.md`, `docs/DESIGN_SYSTEM.md`, `docs/ARCHITECTURE.md`, `AGENTS.md`.
 - **Hosting: Cloudflare** (decidido 18/11/2026), no Vercel.
+
+**Actualización 25/11/2026 (rediseño visual):** panel con el mismo aspecto que Automotora (menú claro, barra de abajo en el celular, Inicio en `/panel` con lo del día, cuentas en `lib/panel/inicio.ts`) y portada de `/demo` nueva. Detalle en `decisiones.md` y `DESIGN_SYSTEM.md`.
 
 **NUNCA se probó contra un Supabase real ni contra Meta real.** La base se probó en memoria. Hasta que eso pase, la guía de canales y el manual figuran como "sin probar".
 

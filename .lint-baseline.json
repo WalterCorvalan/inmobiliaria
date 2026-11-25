@@ -1,12 +1,12 @@
 {
-  "total": 221,
+  "total": 218,
   "porRegla": {
     "@typescript-eslint/no-explicit-any": 147,
     "react-hooks/set-state-in-effect": 23,
-    "@next/next/no-img-element": 12,
     "react/no-unescaped-entities": 10,
     "@typescript-eslint/no-unused-vars": 9,
     "react-hooks/exhaustive-deps": 9,
+    "@next/next/no-img-element": 9,
     "prefer-const": 4,
     "react-hooks/purity": 3,
     "react-hooks/static-components": 3,
