@@ -21,6 +21,21 @@ const PROPIEDADES: P[] = [
   ["L302", "Local comercial en el centro", "local", "venta", 140000, "USD", null, "Lomas de Zamora", "Lomas de Zamora", 2, null, 1, 0, 60, "pausada", 1, 3],
 ];
 
+// Qué fotos lleva cada propiedad de la demo (la primera es la portada). Terreno y locales quedan sin foto, con el dibujo.
+const FOTOS_DEMO: Record<string, string[]> = {
+  A101: ["studio_modern", "kitchen_modern"],
+  A102: ["apartment_downtown", "kitchen_modern"],
+  A103: ["penthouse_luxury", "flat_luxury_living_area"],
+  A104: ["lounge_cosy", "apartment_luxury"],
+  A107: ["new_villa", "house_family"],
+  V201: ["flat_balcony", "apartment_luxury"],
+  V202: ["flat_luxury_living_area", "kitchen_modern"],
+  V204: ["apartment_luxury", "lounge_cosy"],
+  V206: ["house_suburban", "carousel_villa_with_pool"],
+  V207: ["townhouse_historic", "mansion_front"],
+  V209: ["apartment_downtown", "flat_balcony"],
+};
+
 const RUBRO: RubroDatosDemo = {
   negocio: {
     nombre: "Propiedades del Sur", color: "#B4532A", domicilio: "Av. Cabildo 2150, Belgrano, CABA", telefono: "5491155550100", email: "hola@propiedadesdelsur.demo", web: "propiedadesdelsur.demo", instagram: "@propiedadesdelsur", bot: "Lucía",
@@ -146,7 +161,11 @@ const RUBRO: RubroDatosDemo = {
     };
     return {
       propiedades,
-      propiedad_fotos: [],
+      // Fotos de ejemplo (public/demo/propiedades, de un proyecto con licencia MIT: ver LICENCIA.txt de esa carpeta).
+      propiedad_fotos: Object.entries(FOTOS_DEMO).flatMap(([codigo, fotos]) => fotos.map((f, orden) => ({
+        id: idFijo(23, propiedades.findIndex((x) => x.codigo === codigo) * 10 + orden + 1), empresa_id: EMPRESA_DEMO, propiedad_id: prop(codigo).id,
+        url: `/demo/propiedades/${f}.jpg`, orden, es_portada: orden === 0, created_at: haceMin(60 * 24),
+      }))),
       visitas: [
         visita(1, 0, "A102", 1, "11:00", "Pendiente", 1, "Tiene un gato. Garantía propietaria."),
         visita(2, 6, "V207", 3, "11:00", "Confirmada", 3, "Viene con crédito hipotecario."),

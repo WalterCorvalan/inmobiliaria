@@ -28,7 +28,8 @@ import { m } from "framer-motion";
 import { CURVA } from "@/components/ui/movimiento";
 import { CLASE_MODO_CLARO, clasesModoOscuro, temaOscuroValido, EVENTO_TEMA_OSCURO, type TemaOscuro } from "@/lib/panel/temasOscuros";
 
-// Menú (rediseño 26/11/2026, Walter: "como un CRM de esos corporativos"). Barra lateral oscura con los dibujos en color
+// Menú (rediseño 26/11/2026, Walter: "como un CRM de esos corporativos", con capturas de referencia). Barra lateral clara, el activo
+// lleno con el color de la marca, y los dibujos en color
 // del panel de Pfaffen: Walter no quiere los íconos de línea simples ("iconitos de IA").
 // Todo item necesita "modulo" para que la visibilidad por sector (visibilidad_sector) pueda apagarlo.
 type ItemMenu = { href: string; label: string; icon: string; modulo?: string; /** Rutas que lo marcan como activo, si no es su href. */ prefijo?: string; };
@@ -361,8 +362,8 @@ export default function PanelLayoutClient({
         <div key={grupo.titulo || gi} className={gi > 0 ? "mt-5" : ""}>
           {grupo.titulo && (
             angosto
-              ? <div className="mx-3 mb-2 border-t border-white/[0.07]" />
-              : <p className="px-3 pb-2 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-slate-500">{grupo.titulo}</p>
+              ? <div className="mx-3 mb-2 border-t border-slate-100 dark:border-white/[0.07]" />
+              : <p className="px-3 pb-2 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">{grupo.titulo}</p>
           )}
           <div className="space-y-0.5">
             {grupo.items.map((item) => {
@@ -376,20 +377,19 @@ export default function PanelLayoutClient({
                   aria-current={activo ? "page" : undefined}
                   onClick={() => { setIsOpen(false); if (!activo) setNavegandoA(item.href); }}
                   className={`relative flex items-center gap-3 rounded-lg ${celular ? "py-2.5" : "py-2"} ${angosto ? "justify-center px-0" : "px-3"} text-[13.5px] transition-colors ${
-                    activo ? "font-semibold text-white" : "font-medium text-slate-400 hover:bg-white/[0.04] hover:text-slate-100"
+                    activo ? "font-semibold text-white" : "font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-slate-100"
                   }`}
                 >
-                  {activo && <m.span layoutId={celular ? "menu-activo-cel" : "menu-activo"} transition={{ duration: 0.16, ease: CURVA }} className="absolute inset-0 rounded-lg bg-white/[0.08] ring-1 ring-inset ring-white/[0.06]" />}
-                  {activo && !angosto && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[3px] rounded-r-full menu-barra" aria-hidden="true" />}
-                  <span className="relative flex items-center gap-3 min-w-0 flex-1">
+                  {activo && <m.span layoutId={celular ? "menu-activo-cel" : "menu-activo"} transition={{ duration: 0.16, ease: CURVA }} className="absolute inset-0 rounded-lg menu-activo shadow-sm" />}
+                                    <span className="relative flex items-center gap-3 min-w-0 flex-1">
                     <span className="relative shrink-0">
                       {cargando
                         ? <RotateCw className="w-5 h-5 animate-spin text-slate-500" />
-                        : <IconoPanel src={item.icon} alt="" className={`w-5 h-5 transition-opacity ${activo ? "" : "opacity-80"}`} />}
+                        : <span className={activo ? "flex w-6 h-6 -m-0.5 items-center justify-center rounded-md bg-white" : ""}><IconoPanel src={item.icon} alt="" className="w-5 h-5" /></span>}
                     </span>
                     {!angosto && <span className="truncate">{item.label}</span>}
                   </span>
-                  {celular && !activo && <ChevronRight className="relative ml-auto w-4 h-4 text-slate-600" aria-hidden="true" />}
+                  {celular && !activo && <ChevronRight className="relative ml-auto w-4 h-4 text-slate-300 dark:text-slate-600" aria-hidden="true" />}
                 </Link>
               );
             })}
@@ -401,11 +401,11 @@ export default function PanelLayoutClient({
 
   const marcaEmpresa = (angosto: boolean) => (
     <Link href="/" target="_blank" title="Ver la web pública" className={`flex items-center gap-3 min-w-0 ${angosto ? "justify-center" : ""}`}>
-      <IconoPanel src={branding.logoUrl || "/logo-placeholder.svg"} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0 ring-1 ring-white/10 bg-white" />
+      <IconoPanel src={branding.logoUrl || "/logo-placeholder.svg"} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0 ring-1 ring-slate-200 dark:ring-white/10 bg-white" />
       {!angosto && (
         <div className="min-w-0">
-          <p className="text-[14px] font-semibold leading-tight tracking-tight truncate text-white">{nombreEmpresa}</p>
-          <p className="text-[11px] font-medium text-slate-500 leading-tight mt-0.5">CRM de ventas</p>
+          <p className="text-[14px] font-semibold leading-tight tracking-tight truncate text-slate-900 dark:text-white">{nombreEmpresa}</p>
+          <p className="text-[11px] font-medium text-slate-400 leading-tight mt-0.5">CRM de ventas</p>
         </div>
       )}
     </Link>
@@ -413,18 +413,18 @@ export default function PanelLayoutClient({
 
   const iniciales = nombre.split(" ").filter(Boolean).slice(0, 2).map((p) => p.charAt(0).toUpperCase()).join("") || "?";
   const usuario = (angosto: boolean) => (
-    <div className={`flex items-center gap-3 rounded-lg ${angosto ? "justify-center" : "p-2 bg-white/[0.04] ring-1 ring-inset ring-white/[0.06]"}`} title={angosto ? nombre : undefined}>
+    <div className={`flex items-center gap-3 rounded-lg ${angosto ? "justify-center" : "p-2 bg-slate-50 dark:bg-white/[0.04] ring-1 ring-inset ring-slate-100 dark:ring-white/[0.06]"}`} title={angosto ? nombre : undefined}>
       <div className="w-8 h-8 rounded-full menu-avatar text-white flex items-center justify-center text-[12px] font-semibold shrink-0">
         {iniciales}
       </div>
       {!angosto && (
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold truncate text-slate-100">{nombre}</p>
+          <p className="text-[13px] font-semibold truncate text-slate-900 dark:text-slate-100">{nombre}</p>
           <p className="text-[11px] text-slate-500 truncate">{ROL_LABEL[rolPrincipal] || rolPrincipal || "Equipo"}</p>
         </div>
       )}
       {!angosto && (
-        <button onClick={handleLogout} title="Cerrar sesión" aria-label="Cerrar sesión" className="p-1.5 rounded-md text-slate-500 hover:text-white hover:bg-white/10 transition-colors">
+        <button onClick={handleLogout} title="Cerrar sesión" aria-label="Cerrar sesión" className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-white/10 transition-colors">
           <LogOut className="w-4 h-4" />
         </button>
       )}
@@ -444,11 +444,11 @@ export default function PanelLayoutClient({
           onMouseLeave={() => moverMenu(false)}
           className={`menu-oscuro hidden md:flex print:hidden relative h-full ${colapsado ? "w-[72px]" : "w-[248px]"} flex-col shrink-0 transition-[width] duration-150 ease-out z-40`}
         >
-          <div className={`h-16 flex items-center border-b border-white/[0.06] shrink-0 ${colapsado ? "justify-center px-2" : "px-4"}`}>
+          <div className={`h-16 flex items-center border-b border-slate-100 dark:border-white/[0.06] shrink-0 ${colapsado ? "justify-center px-2" : "px-4"}`}>
             {marcaEmpresa(colapsado)}
           </div>
           {listaMenu(colapsado, false)}
-          <div className={`shrink-0 ${colapsado ? "p-3 border-t border-white/[0.06]" : "p-3"}`}>
+          <div className={`shrink-0 ${colapsado ? "p-3 border-t border-slate-100 dark:border-white/[0.06]" : "p-3"}`}>
             {usuario(colapsado)}
           </div>
         </aside>
@@ -468,15 +468,15 @@ export default function PanelLayoutClient({
             }}
             className={`menu-oscuro absolute inset-y-0 left-0 w-[86%] max-w-[320px] shadow-2xl flex flex-col transition-transform duration-200 ease-out ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
           >
-            <div className="h-16 flex items-center justify-between gap-2 pl-4 pr-3 border-b border-white/[0.06] shrink-0">
+            <div className="h-16 flex items-center justify-between gap-2 pl-4 pr-3 border-b border-slate-100 dark:border-white/[0.06] shrink-0">
               {marcaEmpresa(false)}
-              <button onClick={() => setIsOpen(false)} aria-label="Cerrar menú" className="p-2 rounded-lg text-slate-400 hover:bg-white/10">
+              <button onClick={() => setIsOpen(false)} aria-label="Cerrar menú" className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10">
                 <X className="w-5 h-5" />
               </button>
             </div>
             {listaMenu(false, true)}
-            <div className="border-t border-white/[0.06] p-3 space-y-2 shrink-0 pb-[max(12px,env(safe-area-inset-bottom))]">
-              <button onClick={toggleDarkMode} className="w-full flex items-center gap-3 px-3 py-1.5 text-[13.5px] font-medium text-slate-400">
+            <div className="border-t border-slate-100 dark:border-white/[0.06] p-3 space-y-2 shrink-0 pb-[max(12px,env(safe-area-inset-bottom))]">
+              <button onClick={toggleDarkMode} className="w-full flex items-center gap-3 px-3 py-1.5 text-[13.5px] font-medium text-slate-600 dark:text-slate-400">
                 {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                 {darkMode ? "Modo claro" : "Modo oscuro"}
               </button>

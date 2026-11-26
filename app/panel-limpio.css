@@ -27,13 +27,10 @@
    Walter: "más limpio, como un CRM de esos corporativos que vemos por Pinterest". Barra lateral oscura (tinta azulada),
    íconos de línea, encabezado con la sección arriba del título, pesos de letra más tranquilos y tarjetas con esquinas de
    12 px y una sombra apenas visible. */
-.menu-oscuro {
-  --menu-fondo: #0E1525;
-  background: var(--menu-fondo);
-  color: #e2e8f0;
-}
-.dark .menu-oscuro { --menu-fondo: #0B0B0E; border-right: 1px solid rgba(255, 255, 255, 0.06); }
-.menu-barra { background: color-mix(in srgb, var(--marca) 55%, white); }
+/* Barra lateral clara (capturas de referencia de Walter, 26/11/2026): el activo va lleno con el color de la marca. */
+.menu-oscuro { --menu-fondo: #ffffff; background: var(--menu-fondo); border-right: 1px solid #E7E9EE; }
+.dark .menu-oscuro { --menu-fondo: #111113; border-right-color: rgba(255, 255, 255, 0.07); }
+.menu-activo { background: var(--marca); }
 .menu-avatar { background: linear-gradient(135deg, color-mix(in srgb, var(--marca) 80%, white), color-mix(in srgb, var(--marca) 80%, black)); }
 
 .panel-v2-root main .font-extrabold { font-weight: 650; }

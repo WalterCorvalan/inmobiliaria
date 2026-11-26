@@ -1,0 +1,2 @@
+Fotos de ejemplo para la demo, tomadas del proyecto PropertyWebBuilder (github.com/etewiah/property_web_builder),
+publicado con licencia MIT. Solo se usan en la demo con datos de ejemplo; cada inmobiliaria carga las suyas.
