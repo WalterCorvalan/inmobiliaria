@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agendaProxima, haceCuanto, hoyArgentina, leadsParaAtender, resumenInicio, sumarDiasISO, type LeadInicio, type VisitaInicio, embudoVentas } from "./inicio";
+import { agendaProxima, haceCuanto, hoyArgentina, leadsParaAtender, resumenInicio, sumarDiasISO, type LeadInicio, type VisitaInicio, embudoVentas, cuentaPorDia } from "./inicio";
 
 const AHORA = new Date("2026-11-25T15:00:00Z"); // 12:00 en Argentina
 const lead = (p: Partial<LeadInicio>): LeadInicio => ({ id: "x", canal: "whatsapp", nombre: "A", calificacion: null, estado_lead: "nuevo", unread_count: 0, last_message_at: null, created_at: "2026-11-20T10:00:00Z", es_basura: false, ...p });
@@ -68,5 +68,15 @@ describe("embudoVentas", () => {
   });
   it("sin leads da todo en cero", () => {
     expect(embudoVentas([]).tasaCierre).toBe(0);
+  });
+});
+
+describe("cuentaPorDia", () => {
+  it("cuenta los últimos días terminando hoy, en hora de Argentina", () => {
+    // 2026-11-26 01:00 UTC es todavía 25/11 en Argentina.
+    expect(cuentaPorDia(["2026-11-26T15:00:00Z", "2026-11-26T01:00:00Z", "2026-11-20T15:00:00Z", "2026-11-10T15:00:00Z", null], "2026-11-26")).toEqual([1, 0, 0, 0, 0, 1, 1]);
+  });
+  it("cuenta los próximos días empezando hoy con fechas AAAA-MM-DD", () => {
+    expect(cuentaPorDia(["2026-11-26", "2026-11-28", "2026-11-28", "2026-12-10"], "2026-11-26", 7, false)).toEqual([1, 0, 2, 0, 0, 0, 0]);
   });
 });

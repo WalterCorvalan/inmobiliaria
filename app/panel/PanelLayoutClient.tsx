@@ -18,16 +18,6 @@ import {
   Sun,
   X,
   LayoutGrid,
-  MessageCircle,
-  LayoutDashboard,
-  Users,
-  CalendarDays,
-  Building2,
-  Camera,
-  MessagesSquare,
-  Globe,
-  Settings,
-  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import IconoPanel from "@/components/panel/IconoPanel";
@@ -38,41 +28,41 @@ import { m } from "framer-motion";
 import { CURVA } from "@/components/ui/movimiento";
 import { CLASE_MODO_CLARO, clasesModoOscuro, temaOscuroValido, EVENTO_TEMA_OSCURO, type TemaOscuro } from "@/lib/panel/temasOscuros";
 
-// Menú (rediseño 26/11/2026, Walter: "como un CRM de esos corporativos"). Barra lateral oscura con íconos de línea de un
-// solo color (antes, los dibujos en color de Pfaffen); los canales llevan un punto con su color para reconocerlos rápido.
+// Menú (rediseño 26/11/2026, Walter: "como un CRM de esos corporativos"). Barra lateral oscura con los dibujos en color
+// del panel de Pfaffen: Walter no quiere los íconos de línea simples ("iconitos de IA").
 // Todo item necesita "modulo" para que la visibilidad por sector (visibilidad_sector) pueda apagarlo.
-type ItemMenu = { href: string; label: string; icon: LucideIcon; modulo?: string; /** Rutas que lo marcan como activo, si no es su href. */ prefijo?: string; /** Color del canal. */ punto?: string };
+type ItemMenu = { href: string; label: string; icon: string; modulo?: string; /** Rutas que lo marcan como activo, si no es su href. */ prefijo?: string; };
 
-const INICIO: ItemMenu = { href: "/panel", label: "Inicio", icon: LayoutDashboard, modulo: "inicio" };
+const INICIO: ItemMenu = { href: "/panel", label: "Inicio", icon: "/icons/panel/dashboard.png", modulo: "inicio" };
 
 const GRUPOS: { titulo: string; items: ItemMenu[] }[] = [
   { titulo: "", items: [INICIO] },
   {
     titulo: "Ventas",
     items: [
-      { href: "/panel/leads", label: "Leads", icon: Users, modulo: "leads" },
-      { href: "/panel/visitas", label: "Visitas", icon: CalendarDays, modulo: "visitas" },
+      { href: "/panel/leads", label: "Leads", icon: "/icons/panel/leads.png", modulo: "leads" },
+      { href: "/panel/visitas", label: "Visitas", icon: "/icons/panel/calendario.png", modulo: "visitas" },
     ],
   },
   {
     titulo: "Cartera",
     items: [
-      { href: "/panel/propiedades", label: "Propiedades", icon: Building2, modulo: "propiedades" },
+      { href: "/panel/propiedades", label: "Propiedades", icon: "/icons/panel/consignaciones.png", modulo: "propiedades" },
     ],
   },
   {
     titulo: "Bandeja de entrada",
     items: [
-      { href: "/panel/whatsapp", label: "WhatsApp", icon: MessageCircle, modulo: "whatsapp", punto: "#22C55E" },
-      { href: "/panel/instagram", label: "Instagram", icon: Camera, modulo: "instagram", punto: "#E1306C" },
-      { href: "/panel/messenger", label: "Messenger", icon: MessagesSquare, modulo: "messenger", punto: "#3B82F6" },
-      { href: "/panel/rodi", label: "Chat de la web", icon: Globe, modulo: "rodi", punto: "#94A3B8" },
+      { href: "/panel/whatsapp", label: "WhatsApp", icon: "/icons/panel/whatsapp.png", modulo: "whatsapp" },
+      { href: "/panel/instagram", label: "Instagram", icon: "/icons/panel/instagram.png", modulo: "instagram" },
+      { href: "/panel/messenger", label: "Messenger", icon: "/icons/panel/messenger.png", modulo: "messenger" },
+      { href: "/panel/rodi", label: "Chat de la web", icon: "/icons/panel/contenido-sitio.png", modulo: "rodi" },
     ],
   },
   {
     titulo: "Ajustes",
     items: [
-      { href: "/panel/configuracion/empresa", prefijo: "/panel/configuracion", label: "Configuración", icon: Settings, modulo: "configuracion" },
+      { href: "/panel/configuracion/empresa", prefijo: "/panel/configuracion", label: "Configuración", icon: "/icons/panel/configuracion.png", modulo: "configuracion" },
     ],
   },
 ];
@@ -80,9 +70,9 @@ const GRUPOS: { titulo: string; items: ItemMenu[] }[] = [
 // Barra de abajo del celular: lo que se usa todo el día. El resto (canales, ajustes) está en "Menú".
 const NAV_MOBILE: ItemMenu[] = [
   INICIO,
-  { href: "/panel/leads", label: "Leads", icon: Users },
-  { href: "/panel/propiedades", label: "Propiedades", icon: Building2 },
-  { href: "/panel/visitas", label: "Agenda", icon: CalendarDays },
+  { href: "/panel/leads", label: "Leads", icon: "/icons/panel/leads.png" },
+  { href: "/panel/propiedades", label: "Propiedades", icon: "/icons/panel/consignaciones.png" },
+  { href: "/panel/visitas", label: "Agenda", icon: "/icons/panel/calendario.png" },
 ];
 
 const esActivo = (href: string, ruta: string | null, prefijo?: string) => (href === "/panel" ? ruta === "/panel" : !!ruta?.startsWith(prefijo ?? href));
@@ -378,7 +368,6 @@ export default function PanelLayoutClient({
             {grupo.items.map((item) => {
               const activo = esActivo(item.href, pathname, item.prefijo);
               const cargando = navegandoA === item.href && !activo;
-              const Icono = item.icon;
               return (
                 <Link
                   key={item.href}
@@ -395,9 +384,8 @@ export default function PanelLayoutClient({
                   <span className="relative flex items-center gap-3 min-w-0 flex-1">
                     <span className="relative shrink-0">
                       {cargando
-                        ? <RotateCw className="w-[18px] h-[18px] animate-spin text-slate-500" />
-                        : <Icono className={`w-[18px] h-[18px] ${activo ? "text-white" : ""}`} strokeWidth={1.75} />}
-                      {item.punto && <span className="absolute -right-0.5 -bottom-0.5 w-[7px] h-[7px] rounded-full ring-2 ring-[var(--menu-fondo)]" style={{ background: item.punto }} aria-hidden="true" />}
+                        ? <RotateCw className="w-5 h-5 animate-spin text-slate-500" />
+                        : <IconoPanel src={item.icon} alt="" className={`w-5 h-5 transition-opacity ${activo ? "" : "opacity-80"}`} />}
                     </span>
                     {!angosto && <span className="truncate">{item.label}</span>}
                   </span>
@@ -513,7 +501,7 @@ export default function PanelLayoutClient({
             </div>
             {demo && (
               <Link href="/demo" className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-[#E2E5EA] dark:border-white/10 px-3 h-9 text-[13px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5">
-                <MessageCircle className="w-4 h-4 text-[#0145F2]" /> Probar el bot
+                <IconoPanel src="/icons/panel/whatsapp.png" alt="" className="w-4 h-4" /> Probar el bot
               </Link>
             )}
             <button
@@ -570,7 +558,7 @@ export default function PanelLayoutClient({
                 className="flex flex-col items-center justify-center gap-1 h-[64px]"
               >
                 <span className={`flex items-center justify-center w-12 h-7 rounded-full transition-colors ${activo ? "bg-indigo-50 dark:bg-indigo-500/20" : ""}`}>
-                  <item.icon className={`w-[20px] h-[20px] ${activo ? "text-indigo-700 dark:text-indigo-300" : "text-slate-500 dark:text-slate-400"}`} strokeWidth={activo ? 2 : 1.75} />
+                  <IconoPanel src={item.icon} alt="" className="w-[22px] h-[22px]" />
                 </span>
                 <span className={`text-[11px] leading-none ${activo ? "font-semibold text-indigo-700 dark:text-indigo-300" : "font-medium text-slate-500 dark:text-slate-400"}`}>{item.label}</span>
               </Link>

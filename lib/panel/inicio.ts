@@ -152,3 +152,16 @@ export function embudoVentas(leads: Pick<LeadInicio, "estado_pipeline" | "es_bas
   const cerrados = cuenta.cerrado ?? 0;
   return { etapas, total, perdidos, tasaCierre: total ? Math.round((cerrados / total) * 100) : 0 };
 }
+
+/** Cuántas fechas caen en cada uno de `dias` días seguidos (hora de Argentina). Con `desde` = hoy y `haciaAtras`, los
+ *  últimos días terminando hoy; sin, los próximos días empezando hoy. Para los mini gráficos de Inicio. */
+export function cuentaPorDia(fechas: (string | null | undefined)[], hoy: string, dias = 7, haciaAtras = true): number[] {
+  const claves = Array.from({ length: dias }, (_, i) => sumarDiasISO(hoy, haciaAtras ? i - dias + 1 : i));
+  const cuenta = new Map(claves.map((k) => [k, 0]));
+  for (const f of fechas) {
+    if (!f) continue;
+    const dia = f.length === 10 ? f : hoyArgentina(new Date(f));
+    if (cuenta.has(dia)) cuenta.set(dia, (cuenta.get(dia) ?? 0) + 1);
+  }
+  return claves.map((k) => cuenta.get(k) ?? 0);
+}

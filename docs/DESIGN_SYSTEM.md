@@ -62,7 +62,7 @@ navegador), estados como píldora chica con punto de color y tablas en la compu 
 también en `app/panel-marca.css`.
 
 ## 11 CRM corporativo (26/11/2026)
-Arriba de lo anterior: barra lateral oscura (#0E1525, en modo oscuro #0B0B0E) con íconos de línea de lucide en un solo color,
+Arriba de lo anterior: barra lateral oscura (#0E1525, en modo oscuro #0B0B0E) con los dibujos en color de `public/icons/panel` (nada de íconos de línea simples en el menú ni en las tarjetas: Walter los rechazó),
 el activo con fondo blanco al 8 % y una rayita del color de la marca (`app/panel-limpio.css`: `.menu-oscuro`, `.menu-barra`,
 `.menu-avatar`). Encabezado: "Empresa / Sección" en chico arriba del título y el usuario a la derecha. Fondo #F4F5F7, tarjetas
 blancas con borde #E7E9EE, esquinas de 12 px, títulos en semibold (nada de extrabold). Estados y temperaturas siempre en

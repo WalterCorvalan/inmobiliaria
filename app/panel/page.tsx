@@ -1,10 +1,10 @@
 import Link from "next/link";
 import IconoPanel from "@/components/panel/IconoPanel";
 import type { ReactNode } from "react";
-import { AlertTriangle, ArrowRight, Filter, PieChart, Building2, CalendarClock, CheckCircle2, Clock, Flame, KeyRound, MessageSquareDot, Plus, Users } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import {
-  agendaProxima, embudoVentas, haceCuanto, tareaVencida, hoyArgentina, leadsParaAtender, resumenInicio, sumarDiasISO,
+  agendaProxima, cuentaPorDia, embudoVentas, haceCuanto, tareaVencida, hoyArgentina, leadsParaAtender, resumenInicio, sumarDiasISO,
   type CanalLead, type LeadInicio, type PropiedadInicio, type TareaInicio, type VisitaInicio,
 } from "@/lib/panel/inicio";
 
@@ -90,6 +90,10 @@ export default async function InicioPage() {
   const maxCanal = Math.max(1, ...Object.values(r.porCanal));
   const totalCanal = Object.values(r.porCanal).reduce((a, b) => a + b, 0);
   const embudo = embudoVentas(leads);
+  // Mini gráficos de las tarjetas de números (en vez de íconos, que Walter no quiere): últimos 7 días y próximos 7.
+  const leadsPorDia = cuentaPorDia(leads.filter((l) => !l.es_basura).map((l) => l.created_at), hoy);
+  const sinLeerPorDia = cuentaPorDia(leads.filter((l) => (l.unread_count ?? 0) > 0).map((l) => l.last_message_at || l.created_at), hoy);
+  const visitasPorDia = cuentaPorDia(visitas.filter((v) => v.estado !== "Cancelada").map((v) => v.fecha_visita), hoy, 7, false);
 
   return (
     <div className="mx-auto w-full max-w-[1320px] px-4 py-5 md:px-8 md:py-7 space-y-5">
@@ -106,22 +110,22 @@ export default async function InicioPage() {
         </div>
         <div className="grid grid-cols-3 gap-2 md:flex md:gap-2.5">
           <Accion href="/panel/leads" icono={<Plus className="w-4 h-4" />} primaria>Nuevo lead</Accion>
-          <Accion href="/panel/propiedades" icono={<Building2 className="w-4 h-4" />}>Propiedad</Accion>
-          <Accion href="/panel/visitas" icono={<CalendarClock className="w-4 h-4" />}>Agendar</Accion>
+          <Accion href="/panel/propiedades">Propiedad</Accion>
+          <Accion href="/panel/visitas">Agendar</Accion>
         </div>
       </section>
 
       {/* Números del día */}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Resumen">
-        <Numero href="/panel/leads" icono={<Users className="w-[18px] h-[18px]" />} tono="marca" titulo="Leads activos" valor={r.leadsActivos} detalle={r.leadsNuevosHoy > 0 ? `${r.leadsNuevosHoy} ${r.leadsNuevosHoy === 1 ? "nuevo" : "nuevos"} hoy` : "en seguimiento"} />
-        <Numero href="/panel/leads" icono={<MessageSquareDot className="w-[18px] h-[18px]" />} tono="rosa" titulo="Esperan respuesta" valor={r.sinLeer} detalle={`${r.calientes} ${r.calientes === 1 ? "caliente" : "calientes"}`} />
-        <Numero href="/panel/visitas" icono={<CalendarClock className="w-[18px] h-[18px]" />} tono="ambar" titulo="Visitas hoy" valor={r.visitasHoy} detalle={`${r.visitasSemana} en los próximos 7 días`} />
-        <Numero href="/panel/propiedades" icono={<Building2 className="w-[18px] h-[18px]" />} tono="verde" titulo="Propiedades disponibles" valor={r.disponibles} detalle={`${r.reservadas} ${r.reservadas === 1 ? "reservada" : "reservadas"} · ${r.enVenta} venta · ${r.enAlquiler} alquiler`} />
+        <Numero href="/panel/leads" grafico={<MiniBarras valores={leadsPorDia} ultimoFuerte titulo="Leads nuevos por día, últimos 7 días" />} titulo="Leads activos" valor={r.leadsActivos} detalle={r.leadsNuevosHoy > 0 ? `${r.leadsNuevosHoy} ${r.leadsNuevosHoy === 1 ? "nuevo" : "nuevos"} hoy` : "en seguimiento"} />
+        <Numero href="/panel/leads" grafico={<MiniBarras valores={sinLeerPorDia} ultimoFuerte tono="#E11D48" titulo="Charlas sin leer por día, últimos 7 días" />} titulo="Esperan respuesta" valor={r.sinLeer} detalle={`${r.calientes} ${r.calientes === 1 ? "caliente" : "calientes"}`} />
+        <Numero href="/panel/visitas" grafico={<MiniBarras valores={visitasPorDia} primeroFuerte tono="#D97706" titulo="Agenda de los próximos 7 días" />} titulo="Visitas hoy" valor={r.visitasHoy} detalle={`${r.visitasSemana} en los próximos 7 días`} />
+        <Numero href="/panel/propiedades" grafico={<Proporcion partes={[[r.disponibles, "#059669", "Disponibles"], [r.reservadas, "#F59E0B", "Reservadas"]]} />} titulo="Propiedades disponibles" valor={r.disponibles} detalle={`${r.reservadas} ${r.reservadas === 1 ? "reservada" : "reservadas"} · ${r.enVenta} venta · ${r.enAlquiler} alquiler`} />
       </section>
 
       {/* Embudo y canales: lo analítico arriba, como en los tableros de CRM (rediseño corporativo 26/11/2026). */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <Tarjeta className="lg:col-span-3" titulo="Embudo de ventas" icono={<Filter className="w-4 h-4 text-slate-400" />} extra={embudo.total > 0 ? <span className="text-[12px] text-slate-500 dark:text-slate-400">Cierre <b className="font-semibold text-slate-900 dark:text-white tabular-nums">{embudo.tasaCierre}%</b></span> : null}>
+        <Tarjeta className="lg:col-span-3" titulo="Embudo de ventas" extra={embudo.total > 0 ? <span className="text-[12px] text-slate-500 dark:text-slate-400">Cierre <b className="font-semibold text-slate-900 dark:text-white tabular-nums">{embudo.tasaCierre}%</b></span> : null}>
           {embudo.total === 0 ? (
             <Vacio texto="Todavía no hay leads con etapa cargada." />
           ) : (
@@ -143,7 +147,7 @@ export default async function InicioPage() {
             </ul>
           )}
         </Tarjeta>
-        <Tarjeta className="lg:col-span-2" titulo="Leads por canal" icono={<PieChart className="w-4 h-4 text-slate-400" />} extra={<span className="text-[12px] text-slate-500 dark:text-slate-400"><b className="font-semibold text-slate-900 dark:text-white tabular-nums">{totalCanal}</b> activos</span>}>
+        <Tarjeta className="lg:col-span-2" titulo="Leads por canal" extra={<span className="text-[12px] text-slate-500 dark:text-slate-400"><b className="font-semibold text-slate-900 dark:text-white tabular-nums">{totalCanal}</b> activos</span>}>
           <ul className="space-y-3.5 px-4 py-4 md:px-5">
             {(Object.keys(CANAL) as CanalLead[]).map((c) => (
               <li key={c} className="flex items-center gap-3">
@@ -161,7 +165,7 @@ export default async function InicioPage() {
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         {/* Leads para atender */}
-        <Tarjeta className="lg:col-span-3" titulo="Para atender ahora" icono={<Flame className="w-4 h-4 text-rose-500" />} href="/panel/leads" verTodo="Ver leads">
+        <Tarjeta className="lg:col-span-3" titulo="Para atender ahora" href="/panel/leads" verTodo="Ver leads">
           {atender.length === 0 ? (
             <Vacio texto="No hay leads calientes ni mensajes sin leer." />
           ) : (
@@ -196,7 +200,7 @@ export default async function InicioPage() {
         </Tarjeta>
 
         {/* Agenda */}
-        <Tarjeta className="lg:col-span-2" titulo="Agenda de la semana" icono={<CalendarClock className="w-4 h-4 text-amber-500" />} href="/panel/visitas" verTodo="Ver agenda">
+        <Tarjeta className="lg:col-span-2" titulo="Agenda de la semana" href="/panel/visitas" verTodo="Ver agenda">
           {agenda.length === 0 ? (
             <Vacio texto="No hay visitas en los próximos 7 días." />
           ) : (
@@ -225,7 +229,7 @@ export default async function InicioPage() {
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {/* Tareas */}
-        <Tarjeta titulo="Tareas de hoy" icono={<AlertTriangle className="w-4 h-4 text-rose-500" />} href="/panel/leads?modo=tareas" verTodo="Ver tareas">
+        <Tarjeta titulo="Tareas de hoy" href="/panel/leads?modo=tareas" verTodo="Ver tareas">
           {tareasUrgentes.length === 0 ? (
             <Vacio texto="Sin tareas para hoy." />
           ) : (
@@ -249,7 +253,7 @@ export default async function InicioPage() {
         </Tarjeta>
 
         {/* Cartera */}
-        <Tarjeta titulo="Tu cartera" icono={<KeyRound className="w-4 h-4 text-indigo-500" />} href="/panel/propiedades" verTodo="Ver propiedades">
+        <Tarjeta titulo="Tu cartera" href="/panel/propiedades" verTodo="Ver propiedades">
           <dl className="grid grid-cols-3 divide-x divide-slate-100 dark:divide-white/5">
             {[["Disponibles", r.disponibles], ["En venta", r.enVenta], ["En alquiler", r.enAlquiler]].map(([t, n]) => (
               <div key={t} className="px-4 py-5 text-center">
@@ -268,7 +272,7 @@ export default async function InicioPage() {
 
 const ETAPA_TEXTO: Record<string, string> = { sin_contactar: "Sin contactar", contactado: "Contactados", visita: "Visitas", negociacion: "Negociación", cerrado: "Cerrados" };
 
-function Accion({ href, icono, children, primaria = false }: { href: string; icono: ReactNode; children: ReactNode; primaria?: boolean }) {
+function Accion({ href, icono, children, primaria = false }: { href: string; icono?: ReactNode; children: ReactNode; primaria?: boolean }) {
   return (
     <Link
       href={href}
@@ -284,21 +288,14 @@ function Accion({ href, icono, children, primaria = false }: { href: string; ico
   );
 }
 
-const TONOS = {
-  marca: "text-indigo-600 dark:text-indigo-300",
-  rosa: "text-rose-600 dark:text-rose-300",
-  ambar: "text-amber-600 dark:text-amber-300",
-  verde: "text-emerald-600 dark:text-emerald-300",
-};
-
-function Numero({ href, icono, tono, titulo, valor, detalle }: { href: string; icono: ReactNode; tono: keyof typeof TONOS; titulo: string; valor: number; detalle: string }) {
+function Numero({ href, grafico, titulo, valor, detalle }: { href: string; grafico: ReactNode; titulo: string; valor: number; detalle: string }) {
   return (
     <Link href={href} className="group rounded-xl bg-white p-4 md:p-5 border border-[#E7E9EE] shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-colors hover:border-slate-300 dark:bg-[#131316] dark:border-white/[0.08] dark:hover:border-white/20">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[12.5px] font-medium text-slate-500 dark:text-slate-400 truncate">{titulo}</p>
-        <span className={`flex w-8 h-8 items-center justify-center rounded-lg bg-slate-50 dark:bg-white/[0.05] ${TONOS[tono]}`}>{icono}</span>
+      <p className="text-[12.5px] font-medium text-slate-500 dark:text-slate-400 truncate">{titulo}</p>
+      <div className="mt-2 flex items-end justify-between gap-3">
+        <p className="text-[28px] font-semibold leading-none tracking-tight tabular-nums text-slate-900 dark:text-white">{valor}</p>
+        {grafico}
       </div>
-      <p className="mt-2 text-[28px] font-semibold leading-none tracking-tight tabular-nums text-slate-900 dark:text-white">{valor}</p>
       <div className="mt-3 pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between gap-2">
         <p className="truncate text-[12px] text-slate-500 dark:text-slate-400">{detalle}</p>
         <ArrowRight className="w-3.5 h-3.5 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 dark:text-slate-600" aria-hidden="true" />
@@ -307,11 +304,39 @@ function Numero({ href, icono, tono, titulo, valor, detalle }: { href: string; i
   );
 }
 
-function Tarjeta({ titulo, icono, href, verTodo, extra, className = "", children }: { titulo: string; icono: ReactNode; href?: string; verTodo?: string; extra?: ReactNode; className?: string; children: ReactNode }) {
+/** Siete barritas: el día de hoy resaltado. Si no hubo nada, una línea de base. */
+function MiniBarras({ valores, titulo, tono = "var(--marca)", ultimoFuerte = false, primeroFuerte = false }: { valores: number[]; titulo: string; tono?: string; ultimoFuerte?: boolean; primeroFuerte?: boolean }) {
+  const max = Math.max(1, ...valores);
+  return (
+    <span className="flex items-end gap-[3px] h-8 shrink-0" role="img" aria-label={`${titulo}: ${valores.join(", ")}`} title={titulo}>
+      {valores.map((v, i) => {
+        const fuerte = (ultimoFuerte && i === valores.length - 1) || (primeroFuerte && i === 0);
+        return <span key={i} className="w-[7px] rounded-[2px]" style={{ height: `${Math.max(3, (v / max) * 32)}px`, background: tono, opacity: fuerte ? 1 : v > 0 ? 0.35 : 0.15 }} />;
+      })}
+    </span>
+  );
+}
+
+/** Barra partida en dos o más partes, con la leyenda abajo. */
+function Proporcion({ partes }: { partes: [number, string, string][] }) {
+  const total = partes.reduce((a, [n]) => a + n, 0) || 1;
+  return (
+    <span className="w-[96px] shrink-0">
+      <span className="flex h-2 rounded-full overflow-hidden bg-slate-100 dark:bg-white/10">
+        {partes.map(([n, color, nombre]) => <span key={nombre} style={{ width: `${(n / total) * 100}%`, background: color }} />)}
+      </span>
+      <span className="mt-1.5 flex justify-between text-[10.5px] text-slate-500 dark:text-slate-400 tabular-nums">
+        {partes.map(([n, color, nombre]) => <span key={nombre} className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />{n}</span>)}
+      </span>
+    </span>
+  );
+}
+
+function Tarjeta({ titulo, href, verTodo, extra, className = "", children }: { titulo: string; href?: string; verTodo?: string; extra?: ReactNode; className?: string; children: ReactNode }) {
   return (
     <div className={`overflow-hidden rounded-xl bg-white border border-[#E7E9EE] shadow-[0_1px_2px_rgba(16,24,40,0.04)] dark:bg-[#131316] dark:border-white/[0.08] ${className}`}>
       <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 md:px-5 dark:border-white/[0.06]">
-        <h3 className="flex items-center gap-2 text-[14px] font-semibold text-slate-900 dark:text-white">{icono}{titulo}</h3>
+        <h3 className="text-[14px] font-semibold text-slate-900 dark:text-white">{titulo}</h3>
         {extra}
         {href && verTodo && (
           <Link href={href} className="inline-flex shrink-0 items-center gap-1 text-[12.5px] font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
