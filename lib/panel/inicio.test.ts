@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agendaProxima, haceCuanto, hoyArgentina, leadsParaAtender, resumenInicio, sumarDiasISO, type LeadInicio, type VisitaInicio } from "./inicio";
+import { agendaProxima, haceCuanto, hoyArgentina, leadsParaAtender, resumenInicio, sumarDiasISO, type LeadInicio, type VisitaInicio, embudoVentas } from "./inicio";
 
 const AHORA = new Date("2026-11-25T15:00:00Z"); // 12:00 en Argentina
 const lead = (p: Partial<LeadInicio>): LeadInicio => ({ id: "x", canal: "whatsapp", nombre: "A", calificacion: null, estado_lead: "nuevo", unread_count: 0, last_message_at: null, created_at: "2026-11-20T10:00:00Z", es_basura: false, ...p });
@@ -52,5 +52,21 @@ describe("inicio del panel", () => {
     expect(haceCuanto("2026-11-25T14:55:00Z", AHORA)).toBe("hace 5 min");
     expect(haceCuanto("2026-11-25T12:00:00Z", AHORA)).toBe("hace 3 h");
     expect(haceCuanto("2026-11-24T12:00:00Z", AHORA)).toBe("ayer");
+  });
+});
+
+describe("embudoVentas", () => {
+  it("cuenta cada etapa, acumula hacia atrás y saca la tasa de cierre", () => {
+    const l = (estado_pipeline: string | null, es_basura = false) => ({ estado_pipeline, es_basura });
+    const e = embudoVentas([l("sin_contactar"), l("contactado"), l("contactado"), l("visita"), l("cerrado"), l("perdido"), l(null), l("cerrado", true)]);
+    expect(e.etapas.map((x) => [x.etapa, x.enEtapa, x.llegaron])).toEqual([
+      ["sin_contactar", 1, 5], ["contactado", 2, 4], ["visita", 1, 2], ["negociacion", 0, 1], ["cerrado", 1, 1],
+    ]);
+    expect(e.total).toBe(6);
+    expect(e.perdidos).toBe(1);
+    expect(e.tasaCierre).toBe(17);
+  });
+  it("sin leads da todo en cero", () => {
+    expect(embudoVentas([]).tasaCierre).toBe(0);
   });
 });

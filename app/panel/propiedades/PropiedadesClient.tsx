@@ -191,7 +191,7 @@ export default function PropiedadesClient({ iniciales, sucursales, asesores, miI
                             </div>
                           </td>
                           <td className="px-3 py-2.5"><span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${OPERACION_PILL[p.operacion]}`}>{OPERACION_LABEL[p.operacion]}</span></td>
-                          <td className="px-3 py-2.5 text-[12.5px] text-slate-600 dark:text-slate-300 min-w-[120px]">{especificaciones(p).slice(0, 3).join(" · ") || "—"}</td>
+                          <td className="px-3 py-2.5 text-[12.5px] text-slate-600 dark:text-slate-300 min-w-[130px]">{especificaciones(p).slice(0, 3).map((e, i) => <span key={e} className="whitespace-nowrap">{i > 0 && " · "}{e}</span>)}{especificaciones(p).length === 0 && "—"}</td>
                           <td className="px-3 py-2.5 whitespace-nowrap">
                             <p className="text-[14px] font-semibold tabular-nums text-slate-900 dark:text-white">{precio.monto}{precio.sufijo && <span className="text-[11px] font-medium text-slate-500"> {precio.sufijo}</span>}</p>
                             {p.expensas ? <p className="text-[11px] text-slate-500 dark:text-slate-400">+ $ {new Intl.NumberFormat("es-AR").format(p.expensas)} expensas</p> : null}

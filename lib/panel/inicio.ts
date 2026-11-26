@@ -13,6 +13,8 @@ export interface LeadInicio {
   last_message_at: string | null;
   created_at: string;
   es_basura: boolean | null;
+  /** Etapa del embudo (WhatsApp, Instagram y Messenger la tienen; el chat de la web y los cargados a mano, no). */
+  estado_pipeline?: string | null;
 }
 
 export interface VisitaInicio {
@@ -118,4 +120,35 @@ export function haceCuanto(iso: string | null, ahora: Date = new Date()): string
   if (h < 24) return `hace ${h} h`;
   const dias = Math.round(h / 24);
   return dias === 1 ? "ayer" : `hace ${dias} días`;
+}
+
+// Embudo de ventas de la pantalla de Inicio (rediseño corporativo 26/11/2026). Cuenta cada lead en su etapa y cuántos
+// llegaron al menos hasta ahí, para mostrar las barras de mayor a menor. Los que no tienen etapa no entran.
+export const ETAPAS_EMBUDO = ["sin_contactar", "contactado", "visita", "negociacion", "cerrado"] as const;
+export type EtapaEmbudo = (typeof ETAPAS_EMBUDO)[number];
+
+export interface Embudo {
+  etapas: { etapa: EtapaEmbudo; enEtapa: number; llegaron: number }[];
+  total: number;
+  perdidos: number;
+  /** Cerrados sobre el total con etapa (perdidos incluidos), en porcentaje redondeado. */
+  tasaCierre: number;
+}
+
+export function embudoVentas(leads: Pick<LeadInicio, "estado_pipeline" | "es_basura">[]): Embudo {
+  const cuenta: Record<string, number> = {};
+  let perdidos = 0;
+  for (const l of leads) {
+    if (l.es_basura || !l.estado_pipeline) continue;
+    if (l.estado_pipeline === "perdido") { perdidos++; continue; }
+    cuenta[l.estado_pipeline] = (cuenta[l.estado_pipeline] ?? 0) + 1;
+  }
+  let acumulado = 0;
+  const etapas = [...ETAPAS_EMBUDO].reverse().map((etapa) => {
+    acumulado += cuenta[etapa] ?? 0;
+    return { etapa, enEtapa: cuenta[etapa] ?? 0, llegaron: acumulado };
+  }).reverse();
+  const total = acumulado + perdidos;
+  const cerrados = cuenta.cerrado ?? 0;
+  return { etapas, total, perdidos, tasaCierre: total ? Math.round((cerrados / total) * 100) : 0 };
 }

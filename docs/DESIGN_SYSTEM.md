@@ -61,6 +61,13 @@ navegador), estados como píldora chica con punto de color y tablas en la compu 
 `app/panel/propiedades/estiloStockMinimal.ts` ajusta lo que se abre adentro. Las clases nuevas con el azul escrito a mano van
 también en `app/panel-marca.css`.
 
+## 11 CRM corporativo (26/11/2026)
+Arriba de lo anterior: barra lateral oscura (#0E1525, en modo oscuro #0B0B0E) con íconos de línea de lucide en un solo color,
+el activo con fondo blanco al 8 % y una rayita del color de la marca (`app/panel-limpio.css`: `.menu-oscuro`, `.menu-barra`,
+`.menu-avatar`). Encabezado: "Empresa / Sección" en chico arriba del título y el usuario a la derecha. Fondo #F4F5F7, tarjetas
+blancas con borde #E7E9EE, esquinas de 12 px, títulos en semibold (nada de extrabold). Estados y temperaturas siempre en
+píldora suave (fondo claro, letra oscura del mismo color), nunca en color lleno.
+
 ## Reglas
 - Un solo acento: el color de la empresa. Nada de colores fuera de esta paleta.
 - No repetir el nombre de la pantalla dentro de la página.

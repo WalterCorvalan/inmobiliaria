@@ -22,3 +22,23 @@
 
 /* Barra de abajo del celular: sobre la zona del gesto de inicio del teléfono. */
 .panel-nav-abajo { padding-bottom: env(safe-area-inset-bottom); }
+
+/* ===== CRM corporativo (26/11/2026) =====
+   Walter: "más limpio, como un CRM de esos corporativos que vemos por Pinterest". Barra lateral oscura (tinta azulada),
+   íconos de línea, encabezado con la sección arriba del título, pesos de letra más tranquilos y tarjetas con esquinas de
+   12 px y una sombra apenas visible. */
+.menu-oscuro {
+  --menu-fondo: #0E1525;
+  background: var(--menu-fondo);
+  color: #e2e8f0;
+}
+.dark .menu-oscuro { --menu-fondo: #0B0B0E; border-right: 1px solid rgba(255, 255, 255, 0.06); }
+.menu-barra { background: color-mix(in srgb, var(--marca) 55%, white); }
+.menu-avatar { background: linear-gradient(135deg, color-mix(in srgb, var(--marca) 80%, white), color-mix(in srgb, var(--marca) 80%, black)); }
+
+.panel-v2-root main .font-extrabold { font-weight: 650; }
+.panel-v2-root main .rounded-2xl { border-radius: 12px; }
+.panel-v2-root main .shadow-\[0_1px_2px_rgba\(15\,23\,42\,0\.04\)\] { box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.03); }
+@media (min-width: 768px) { .panel-v2-root .im-page { padding: 24px 32px 32px; } }
+.panel-v2-root .im-page { --im-bg: #F4F5F7; }
+.dark .panel-v2-root .im-page, .panel-v2-root.dark .im-page { --im-bg: #0A0A0B; }

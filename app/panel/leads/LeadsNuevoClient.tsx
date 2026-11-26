@@ -67,9 +67,9 @@ const ESTADO_LABEL: Record<string, string> = { nuevo: "Nuevo", asignado: "Contac
 const ESTADO_DOT: Record<string, string> = { nuevo: "bg-[#0145F2]", asignado: "bg-[#0145F2]", calificando: "bg-violet-500", convertido: "bg-emerald-500", perdido: "bg-rose-500" };
 const CALIFICACION_DOT: Record<string, string> = { caliente: "bg-rose-500", tibio: "bg-amber-500", frio: "bg-sky-400" };
 const TEMPERATURA: Record<string, { label: string; clase: string; icono: typeof Flame }> = {
-  caliente: { label: "Caliente", clase: "bg-rose-600 text-white", icono: Flame },
-  tibio: { label: "Tibio", clase: "bg-amber-400 text-amber-950", icono: Sun },
-  frio: { label: "Frío", clase: "bg-sky-500 text-white", icono: Snowflake },
+  caliente: { label: "Caliente", clase: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:ring-rose-500/30", icono: Flame },
+  tibio: { label: "Tibio", clase: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30", icono: Sun },
+  frio: { label: "Frío", clase: "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-500/30", icono: Snowflake },
 };
 /** "Hoy 10:00", "Mañana 11:00" o "14 oct". */
 
@@ -316,25 +316,26 @@ export default function LeadsNuevoClient({ leadsIniciales, vendedores, sucursale
       `}</style>
       {/* Celular: dos renglones, los grupos arriba y sus opciones (ej. Lista / Pipeline) abajo, todo a lo ancho; antes iban
           en uno solo y se cortaban a la derecha (Walter, 12/11/2026). Computadora: un renglón como siempre. */}
-      <div className={`shrink-0 flex-wrap md:flex-nowrap items-center gap-1.5 md:gap-2 px-2.5 py-1.5 md:py-2 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-[#111] md:overflow-x-auto ${seleccionado && modo === "lista" ? "hidden" : "flex"}`}>
-        <div className="w-full md:w-auto md:shrink-0 flex items-center gap-0.5 rounded-xl bg-slate-100 dark:bg-white/5 p-0.5">
+      <div className={`shrink-0 flex-wrap md:flex-nowrap items-center gap-1.5 md:gap-6 px-2.5 md:px-8 py-1.5 md:py-0 border-b border-[#E7E9EE] dark:border-white/[0.07] bg-white dark:bg-[#111113] md:overflow-x-auto ${seleccionado && modo === "lista" ? "hidden" : "flex"}`}>
+        {/* Pestañas con subrayado, como los CRM corporativos (26/11/2026). En el celular siguen como botones a lo ancho. */}
+        <div className="w-full md:w-auto md:shrink-0 flex items-center gap-0.5 md:gap-5 rounded-lg md:rounded-none bg-slate-100 md:bg-transparent dark:bg-white/5 md:dark:bg-transparent p-0.5 md:p-0">
           {GRUPOS.map((g) => {
             const Icon = g.icon;
             const activo = g.id === grupoActual.id;
             return (
               <button key={g.id} onClick={() => !activo && setModo(g.modos[0].v)} aria-pressed={activo}
-                className={`flex-1 md:flex-none justify-center flex items-center gap-1.5 px-3 h-8 md:h-auto md:py-1.5 rounded-lg text-[13px] md:text-xs font-bold transition-colors ${activo ? "bg-white dark:bg-[#1c1c1f] text-slate-900 dark:text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"}`}>
+                className={`flex-1 md:flex-none justify-center flex items-center gap-1.5 px-3 md:px-0.5 h-8 md:h-12 rounded-md md:rounded-none text-[13px] font-medium md:border-b-2 transition-colors ${activo ? "bg-white md:bg-transparent dark:bg-[#1c1c1f] md:dark:bg-transparent text-slate-900 dark:text-white shadow-sm md:shadow-none md:border-indigo-600 dark:md:border-indigo-400" : "md:border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"}`}>
                 <Icon className="w-3.5 h-3.5" /> {g.label}
               </button>
             );
           })}
         </div>
         {grupoActual.modos.length > 1 && (
-          <div className="w-full md:w-auto md:shrink-0 flex items-center gap-1">
+          <div className="w-full md:w-auto md:shrink-0 md:ml-auto flex items-center gap-1 md:p-0.5 md:rounded-lg md:border md:border-[#E7E9EE] dark:md:border-white/10">
             {grupoActual.modos.map((t) => {
               const Icon = t.icon;
               return (
-                <button key={t.v} onClick={() => setModo(t.v)} className={`flex-1 md:flex-none justify-center flex items-center gap-1.5 px-2.5 h-8 md:h-auto md:py-1 rounded-lg text-[13px] md:text-xs font-bold transition-colors ${modo === t.v ? "bg-[#0145F2] text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5"}`}>
+                <button key={t.v} onClick={() => setModo(t.v)} className={`flex-1 md:flex-none justify-center flex items-center gap-1.5 px-2.5 h-8 md:h-7 rounded-md text-[13px] md:text-[12.5px] font-medium transition-colors ${modo === t.v ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5"}`}>
                   <Icon className="w-3.5 h-3.5" /> {t.label}
                 </button>
               );
@@ -368,8 +369,8 @@ export default function LeadsNuevoClient({ leadsIniciales, vendedores, sucursale
       )}
 
       {modo === "lista" && !seleccionado && (
-        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-[#F1F2F5] dark:bg-[#0c0c0f]">
-          <div className="p-3 md:p-6 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-[#F4F5F7] dark:bg-[#0A0A0B]">
+          <div className="p-3 md:px-8 md:py-6 space-y-4">
             {/* Título, cuántos hay y el botón de crear. Estilo "SaaS de alto contraste" (Walter, 20/11/2026). */}
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-baseline gap-3 min-w-0">
