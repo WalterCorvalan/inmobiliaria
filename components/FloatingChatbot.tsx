@@ -24,7 +24,7 @@ const MENSAJE_INICIAL: Message = {
 
 // Botones de respuesta rápida debajo del saludo (Walter, 22/10/2026): se mandan como si el cliente los escribiera y
 // desaparecen apenas arranca la charla.
-const RESPUESTAS_RAPIDAS = ["Busco un auto", "Quiero vender el mío", "Financiación", "Quiero asegurar mi auto", "Hablar con un asesor"];
+const RESPUESTAS_RAPIDAS = ["Busco para alquilar", "Busco para comprar", "Quiero vender o alquilar mi propiedad", "Quiero tasar mi propiedad", "Hablar con un asesor"];
 
 const SESSION_KEY = "rodi_session_id";
 
@@ -38,13 +38,14 @@ function obtenerSessionId(): string {
   return id;
 }
 
-// `empresa` es el identificador público (slug) de la empresa dueña del chat. El código para pegar en la web de cada
-// inmobiliaria lo trae; mientras no exista, se toma de NEXT_PUBLIC_EMPRESA_SLUG.
-export default function FloatingChatbot({ empresa = process.env.NEXT_PUBLIC_EMPRESA_SLUG ?? "" }: { empresa?: string }) {
+// `empresa` es el identificador público (slug) de la empresa dueña del chat. En la web de cada inmobiliaria lo trae el código
+// para pegar (public/chat-web.js → /chat/<empresa>, con `embebido`); si no, se toma de NEXT_PUBLIC_EMPRESA_SLUG.
+// `embebido`: el chat ocupa toda la ventana (va dentro de un iframe) y al cerrarlo le avisa a la web para que lo esconda.
+export default function FloatingChatbot({ empresa = process.env.NEXT_PUBLIC_EMPRESA_SLUG ?? "", embebido = false, nombreNegocio }: { empresa?: string; embebido?: boolean; nombreNegocio?: string | null }) {
   const pathname = usePathname();
   const enDetalleVehiculo = pathname?.startsWith("/catalogo/") ?? false;
 
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(embebido);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([MENSAJE_INICIAL]);
@@ -110,7 +111,7 @@ export default function FloatingChatbot({ empresa = process.env.NEXT_PUBLIC_EMPR
 
   // z-[75]: por encima del aviso de cookies (z-70), que si no tapaba el botón y la caja de texto (15/10/2026).
   return (
-    <div className={`fixed ${enDetalleVehiculo ? "bottom-24 lg:bottom-6" : "bottom-6"} right-4 lg:right-6 z-[75] font-sans`}>
+    <div className={embebido ? "fixed inset-0 font-sans" : `fixed ${enDetalleVehiculo ? "bottom-24 lg:bottom-6" : "bottom-6"} right-4 lg:right-6 z-[75] font-sans`}>
       {/* Botón flotante para abrir/cerrar */}
       {!isOpen && (
         <m.button
@@ -131,7 +132,7 @@ export default function FloatingChatbot({ empresa = process.env.NEXT_PUBLIC_EMPR
 
       {/* Ventana del Chat. En el celular ocupa toda la pantalla; sigue el modo oscuro de la web (Walter, 22/10/2026). */}
       {isOpen && (
-        <div className="bg-slate-50 dark:bg-[#0a0a0f] border-0 sm:border border-slate-200 dark:border-white/10 fixed inset-0 sm:static sm:w-[380px] sm:h-[560px] rounded-none sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fadeIn">
+        <div className={embebido ? "bg-slate-50 dark:bg-[#0a0a0f] w-full h-full flex flex-col overflow-hidden" : "bg-slate-50 dark:bg-[#0a0a0f] border-0 sm:border border-slate-200 dark:border-white/10 fixed inset-0 sm:static sm:w-[380px] sm:h-[560px] rounded-none sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fadeIn"}>
           {/* Cabecera del Chat */}
           <div className="bg-[#0F172A] dark:bg-[#16161b] dark:border-b dark:border-white/10 text-white px-4 py-3.5 flex items-center gap-3 shrink-0">
             <div className="w-10 h-10 rounded-full bg-[#0145F2] flex items-center justify-center text-white shrink-0">
@@ -141,7 +142,7 @@ export default function FloatingChatbot({ empresa = process.env.NEXT_PUBLIC_EMPR
               <h3 className="font-black text-base leading-tight">{NOMBRE_ASISTENTE_WEB}</h3>
               <p className="text-[11px] text-slate-400 flex items-center gap-1.5 truncate">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                Asistente virtual
+                {nombreNegocio ? `Asistente virtual de ${nombreNegocio}` : "Asistente virtual"}
               </p>
             </div>
             <button
@@ -153,7 +154,7 @@ export default function FloatingChatbot({ empresa = process.env.NEXT_PUBLIC_EMPR
               <RotateCcw className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={() => (embebido ? window.parent.postMessage({ tipo: "chat-web:cerrar" }, "*") : setIsOpen(false))}
               className="text-slate-300 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition-colors"
               aria-label="Cerrar chat"
             >

@@ -155,3 +155,8 @@ export async function empresaPorSlug(slug: string): Promise<string | null> {
   const { data } = await clienteServicio().from("empresas").select("id").eq("slug", slug).eq("estado", "activa").maybeSingle();
   return (data as { id?: string } | null)?.id ?? null;
 }
+
+/** ¿Están cargadas las variables de la base? Sin ellas (antes de crear el proyecto de Supabase) las páginas públicas no consultan. */
+export function baseConfigurada(): boolean {
+  return !!process.env.NEXT_PUBLIC_SUPABASE2_URL && !!process.env.SUPABASE2_SERVICE_ROLE_KEY;
+}

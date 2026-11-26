@@ -5,7 +5,7 @@ export const SCHEMA_SALIDA = `Respondé SIEMPRE en este formato JSON exacto, sin
   "handoff": false,
   "pausar_sin_notificar": false o true — SOLO true en el caso CLIENTE OFENSIVO (ver regla), junto con "handoff": true. En cualquier otro caso omitilo o dejalo false,
   "resumen_handoff": null o string — SOLO si "handoff" es true (ver regla DERIVAR). Si "handoff" es false, siempre null,
-  "intencion": null o "CONSULTA" | "VISITA" | "NEGOCIAR" | "HABLAR_CON_ASESOR" | "OTRA_CONSULTA" — la intención de ESTE momento de la charla,
+  "intencion": null o "CONSULTA" | "VISITA" | "TASACION" | "NEGOCIAR" | "HABLAR_CON_ASESOR" | "OTRA_CONSULTA" — la intención de ESTE momento de la charla,
   "calificacion": null o "caliente" | "tibio" | "frio",
   "datos_detectados": {
     "nombre": null o string,
@@ -16,6 +16,7 @@ export const SCHEMA_SALIDA = `Respondé SIEMPRE en este formato JSON exacto, sin
     "plazo": null o string — para cuándo lo necesita,
     "zona": null o string — identificador (slug) de la sucursal elegida, tal como figura en la lista de SUCURSALES,
     "dia_visita": null o string — fecha puntual confirmada (ej: "lunes 14"), no solo el día de la semana,
-    "horario_visita": null o string — horario confirmado dentro del horario de la sucursal
+    "horario_visita": null o string — horario confirmado dentro del horario de la sucursal,
+    "propiedad_codigo": null o string — código exacto de la propiedad que eligió o por la que pregunta (de la lista de PROPIEDADES)
   }
 }`;

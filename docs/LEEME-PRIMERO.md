@@ -2,7 +2,7 @@
 
 Si abrís este proyecto desde un chat nuevo, **leé este archivo entero antes de tocar nada**. Resume la idea, lo que se decidió, cómo está construido, en qué estado está y cómo seguir. Es la puerta de entrada; el detalle está en los demás archivos de `docs/` (mapa al final).
 
-Última actualización: 6/11/2026.
+Última actualización: 25/11/2026.
 
 ## 1. Quién es Walter y cómo hay que hablarle
 
@@ -76,6 +76,20 @@ Resumen; el detalle está en `manual-de-arranque.md`.
 
 **Actualización 6/11/2026:** se relevó en solo lectura la app de Meta de Pfaffen (Publicada, sin App Review, negocio verificado) y con eso se completaron `receta-agente-meta.md` y `guia-conexion-canales.md`. Walter decidió **no probar con una empresa nueva por ahora**: se replica lo que anda en Pfaffen y se corrige en el primer alta real.
 
+**Actualización 16/11/2026:** se sumó la demo pública `/demo` (simulador de WhatsApp, Instagram y Messenger con el bot real, datos de ejemplo, resumen simulado, tope de USD 5). Detalle en `demo-simulador.md`. Las respuestas reales del bot se prueban antes de lanzar.
+
+**Actualización 18/11/2026 (versión Pro, Walter: "terminar todas las funcionalidades ahora; base, servidor y claves después"):**
+- El bot **ofrece propiedades** de la cartera (solo disponibles; las reservadas las nombra como reservadas) y devuelve `propiedad_codigo` (`lib/ai/promptV2/propiedades.ts`).
+- **Visitas** (`/panel/visitas`): agenda semanal, filtros por oficina/asesor/estado, choques de horario, confirmar por WhatsApp, alta y edición a mano. La visita queda atada a la propiedad (migración `sql_010_visitas_propiedad.sql`). Tarea nueva `recordatorio-visitas`: a las 18 avisa al asesor de las visitas de mañana.
+- **Tasaciones**: el bot detecta "quiero vender/alquilar mi propiedad" (intención `TASACION`), junta los datos, propone visita y deriva.
+- **Configuración**: Equipo (`/panel/configuracion`, altas con clave temporal), Empresa (datos, marca, descripción para el bot, respuestas de ejemplo, código del chat para la web) y Oficinas (`/panel/configuracion/sucursales`).
+- **Chat para la web**: una línea `<script src=".../chat-web.js" data-empresa="...">` abre `/chat/<empresa>` en un recuadro.
+- **Superadmin** (`/superadmin`): alta de inmobiliarias sin SQL, suspender y reactivar.
+- `.env.example` con todas las variables. Brief de 4 archivos: `docs/PRD.md`, `docs/DESIGN_SYSTEM.md`, `docs/ARCHITECTURE.md`, `AGENTS.md`.
+- **Hosting: Cloudflare** (decidido 18/11/2026), no Vercel.
+
+**Actualización 25/11/2026 (rediseño visual):** panel con el mismo aspecto que Automotora (menú claro, barra de abajo en el celular, Inicio en `/panel` con lo del día, cuentas en `lib/panel/inicio.ts`) y portada de `/demo` nueva. Detalle en `decisiones.md` y `DESIGN_SYSTEM.md`.
+
 **NUNCA se probó contra un Supabase real ni contra Meta real.** La base se probó en memoria. Hasta que eso pase, la guía de canales y el manual figuran como "sin probar".
 
 **Regla firme:** no conectar ninguna inmobiliaria real hasta probar todo contra un Supabase real.
@@ -84,11 +98,12 @@ Resumen; el detalle está en `manual-de-arranque.md`.
 
 1. Walter crea el proyecto nuevo en Supabase y corre las migraciones en orden (ver `pasada-2-estado.md`, sección "Para correrlo en Supabase"). Después se prueba un recorrido real: entrar, conectar un canal, mandar un mensaje.
 2. Corregir lo que aparezca en esa primera prueba (se anota en las guías).
-3. Panel de superadmin (hoy la primera empresa se crea con SQL).
-4. Código para pegar el chat en la web de cada inmobiliaria.
-5. Memoria inicial del bot por empresa.
+3. ~~Panel de superadmin~~ hecho 18/11/2026 (`/superadmin`; el primer superadmin se agrega a mano en la tabla `superadmins`).
+4. ~~Código para pegar el chat~~ hecho 18/11/2026.
+5. ~~Memoria inicial del bot~~ hecho 18/11/2026 (se carga al dar de alta la empresa o con un botón en Configuración > Empresa).
 6. Que el dueño no pueda leer los tokens cifrados desde el navegador.
-7. Crear `.env.example` con los nombres de las variables (no existe todavía).
+7. ~~`.env.example`~~ hecho 18/11/2026.
+7b. Pasar el deploy a Cloudflare (OpenNext) y correr las migraciones 001 a 010.
 8. Fases posteriores del plan original: pantalla de configuración de empresa, usuarios y oficinas; propiedades; catálogo propio con dominio (Fase 14, solo si se decide). El orden propuesto de módulos nuevos (Propiedades, Clientes, Visitas, etc.) está en `plan-modulos.md`. El plan original por fases no quedó escrito completo en el repositorio: lo que se sabe está en `fase-3-diseno-base.md`, `estado-pasada-1.md` y `pasada-2-estado.md`.
 
 La lista viva de pendientes es `pasada-2-estado.md`, sección "Lo que sigue pendiente".
@@ -109,6 +124,7 @@ La lista viva de pendientes es `pasada-2-estado.md`, sección "Lo que sigue pend
 | Archivo | Para qué |
 |---|---|
 | `docs/LEEME-PRIMERO.md` | este manual: idea, decisiones, estado, cómo seguir |
+| `docs/demo-simulador.md` | la demo `/demo`: simulador de canales, datos de ejemplo, tope de gasto |
 | `docs/decisiones.md` | tabla de decisiones de Walter con fecha (lo que está acá no es un bug) |
 | `docs/manual-de-arranque.md` | receta para armar otro CRM con este método (ej: concesionaria) |
 | `docs/guia-conexion-canales.md` | conectar WhatsApp, Instagram y Messenger paso a paso |

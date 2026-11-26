@@ -1,18 +1,19 @@
 import { z } from "zod";
 import { supabaseEmpresa as supabase } from "@/lib/empresa/db";
 import { chatJsonV2 } from "@/lib/ai/indexV2";
+import type { PropiedadParaBot } from "@/lib/ai/promptV2/propiedades";
 import { buildSystemPromptV2, SEPARADOR_MENSAJES, type EmpresaParaBot, type SucursalInfo } from "@/lib/ai/promptsV2";
 
 // Agente de los canales (WhatsApp, Instagram, Messenger y chat de la web). Solo razona con el texto de la charla y con lo que
 // la empresa cargó (nombre, qué hace, respuestas fijas, sucursales): nunca escribe la conversación, eso lo hace el webhook que
-// lo llama. No busca ni muestra catálogos: atiende, califica, junta datos, agenda visitas y deriva a una persona.
+// lo llama. Atiende, ofrece propiedades de la cartera cargada, califica, junta datos, agenda visitas y deriva a una persona.
 
 export const AgentReplySchemaV2 = z.object({
   reply: z.string(),
   handoff: z.boolean(),
   pausar_sin_notificar: z.boolean().optional(),
   resumen_handoff: z.string().nullable(),
-  intencion: z.enum(["CONSULTA", "VISITA", "NEGOCIAR", "HABLAR_CON_ASESOR", "OTRA_CONSULTA"]).nullable(),
+  intencion: z.enum(["CONSULTA", "VISITA", "TASACION", "NEGOCIAR", "HABLAR_CON_ASESOR", "OTRA_CONSULTA"]).nullable(),
   calificacion: z.enum(["caliente", "tibio", "frio"]).nullable(),
   datos_detectados: z.object({
     nombre: z.string().nullable(),
@@ -24,6 +25,7 @@ export const AgentReplySchemaV2 = z.object({
     zona: z.string().nullable().optional() /* identificador (slug) de la sucursal elegida */,
     dia_visita: z.string().nullable().optional(),
     horario_visita: z.string().nullable().optional(),
+    propiedad_codigo: z.string().nullable().optional(),
   }),
 });
 
@@ -68,6 +70,15 @@ async function cargarSucursales(): Promise<SucursalInfo[]> {
   return (data ?? []) as SucursalInfo[];
 }
 
+// Cartera para el bot: solo disponibles y reservadas. Si la tabla todavía no existe (falta sql_009), el bot sigue sin catálogo.
+async function cargarPropiedades(): Promise<PropiedadParaBot[]> {
+  const { data, error } = await supabase.from("propiedades")
+    .select("codigo, titulo, tipo, operacion, estado, precio, moneda, expensas, direccion, barrio, ciudad, ambientes, dormitorios, banos, cocheras, superficie_total, superficie_cubierta, descripcion")
+    .in("estado", ["disponible", "reservada"]).order("created_at", { ascending: false }).limit(80);
+  if (error) return [];
+  return (data ?? []) as PropiedadParaBot[];
+}
+
 export async function generarRespuestaAgenteV2(
   historial: HistorialMensaje[],
   canal: string = "whatsapp-v2",
@@ -76,9 +87,9 @@ export async function generarRespuestaAgenteV2(
   const mensajesCliente = historial.filter((h) => h.role === "user").length;
   if (mensajesCliente > LIMITE_MENSAJES_DURO) return { ok: true, data: respuestaLimiteAlcanzado() };
 
-  const [empresa, sucursales] = await Promise.all([cargarEmpresa(), cargarSucursales()]);
+  const [empresa, sucursales, propiedades] = await Promise.all([cargarEmpresa(), cargarSucursales(), cargarPropiedades()]);
   const result = await chatJsonV2(AgentReplySchemaV2, [
-    { role: "system", content: buildSystemPromptV2({ empresa, nombreBot: opciones.nombreBot, sucursales, sugerirCierre: mensajesCliente >= LIMITE_MENSAJES_SUAVE, tono: opciones.tono, esInstagram: opciones.esInstagram, esWeb: opciones.esWeb }) },
+    { role: "system", content: buildSystemPromptV2({ empresa, nombreBot: opciones.nombreBot, sucursales, sugerirCierre: mensajesCliente >= LIMITE_MENSAJES_SUAVE, tono: opciones.tono, esInstagram: opciones.esInstagram, esWeb: opciones.esWeb, propiedades }) },
     ...historial,
   ], { origen: canal });
   if (!result.ok) return { ok: false, error: result.error };
