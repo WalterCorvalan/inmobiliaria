@@ -101,3 +101,18 @@
 @media (max-width: 960px) { .im-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .im-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .im-kpi:nth-child(3) { border-left: 0; } .im-kpi:nth-child(n+3) { border-top: 1px solid var(--im-line); } }
 @media (max-width: 560px) { .im-page { padding: 14px 12px 24px; } .im-grid { grid-template-columns: minmax(0, 1fr); } .im-kpi { padding: 12px 14px; } .im-kpi strong { font-size: 21px; } .im-modal-b { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: no-preference) { .im-card { transition: box-shadow .15s, transform .15s; } .im-card:hover { transform: translateY(-2px); } }
+/* Formularios de alta cortos (26/11/2026): botones juntos en vez de desplegables y "Más datos" plegado. */
+.im-label { font-size: 12px; font-weight: 600; color: var(--im-muted); }
+.im-modal-sub { margin: 2px 0 0; font-size: 12.5px; color: var(--im-muted); }
+.im-seg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border-radius: 10px; background: var(--im-surface-2); border: 1px solid var(--im-line); align-self: flex-start; }
+.im-seg button { height: 30px; padding: 0 12px; border: 0; border-radius: 7px; background: transparent; color: var(--im-muted); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.im-seg button:hover { color: var(--im-fg); }
+.im-seg button.on { background: var(--im-surface); color: var(--im-fg); box-shadow: 0 1px 2px rgba(16, 24, 40, .08), 0 0 0 1px var(--im-line); }
+.im-seg button:focus-visible { outline: 2px solid var(--marca, #2563eb); outline-offset: 1px; }
+.im-mas { border-top: 1px dashed var(--im-line); padding-top: 12px; margin-top: 4px; }
+.im-mas > summary { cursor: pointer; list-style: none; font-size: 13px; font-weight: 650; color: var(--im-fg); display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.im-mas > summary::-webkit-details-marker { display: none; }
+.im-mas > summary::before { content: "+"; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 6px; background: var(--im-surface-2); border: 1px solid var(--im-line); font-size: 13px; line-height: 1; }
+.im-mas[open] > summary::before { content: "−"; }
+.im-mas > summary span { font-weight: 500; color: var(--im-muted); font-size: 12px; }
+@media (max-width: 560px) { .im-mas .im-modal-b { grid-template-columns: minmax(0, 1fr); } }

@@ -43,6 +43,8 @@ export default function PropiedadModal({ propiedad, sucursales, asesores, miId, 
   const [foto, setFoto] = useState(propiedad ? fotoPortada(propiedad) ?? "" : "");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
+  // "Más datos" arranca abierto solo si la propiedad ya tiene cargado algo de ahí.
+  const [masAbierto, setMasAbierto] = useState(!!(propiedad && (propiedad.descripcion || propiedad.direccion || propiedad.banos != null)));
 
   const guardar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,30 +95,54 @@ export default function PropiedadModal({ propiedad, sucursales, asesores, miId, 
     <div className="im-overlay" role="dialog" aria-modal="true" aria-label={edita ? "Editar propiedad" : "Nueva propiedad"} onClick={() => !guardando && onClose()}>
       <form className="im-modal" onSubmit={guardar} onClick={(e) => e.stopPropagation()}>
         <div className="im-modal-h">
-          <h2>{edita ? "Editar propiedad" : "Nueva propiedad"}</h2>
+          <div>
+            <h2>{edita ? "Editar propiedad" : "Nueva propiedad"}</h2>
+            {!edita && <p className="im-modal-sub">Con título, barrio y precio ya queda publicada. Lo demás es opcional.</p>}
+          </div>
           <button type="button" className="im-btn" onClick={onClose} aria-label="Cerrar"><X size={16} /></button>
         </div>
+        {/* Formulario corto (Walter, 26/11/2026: "muy sobrecargado de campos"): arriba lo justo para publicar la propiedad y el
+            resto plegado en "Más datos". Nada de lo que se guardaba se perdió. */}
         <div className="im-modal-b">
+          <div className="im-field full">
+            <span className="im-label">Operación</span>
+            <Segmento valor={operacion} opciones={OPERACIONES.map((o) => [o, OPERACION_LABEL[o]])} onCambio={(v) => setOperacion(v as Operacion)} etiqueta="Operación" />
+          </div>
           <div className="im-field full"><label htmlFor="pr-titulo">Título *</label><input id="pr-titulo" className="im-input" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Depto 2 amb. con balcón" autoFocus /></div>
           <div className="im-field"><label htmlFor="pr-tipo">Tipo</label><select id="pr-tipo" className="im-input" value={tipo} onChange={(e) => setTipo(e.target.value as TipoPropiedad)}>{TIPOS.map((t) => <option key={t} value={t}>{TIPO_LABEL[t]}</option>)}</select></div>
-          <div className="im-field"><label htmlFor="pr-op">Operación</label><select id="pr-op" className="im-input" value={operacion} onChange={(e) => setOperacion(e.target.value as Operacion)}>{OPERACIONES.map((o) => <option key={o} value={o}>{OPERACION_LABEL[o]}</option>)}</select></div>
-          <div className="im-field"><label htmlFor="pr-precio">Precio{operacion === "alquiler" ? " por mes" : ""}</label><input id="pr-precio" className="im-input" inputMode="decimal" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="148000" /></div>
-          <div className="im-field"><label htmlFor="pr-moneda">Moneda</label><select id="pr-moneda" className="im-input" value={moneda} onChange={(e) => setMoneda(e.target.value as Moneda)}>{MONEDAS.map((m) => <option key={m} value={m}>{m === "USD" ? "Dólares (USD)" : "Pesos ($)"}</option>)}</select></div>
-          <div className="im-field"><label htmlFor="pr-dir">Dirección</label><input id="pr-dir" className="im-input" value={direccion} onChange={(e) => setDireccion(e.target.value)} placeholder="Honduras 4800" /></div>
           <div className="im-field"><label htmlFor="pr-barrio">Barrio</label><input id="pr-barrio" className="im-input" value={barrio} onChange={(e) => setBarrio(e.target.value)} placeholder="Palermo" /></div>
-          <div className="im-field"><label htmlFor="pr-amb">Ambientes</label><input id="pr-amb" className="im-input" inputMode="numeric" value={ambientes} onChange={(e) => setAmbientes(e.target.value)} /></div>
-          <div className="im-field"><label htmlFor="pr-banos">Baños</label><input id="pr-banos" className="im-input" inputMode="numeric" value={banos} onChange={(e) => setBanos(e.target.value)} /></div>
-          <div className="im-field"><label htmlFor="pr-coch">Cocheras</label><input id="pr-coch" className="im-input" inputMode="numeric" value={cocheras} onChange={(e) => setCocheras(e.target.value)} /></div>
-          <div className="im-field"><label htmlFor="pr-m2c">Metros cubiertos</label><input id="pr-m2c" className="im-input" inputMode="decimal" value={m2Cubiertos} onChange={(e) => setM2Cubiertos(e.target.value)} /></div>
-          <div className="im-field"><label htmlFor="pr-m2t">Metros totales</label><input id="pr-m2t" className="im-input" inputMode="decimal" value={m2Totales} onChange={(e) => setM2Totales(e.target.value)} /></div>
-          <div className="im-field"><label htmlFor="pr-cod">Código interno</label><input id="pr-cod" className="im-input" value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="PAL-014" /></div>
-          <div className="im-field"><label htmlFor="pr-estado">Estado</label><select id="pr-estado" className="im-input" value={estado} onChange={(e) => setEstado(e.target.value as EstadoPropiedad)}>{ESTADOS.map((s) => <option key={s} value={s}>{ESTADO_LABEL[s]}</option>)}</select></div>
-          <div className="im-field"><label htmlFor="pr-asesor">Asesor</label><select id="pr-asesor" className="im-input" value={asesorId} onChange={(e) => setAsesorId(e.target.value)}><option value="">Sin asignar</option>{asesores.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}</select></div>
-          {sucursales.length > 0 && (
-            <div className="im-field"><label htmlFor="pr-suc">Oficina</label><select id="pr-suc" className="im-input" value={sucursalId} onChange={(e) => setSucursalId(e.target.value)}><option value="">Sin oficina</option>{sucursales.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}</select></div>
+          <div className="im-field full">
+            <label htmlFor="pr-precio">Precio{operacion === "alquiler" ? " por mes" : ""}</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input id="pr-precio" className="im-input" style={{ flex: 1, minWidth: 0 }} inputMode="decimal" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="148000" />
+              <Segmento valor={moneda} opciones={MONEDAS.map((m) => [m, m === "USD" ? "USD" : "$"])} onCambio={(v) => setMoneda(v as Moneda)} etiqueta="Moneda" />
+            </div>
+          </div>
+          <div className="im-field"><label htmlFor="pr-amb">Ambientes</label><input id="pr-amb" className="im-input" inputMode="numeric" value={ambientes} onChange={(e) => setAmbientes(e.target.value)} placeholder="3" /></div>
+          <div className="im-field"><label htmlFor="pr-m2t">Metros totales</label><input id="pr-m2t" className="im-input" inputMode="decimal" value={m2Totales} onChange={(e) => setM2Totales(e.target.value)} placeholder="75" /></div>
+          {edita && (
+            <div className="im-field full">
+              <span className="im-label">Estado</span>
+              <Segmento valor={estado} opciones={ESTADOS.map((s) => [s, ESTADO_LABEL[s]])} onCambio={(v) => setEstado(v as EstadoPropiedad)} etiqueta="Estado" />
+            </div>
           )}
           <div className="im-field full"><label htmlFor="pr-foto">Foto de portada (dirección de la imagen)</label><input id="pr-foto" className="im-input" value={foto} onChange={(e) => setFoto(e.target.value)} placeholder="https://..." /></div>
-          <div className="im-field full"><label htmlFor="pr-desc">Descripción</label><textarea id="pr-desc" className="im-input" rows={3} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} /></div>
+
+          <details className="im-field full im-mas" open={masAbierto} onToggle={(e) => setMasAbierto((e.target as HTMLDetailsElement).open)}>
+            <summary>Más datos <span>(opcional: dirección, baños, cocheras, asesor y lo que lee el bot)</span></summary>
+            <div className="im-modal-b" style={{ padding: "12px 0 0" }}>
+              <div className="im-field full"><label htmlFor="pr-dir">Dirección</label><input id="pr-dir" className="im-input" value={direccion} onChange={(e) => setDireccion(e.target.value)} placeholder="Honduras 4800" /></div>
+              <div className="im-field"><label htmlFor="pr-banos">Baños</label><input id="pr-banos" className="im-input" inputMode="numeric" value={banos} onChange={(e) => setBanos(e.target.value)} /></div>
+              <div className="im-field"><label htmlFor="pr-coch">Cocheras</label><input id="pr-coch" className="im-input" inputMode="numeric" value={cocheras} onChange={(e) => setCocheras(e.target.value)} /></div>
+              <div className="im-field"><label htmlFor="pr-m2c">Metros cubiertos</label><input id="pr-m2c" className="im-input" inputMode="decimal" value={m2Cubiertos} onChange={(e) => setM2Cubiertos(e.target.value)} /></div>
+              <div className="im-field"><label htmlFor="pr-cod">Código interno</label><input id="pr-cod" className="im-input" value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="PAL-014" /></div>
+              <div className="im-field"><label htmlFor="pr-asesor">Asesor</label><select id="pr-asesor" className="im-input" value={asesorId} onChange={(e) => setAsesorId(e.target.value)}><option value="">Sin asignar</option>{asesores.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}</select></div>
+              {sucursales.length > 0 && (
+                <div className="im-field"><label htmlFor="pr-suc">Oficina</label><select id="pr-suc" className="im-input" value={sucursalId} onChange={(e) => setSucursalId(e.target.value)}><option value="">Sin oficina</option>{sucursales.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}</select></div>
+              )}
+              <div className="im-field full"><label htmlFor="pr-desc">Descripción (la lee el bot)</label><textarea id="pr-desc" className="im-input" rows={3} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Luminoso, al frente, con balcón corrido. Apto crédito." /></div>
+            </div>
+          </details>
           {error && <div className="im-error" role="alert">{error}</div>}
         </div>
         <div className="im-modal-f">
@@ -124,6 +150,17 @@ export default function PropiedadModal({ propiedad, sucursales, asesores, miId, 
           <button type="submit" className="im-btn primary" disabled={guardando}>{guardando ? "Guardando..." : edita ? "Guardar cambios" : "Crear propiedad"}</button>
         </div>
       </form>
+    </div>
+  );
+}
+
+/** Botones juntos para elegir una opción (en vez de un desplegable). */
+function Segmento({ valor, opciones, onCambio, etiqueta }: { valor: string; opciones: [string, string][]; onCambio: (v: string) => void; etiqueta: string }) {
+  return (
+    <div className="im-seg" role="group" aria-label={etiqueta}>
+      {opciones.map(([v, t]) => (
+        <button key={v} type="button" aria-pressed={valor === v} className={valor === v ? "on" : ""} onClick={() => onCambio(v)}>{t}</button>
+      ))}
     </div>
   );
 }
