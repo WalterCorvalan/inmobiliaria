@@ -42,7 +42,7 @@ export function IlustracionPropiedad({ id, titulo }: { id: string; titulo: strin
 }
 
 /** La foto de portada de la propiedad; si todavía no tiene, la ilustración con el cartel "Sin foto". */
-export default function FotoPropiedad({ propiedad, children }: { propiedad: Pick<Propiedad, "id" | "titulo" | "propiedad_fotos">; children?: React.ReactNode }) {
+export default function FotoPropiedad({ propiedad, children, sinCartel = false }: { propiedad: Pick<Propiedad, "id" | "titulo" | "propiedad_fotos">; children?: React.ReactNode; sinCartel?: boolean }) {
   const url = fotoPortada(propiedad);
   return (
     <div className="im-photo">
@@ -52,7 +52,7 @@ export default function FotoPropiedad({ propiedad, children }: { propiedad: Pick
       ) : (
         <>
           <IlustracionPropiedad id={propiedad.id} titulo={propiedad.titulo} />
-          <span className="im-sinfoto">Sin foto</span>
+          {!sinCartel && <span className="im-sinfoto">Sin foto</span>}
         </>
       )}
       {children}

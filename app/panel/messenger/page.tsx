@@ -43,7 +43,7 @@ export default async function MessengerPage() {
   return (
     <ConversacionesShell
       canalFijo="messenger"
-      backTo="/panel/messenger?tab=leads"
+      nuevo
       conversacionesIniciales={[]}
       conversacionesInstagramIniciales={[]}
       conversacionesMessengerIniciales={conversacionesVisibles}

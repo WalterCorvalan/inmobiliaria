@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import LeadsUnificadosClient from "./LeadsUnificadosClient";
+import LeadsNuevoClient from "./LeadsNuevoClient";
 import { filtrarVendedoresAsignables, filtrarPorVendedorAsignado } from "@/lib/panel/permisosModulos";
 import { ocultarCharlasDelBotSinAsignar } from "@/lib/panel/asignacionWhatsapp";
 import { cargarTareasLead } from "./tareasLead";
@@ -31,6 +31,25 @@ async function ultimaDireccionPorConversacion(supabase: Awaited<ReturnType<typeo
   return mapa;
 }
 
+// Lista de Leads con el diseño nuevo (Walter, 19/11/2026): cada fila muestra el resumen de la IA y el
+// último mensaje de la charla. Se traen aparte, en bloque, y si una tabla no tiene la columna o falla, esa columna queda
+// vacía sin romper la lista (no se tocan las consultas de arriba).
+type UltimoMensaje = { texto: string | null; tipo: string | null; direccion: "in" | "out" };
+async function ultimoMensajePorConversacion(supabase: Awaited<ReturnType<typeof createClient>>, tabla: string): Promise<Record<string, UltimoMensaje>> {
+  const mapa: Record<string, UltimoMensaje> = {};
+  const { data, error } = await supabase.from(tabla).select("conversacion_id, texto, tipo, direccion").order("created_at", { ascending: false }).limit(2000);
+  if (error) return mapa;
+  for (const m of (data || []) as ({ conversacion_id: string } & UltimoMensaje)[]) {
+    if (!mapa[m.conversacion_id]) mapa[m.conversacion_id] = { texto: m.texto, tipo: m.tipo, direccion: m.direccion };
+  }
+  return mapa;
+}
+async function resumenPorConversacion(supabase: Awaited<ReturnType<typeof createClient>>, tabla: string): Promise<Record<string, string>> {
+  const { data, error } = await supabase.from(tabla).select("id, handoff_resumen").not("handoff_resumen", "is", null).order("last_message_at", { ascending: false }).limit(1000);
+  if (error) return {};
+  return Object.fromEntries(((data || []) as { id: string; handoff_resumen: string | null }[]).filter((r) => r.handoff_resumen).map((r) => [r.id, r.handoff_resumen as string]));
+}
+
 // Carga una fuente de leads sin que un error de esa tabla se la trague
 // callado (pedido 1/10: "no se están cargando ni Rodi ni Messenger"). Antes un
 // select que fallaba (columna que falta en la base, relación ambigua, permiso)
@@ -55,6 +74,13 @@ export default async function LeadsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Resumen y último mensaje de cada charla: se piden junto con todo lo demás (ver ultimoMensajePorConversacion).
+  const extrasLista = Promise.all([
+    ultimoMensajePorConversacion(supabase, "whatsapp_mensajes"), ultimoMensajePorConversacion(supabase, "instagram_mensajes"),
+    ultimoMensajePorConversacion(supabase, "messenger_mensajes"), ultimoMensajePorConversacion(supabase, "rodi_mensajes"),
+    resumenPorConversacion(supabase, "whatsapp_conversaciones"), resumenPorConversacion(supabase, "instagram_conversaciones"),
+    resumenPorConversacion(supabase, "messenger_conversaciones"), resumenPorConversacion(supabase, "rodi_conversaciones"),
+  ]);
   const [
     { data: whatsapp, aviso: avisoWA }, { data: instagram, aviso: avisoIG }, { data: messenger, aviso: avisoMSG }, { data: rodi, aviso: avisoRodi }, { data: manuales },
     { data: vendedores }, { data: sucursales }, { data: miPerfil },
@@ -75,15 +101,16 @@ export default async function LeadsPage() {
     ultimaDireccionPorConversacion(supabase, "rodi_mensajes"),
     cargarTareasLead(supabase),
   ]);
+  const [ultimoWA, ultimoIG, ultimoMSG, ultimoRodi, resumenWA, resumenIG, resumenMSG, resumenRodi] = await extrasLista;
 
   // Se normaliza cada fuente a la misma forma para poder listarlas/filtrarlas
   // juntas -- cada una vive en su propia tabla (whatsapp/instagram/rodi
   // conversaciones + leads_manuales), esto es solo la vista unificada.
   const normalizados = [
-    ...(whatsapp || []).map((c: any) => ({ id: c.id, origen: "whatsapp" as const, nombre: c.whatsapp_contactos?.nombre_perfil || c.whatsapp_contactos?.telefono || "Sin nombre", telefono: c.whatsapp_contactos?.telefono, vendedor_id: c.vendedor_id, ai_habilitada: c.ai_habilitada, calificacion: c.calificacion, estado_lead: c.estado_lead || "nuevo", canal_origen: c.canal_origen, sucursal_id: c.sucursal_id, created_at: c.created_at, last_message_at: c.last_message_at, esBasura: c.es_basura || false, ultimaDireccion: direccionWA[c.id] || null })),
-    ...(instagram || []).map((c: any) => ({ id: c.id, origen: "instagram" as const, nombre: c.instagram_contactos?.username ? `@${c.instagram_contactos.username}` : c.instagram_contactos?.ig_user_id || "Sin nombre", telefono: null, vendedor_id: c.vendedor_id, calificacion: c.calificacion, estado_lead: c.estado_lead || "nuevo", canal_origen: c.canal_origen, sucursal_id: c.sucursal_id, created_at: c.created_at, last_message_at: c.last_message_at, esBasura: c.es_basura || false, ultimaDireccion: direccionIG[c.id] || null })),
-    ...(messenger || []).map((c: any) => ({ id: c.id, origen: "messenger" as const, nombre: c.messenger_contactos?.nombre_perfil || "Contacto de Messenger", telefono: null, vendedor_id: c.vendedor_id, calificacion: c.calificacion, estado_lead: c.estado_lead || "nuevo", canal_origen: c.canal_origen, sucursal_id: c.sucursal_id, created_at: c.created_at, last_message_at: c.last_message_at, esBasura: c.es_basura || false, ultimaDireccion: direccionMSG[c.id] || null })),
-    ...(rodi || []).map((c: any) => ({ id: c.id, origen: "rodi" as const, nombre: c.nombre_contacto || c.telefono_contacto || "Sin nombre", telefono: c.telefono_contacto, vendedor_id: c.vendedor_id, calificacion: c.calificacion, estado_lead: c.estado_lead || "nuevo", canal_origen: c.canal_origen, sucursal_id: c.sucursal_id, created_at: c.created_at, last_message_at: c.last_message_at, esBasura: c.es_basura || false, ultimaDireccion: direccionRodi[c.id] || null })),
+    ...(whatsapp || []).map((c: any) => ({ id: c.id, origen: "whatsapp" as const, nombre: c.whatsapp_contactos?.nombre_perfil || c.whatsapp_contactos?.telefono || "Sin nombre", telefono: c.whatsapp_contactos?.telefono, vendedor_id: c.vendedor_id, ai_habilitada: c.ai_habilitada, calificacion: c.calificacion, estado_lead: c.estado_lead || "nuevo", canal_origen: c.canal_origen, sucursal_id: c.sucursal_id, created_at: c.created_at, last_message_at: c.last_message_at, esBasura: c.es_basura || false, ultimaDireccion: direccionWA[c.id] || null , ultimoMensaje: ultimoWA[c.id] || null, resumen: resumenWA[c.id] || null })),
+    ...(instagram || []).map((c: any) => ({ id: c.id, origen: "instagram" as const, nombre: c.instagram_contactos?.username ? `@${c.instagram_contactos.username}` : c.instagram_contactos?.ig_user_id || "Sin nombre", telefono: null, vendedor_id: c.vendedor_id, calificacion: c.calificacion, estado_lead: c.estado_lead || "nuevo", canal_origen: c.canal_origen, sucursal_id: c.sucursal_id, created_at: c.created_at, last_message_at: c.last_message_at, esBasura: c.es_basura || false, ultimaDireccion: direccionIG[c.id] || null , ultimoMensaje: ultimoIG[c.id] || null, resumen: resumenIG[c.id] || null })),
+    ...(messenger || []).map((c: any) => ({ id: c.id, origen: "messenger" as const, nombre: c.messenger_contactos?.nombre_perfil || "Contacto de Messenger", telefono: null, vendedor_id: c.vendedor_id, calificacion: c.calificacion, estado_lead: c.estado_lead || "nuevo", canal_origen: c.canal_origen, sucursal_id: c.sucursal_id, created_at: c.created_at, last_message_at: c.last_message_at, esBasura: c.es_basura || false, ultimaDireccion: direccionMSG[c.id] || null , ultimoMensaje: ultimoMSG[c.id] || null, resumen: resumenMSG[c.id] || null })),
+    ...(rodi || []).map((c: any) => ({ id: c.id, origen: "rodi" as const, nombre: c.nombre_contacto || c.telefono_contacto || "Sin nombre", telefono: c.telefono_contacto, vendedor_id: c.vendedor_id, calificacion: c.calificacion, estado_lead: c.estado_lead || "nuevo", canal_origen: c.canal_origen, sucursal_id: c.sucursal_id, created_at: c.created_at, last_message_at: c.last_message_at, esBasura: c.es_basura || false, ultimaDireccion: direccionRodi[c.id] || null , ultimoMensaje: ultimoRodi[c.id] || null, resumen: resumenRodi[c.id] || null })),
     ...(manuales || []).map((c: any) => ({ id: c.id, origen: "manual" as const, nombre: c.nombre, telefono: c.telefono, vendedor_id: c.vendedor_id, calificacion: c.calificacion, estado_lead: c.estado_lead || "nuevo", canal_origen: c.canal_origen, sucursal_id: c.sucursal_id, created_at: c.created_at, last_message_at: c.created_at, esBasura: c.es_basura || false, ultimaDireccion: null })),
   ].sort((a, b) => new Date(b.last_message_at || b.created_at).getTime() - new Date(a.last_message_at || a.created_at).getTime());
 
@@ -103,7 +130,7 @@ export default async function LeadsPage() {
   );
 
   return (
-    <LeadsUnificadosClient
+    <LeadsNuevoClient
       leadsIniciales={leadsVisibles}
       avisosCarga={[avisoWA, avisoIG, avisoMSG, avisoRodi].filter((a): a is string => !!a)}
       topeAlcanzado={[whatsapp, instagram, messenger, rodi, manuales].some((c) => (c || []).length >= 1000)}

@@ -80,10 +80,12 @@ const COLOR_ICONO_ORIGEN: Record<string, string> = {
 };
 
 export default function LeadDetailModal({
-  leadId, origen, miId, vendedores, sucursales = [], onClose, onActualizado, inline = false, variante = "clasica",
+  leadId, origen, miId, vendedores, sucursales = [], onClose, onActualizado, inline = false, variante = "clasica", Ficha = FichaLeads,
 }: { leadId: string; origen: "whatsapp" | "instagram" | "messenger" | "rodi" | "manual"; miId: string; vendedores: Perfil[]; sucursales?: Sucursal[]; onClose: () => void; onActualizado: (id: string, patch: any) => void; inline?: boolean;
   /** "leads": el diseño nuevo de /panel/leads (FichaLeads.tsx, 12/10/2026). Las bandejas de los canales usan "clasica". */
-  variante?: "clasica" | "leads" }) {
+  variante?: "clasica" | "leads";
+  /** Ficha que dibuja la variante "leads": la de siempre (FichaLeads) o la del diseño nuevo (FichaLeadsNueva). */
+  Ficha?: typeof FichaLeads }) {
   const tabla = TABLA_POR_ORIGEN[origen];
   const campoFk = CAMPO_FK_POR_ORIGEN[origen];
   const contactoTabla = CONTACTO_TABLA_POR_ORIGEN[origen];
@@ -475,10 +477,11 @@ export default function LeadDetailModal({
 
   if (variante === "leads") {
     return (
-      <FichaLeads
+      <Ficha
         modales={modales}
         f={{
           lead, leadId, origen, nombre, telefono, linkWhatsApp, vendedores, sucursales, motivos, eventos, onClose,
+          fotoUrl: contacto?.foto_url || null,
           cargandoDetalle, hayMasEventos, cargarMasEventos,
           email: contacto?.email || lead.email_contacto || lead.email || "",
           miNombre: vendedores.find((v) => v.id === miId)?.nombre || "",

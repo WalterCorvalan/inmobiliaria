@@ -17,7 +17,9 @@ const SINONIMOS: Record<string, OrigenCliente> = { rodi: "Web", showroom: "Ofici
 // nunca para guardar ni filtrar.
 export function etiquetaOrigen(valor: string | null | undefined): string {
   if (!valor) return "";
-  return valor.toLowerCase() === "rodi" ? "Chat web" : valor;
+  if (valor.toLowerCase() === "rodi") return "Chat web";
+  // "whatsapp" (como lo guardan los canales) se muestra "WhatsApp", igual que en la lista cerrada.
+  return ORIGENES_CLIENTE.find((o) => sinTildes(o) === sinTildes(valor)) ?? valor;
 }
 
 export function esOrigenClienteValido(valor: string | null | undefined): valor is OrigenCliente {

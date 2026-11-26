@@ -45,7 +45,7 @@ export function textoRestante(ms: number): string {
 const horaCorta = (d: Date) => d.toLocaleTimeString("es-AR", { timeZone: ZONA, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
 /** Qué mostrar arriba del campo para escribir. null = nada (la ventana está abierta y lejos de cerrarse). */
-export function avisoVentana(canal: string, v: EstadoVentana | null, humanAgent: boolean = humanAgentActivo()): { titulo: string; detalle: string; tono: "ambar" | "rojo"; plantilla: boolean } | null {
+export function avisoVentana(canal: string, v: EstadoVentana | null, humanAgent: boolean = humanAgentActivo()): { titulo: string; corto: string; detalle: string; tono: "ambar" | "rojo"; plantilla: boolean } | null {
   if (!v || v.estado === "abierta") return null;
   const esWhatsapp = canal === "whatsapp";
   const plazo = horasVentana(canal, humanAgent) === HORAS_VENTANA ? "24 horas" : "7 días";
@@ -54,6 +54,7 @@ export function avisoVentana(canal: string, v: EstadoVentana | null, humanAgent:
       tono: "ambar",
       plantilla: false,
       titulo: `Contestale antes de las ${horaCorta(v.cierra)} (quedan ${textoRestante(v.restanteMs)})`,
+      corto: `Contestale antes de las ${horaCorta(v.cierra)} (quedan ${textoRestante(v.restanteMs)})`,
       detalle: esWhatsapp
         ? "Después de esa hora ya no vas a poder escribirle libre: solo mandarle una plantilla aprobada."
         : "Después de esa hora ya no se le puede escribir desde el CRM: vas a tener que contestarle desde la app en el celular.",
@@ -64,12 +65,15 @@ export function avisoVentana(canal: string, v: EstadoVentana | null, humanAgent:
         tono: "rojo",
         plantilla: true,
         titulo: "Ya no le podés escribir libre a este cliente",
-        detalle: "Mandale una plantilla aprobada. Cuando conteste, volvés a escribirle normal.",
+        // En una sola línea, en el lugar del cuadro para escribir (11/11/2026: el chat casi no se veía en el celular).
+        corto: "Para seguir la charla, mandale un mensaje aprobado",
+        detalle: "Pasaron 24 horas desde su último mensaje: WhatsApp solo deja mandarle un mensaje aprobado. Cuando conteste, volvés a escribirle normal.",
       }
     : {
         tono: "rojo",
         plantilla: false,
         titulo: canal === "messenger" ? "Contestale desde la app de Messenger" : "Contestale desde la app de Instagram",
+        corto: canal === "messenger" ? "Contestale desde la app de Messenger" : "Contestale desde la app de Instagram",
         // No es por plata: Instagram y Messenger no cobran. Meta solo deja escribir desde un sistema como el CRM hasta 24 hs
         // después del último mensaje del cliente; desde la app del celular no hay límite (Walter, 21/10/2026).
         detalle: `Pasaron más de ${plazo} desde su último mensaje y Meta no deja escribirle desde el CRM. Desde la app en el celular le podés escribir cuando quieras, y no se cobra.`,

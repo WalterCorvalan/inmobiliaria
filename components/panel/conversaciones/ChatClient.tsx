@@ -1,15 +1,20 @@
 "use client";
 
 import AvatarVendedor from "./AvatarVendedor";
-import { Fragment, useState, useEffect, useRef } from "react";
+import { Fragment, useState, useEffect, useRef, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { CLASE_ABRIR_EN_LEADS } from "@/lib/panel/botonesCanal";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase2 } from "@/lib/supabase/client";
+import { limpiarParaFiltro } from "@/lib/busquedaCatalogo";
 import ConfirmDialog from "@/components/panel/ConfirmDialog";
 import { traducirErrorMeta } from "@/lib/meta/erroresWhatsapp";
-import { Search, Send, Bot, Check, CheckCheck, Info, ChevronRight, PanelRight, Loader2, Megaphone, X, MessageSquareText, Archive, ArchiveRestore, FileCheck2, ShoppingBag, Link2, Flame, Clock, FileText, Play } from "lucide-react";
+import {
+  Search, Send, Bot, Check, CheckCheck, Info, ChevronRight, ChevronDown, PanelRight,
+  Loader2, Megaphone, X, MessageSquareText, Archive, ArchiveRestore, FileCheck2,
+  ShoppingBag, Link2, Flame, Car, Clock, FileText, Play,
+} from "lucide-react";
 import dynamic from "next/dynamic";
 import VisorVideoModal from "./VisorVideoModal";
 
@@ -18,14 +23,20 @@ const VisorFotosModal = dynamic(() => import("@/components/modals/VisorFotosModa
 import { etiquetaAdjunto } from "@/lib/panel/adjuntosMeta";
 import { avisoVentana, claveDia, estadoVentana, horasVentana } from "@/lib/panel/ventana24h";
 import SeparadorDia from "./SeparadorDia";
-import { countVariables, renderBody } from "@/lib/panel/variablesPlantilla";
+import MensajeListoParaEnviar from "./MensajeListoParaEnviar";
+import { countVariables, nombreDePila, renderBody } from "@/lib/panel/variablesPlantilla";
+import { etiquetaUltimoMensaje, horaMensaje } from "@/lib/panel/horaBandeja";
 import { sugeridaPorNombre } from "@/lib/panel/plantillasSugeridas";
 import { IconoWhatsapp, IconoInstagram, IconoMessenger } from "@/components/ui/IconosCanales";
 import { normalizarOrigenCliente } from "@/lib/panel/origenesCliente";
 import { ordenarPorLlegada } from "@/lib/panel/ordenBandeja";
 import { avisar } from "@/components/panel/Dialogos";
+import { useStockParaElegir } from "@/components/panel/useStockParaElegir";
+import { etiquetaOrigen } from "@/lib/panel/origenesCliente";
 import { escucharTablas } from "@/lib/panel/escucharTablas";
 import { marcarChatVisto } from "@/lib/panel/chatsVistos";
+import { textoDeReemplazo } from "@/lib/meta/mensajeEntranteWhatsapp";
+import { tramosWhatsapp, sinMarcasWhatsapp } from "@/lib/panel/formatoWhatsapp";
 
 // Badge con el origen real del lead, sobre el avatar -- pedido del 24/9:
 // "canal_origen" ya se clasifica solo en el webhook (WhatsApp directo, Meta
@@ -111,6 +122,8 @@ export default function ChatClient({
   vendedores = [],
   miId = "",
   canalFijo,
+  nuevo = false,
+  cabecera,
 }: {
   conversacionesIniciales: any[];
   conversacionesInstagramIniciales?: any[];
@@ -118,9 +131,25 @@ export default function ChatClient({
   vendedores?: { id: string; nombre: string; roles?: string[] | null }[];
   miId?: string;
   canalFijo?: Canal;
+  // Diseño Nuevo de Mi Perfil: misma pantalla y mismos botones, otro aspecto (Walter, 11/11/2026).
+  nuevo?: boolean;
+  // Con el diseño Nuevo, en la compu la cabecera de la bandeja va arriba de la lista, con su mismo ancho, y el chat y
+  // los detalles llegan hasta arriba (Walter, 11/11/2026). En el celular la muestra el Shell arriba de todo.
+  cabecera?: ReactNode;
 }) {
+  const listaEnColumna = nuevo && !!cabecera;
+  // WhatsApp con el diseño Nuevo (Walter, 19/11/2026): columnas planas como la imagen de referencia que mandó (lista,
+  // cabecera, caja para escribir y "Perfil del cliente"), sin tarjetas redondeadas. Los mensajes quedan como estaban
+  // (globitos y fondo de WhatsApp): eso no se cambia. Misma información y mismos botones;
+  // Instagram, Messenger y el diseño Softcars quedan como estaban. Estilos en estiloBandejaPlana.ts.
+  // Bandeja plana (estilo SaaS): WhatsApp desde el 19/11/2026 y, el mismo día, también Instagram y Messenger (Walter).
+  const plano = nuevo && (canalFijo === "whatsapp" || canalFijo === "instagram" || canalFijo === "messenger");
   const [canal, setCanal] = useState<Canal>(canalFijo || "whatsapp");
   const noEsWhatsapp = canal !== "whatsapp";
+  // Nombre del canal en los textos de la bandeja plana (Instagram y Messenger también, 19/11/2026).
+  const nombreCanal = canal === "instagram" ? "Instagram" : canal === "messenger" ? "Messenger" : "WhatsApp";
+  // Con el diseño Nuevo la cabecera del chat es blanca en los tres canales (sin la barra verde de WhatsApp).
+  const cabeceraClara = noEsWhatsapp || nuevo;
   const [conversacionesWA, setConversacionesWA] = useState(conversacionesIniciales);
   const [conversacionesIG, setConversacionesIG] = useState(conversacionesInstagramIniciales);
   const [conversacionesMSG, setConversacionesMSG] = useState(conversacionesMessengerIniciales);
@@ -164,6 +193,19 @@ export default function ChatClient({
 
   const [panelAbierto, setPanelAbierto] = useState(true);
   const [mostrarDetallesMobile, setMostrarDetallesMobile] = useState(false);
+  // Carteles de arriba y de abajo del chat en una sola línea; al tocarlos se ve el texto entero (11/11/2026).
+  const [verResumenPausa, setVerResumenPausa] = useState(false);
+  const [verDetalle24h, setVerDetalle24h] = useState(false);
+  // Nombre del cliente para el mensaje sugerido cuando pasaron las 24 hs (null = el del perfil de WhatsApp).
+  const [nombreRetomar, setNombreRetomar] = useState<string | null>(null);
+  const [chatDeLosCarteles, setChatDeLosCarteles] = useState(seleccionada);
+  if (chatDeLosCarteles !== seleccionada) {
+    // Al cambiar de chat, los carteles vuelven a una sola línea.
+    setChatDeLosCarteles(seleccionada);
+    setVerResumenPausa(false);
+    setVerDetalle24h(false);
+    setNombreRetomar(null);
+  }
   const [etapaActual, setEtapaActual] = useState("sin_contactar");
   const [notasLocales, setNotasLocales] = useState("");
   const [guardandoNotas, setGuardandoNotas] = useState(false);
@@ -250,22 +292,23 @@ export default function ChatClient({
     supabase2.from("whatsapp_templates").select("*").eq("estado", "approved").then(({ data }) => setPlantillasAprobadas(data || []));
   }, [canal]);
 
-  const enviarConPlantilla = async () => {
-    if (!seleccionada || !templateElegido) return;
+  const enviarConPlantilla = async (directa?: { templateId: string; variables: string[] }) => {
+    const templateId = directa?.templateId || templateElegido;
+    if (!seleccionada || !templateId) return;
     setEnviandoPlantilla(true);
     try {
       const res = await fetch("/api/panel/whatsapp/enviar-plantilla", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversacionId: seleccionada, templateId: templateElegido, variables: datosPlantilla.slice(0, countVariables(plantillasAprobadas.find((t) => t.id === templateElegido)?.cuerpo || "")) }),
+        body: JSON.stringify({ conversacionId: seleccionada, templateId, variables: directa?.variables ?? datosPlantilla.slice(0, countVariables(plantillasAprobadas.find((t) => t.id === templateElegido)?.cuerpo || "")) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setMostrarSelectorAprobadas(false);
       setTemplateElegido("");
       setDatosPlantilla([]);
-    } catch (err: any) {
-      avisar(err.message || "Error enviando la plantilla.");
+    } catch (err) {
+      avisar((err as Error).message || "Error enviando la plantilla.");
     } finally {
       setEnviandoPlantilla(false);
     }
@@ -350,30 +393,52 @@ export default function ChatClient({
   }, []);
   const ultimoDelCliente = [...mensajes].reverse().find((m) => m.direccion === "in")?.created_at ?? null;
   const aviso24h = seleccionada ? avisoVentana(canal, estadoVentana(ultimoDelCliente, ahora, horasVentana(canal))) : null;
+  // Pasaron las 24 hs en WhatsApp (Walter, 16/11/2026: "Pasaron las 24 hs" no se entendía): se sugiere la plantilla
+  // aprobada "Retomar la charla", completa con el nombre del cliente y el del vendedor, lista para enviar con un toque.
+  const plantillaRetomar = aviso24h?.plantilla ? plantillasAprobadas.find((t) => t.nombre === "retomar_consulta") : undefined;
+  const nombreClienteRetomar = nombreRetomar ?? nombreDePila(contactoActivo?.nombre_perfil);
+  const datosRetomar = [nombreClienteRetomar.trim(), nombreDePila(vendedores.find((v) => v.id === miId)?.nombre) || "la inmobiliaria"];
 
-  const formatDate = (dateString: string) => new Date(dateString).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" });
-  // Como en WhatsApp: hoy muestra la hora, ayer "Ayer", esta semana el día, más viejo la fecha. Días de calendario en hora de Argentina.
-  const formatDay = (dateString: string) => {
-    const diaAR = (ms: number) => new Date(ms).toLocaleDateString("sv-SE", { timeZone: "America/Argentina/Buenos_Aires" });
-    const ms = new Date(dateString).getTime();
-    const difDays = Math.round((Date.parse(diaAR(Date.now())) - Date.parse(diaAR(ms))) / 86400000);
-    if (difDays <= 0) return new Date(ms).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" });
-    if (difDays === 1) return "Ayer";
-    if (difDays < 7) { const d = new Date(ms).toLocaleDateString("es-AR", { weekday: "long", timeZone: "America/Argentina/Buenos_Aires" }); return d.charAt(0).toUpperCase() + d.slice(1); }
-    return new Date(ms).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "America/Argentina/Buenos_Aires" });
-  };
+  // Hora y día de la lista en lib/panel/horaBandeja.ts: el servidor y el navegador los escriben igual (17/11/2026).
+  const formatDate = (dateString: string) => horaMensaje(dateString);
+  const formatDay = (dateString: string) => etiquetaUltimoMensaje(dateString);
 
   const indexEtapaActual = ETAPAS_PIPELINE.findIndex((e) => e.value === etapaActual);
 
   const [showVincular, setShowVincular] = useState(false);
   const [buscarCliente, setBuscarCliente] = useState("");
   const [clientesResult, setClientesResult] = useState<any[]>([]);
+  const [buscarVehiculo, setBuscarVehiculo] = useState("");
+  const [vehiculoVinculado, setVehiculoVinculado] = useState<any>(null);
+  const [buscandoVehiculoInline, setBuscandoVehiculoInline] = useState(false);
+  // Al abrir "Vincular auto" ya se ve el stock en venta, sin escribir (Walter, 14/10/2026).
+  const vehiculosResult = useStockParaElegir(buscarVehiculo, { activo: buscandoVehiculoInline, limite: 30 }).filas;
+
+  // Tarjeta de "vehículo vinculado" en el panel de detalle (pedido 27/9) --
+  // antes se podía vincular un auto (vincularVehiculo, ya existía para el
+  // modal de Cliente/Vehículo) pero una vez vinculado no se mostraba en
+  // ningún lado cuál quedó asociado. conversaciones no trae el join de
+  // vehiculos (whatsapp/instagram page.tsx solo trae vehiculo_id), así que
+  // se busca acá cuando cambia la conversación activa.
+  useEffect(() => {
+    const vehiculoId = conversacionActiva?.vehiculo_id;
+    if (!vehiculoId) { setVehiculoVinculado(null); return; }
+    let cancelado = false;
+    supabase2.from("vehiculos").select("id, marca, modelo, anio, km, precio_venta, moneda_venta, estado, fotos, slug").eq("id", vehiculoId).maybeSingle()
+      .then(({ data }) => { if (!cancelado) setVehiculoVinculado(data); });
+    return () => { cancelado = true; };
+  }, [conversacionActiva?.vehiculo_id]);
+
   const buscarClientesFn = async (q: string) => {
     setBuscarCliente(q);
     if (q.length < 2) return setClientesResult([]);
-    const { data } = await supabase2.from("clientes").select("id, nombre, telefono, dni_cuit").or(`nombre.ilike.%${q}%,telefono.ilike.%${q}%,dni_cuit.ilike.%${q}%`).limit(5);
+    // Texto limpio para el filtro (6/11/2026): una coma o un paréntesis en lo que se escribe rompía la búsqueda (error 400 de la base).
+    const f = limpiarParaFiltro(q);
+    const { data } = await supabase2.from("clientes").select("id, nombre, telefono, dni_cuit").or(`nombre.ilike.%${f}%,telefono.ilike.%${f}%,dni_cuit.ilike.%${f}%`).limit(5);
     setClientesResult(data || []);
   };
+
+  const buscarVehiculosFn = (q: string) => setBuscarVehiculo(q);
 
   const abrirFormularioCliente = () => {
     setNuevoCliente({ nombre: contactoActivo?.nombre_perfil || "", telefono: contactoActivo?.telefono || "", email: "", dni_cuit: "" });
@@ -433,6 +498,13 @@ export default function ChatClient({
     setShowVincular(false);
   };
 
+  const vincularVehiculo = async (vehiculoId: string | null) => {
+    if (!seleccionada) return;
+    await supabase2.from(tablaConversaciones).update({ vehiculo_id: vehiculoId }).eq("id", seleccionada);
+    setConversaciones((prev) => prev.map((c) => (c.id === seleccionada ? { ...c, vehiculo_id: vehiculoId } : c)));
+    setShowVincular(false);
+  };
+
   const reasignarVendedor = async (vendedorId: string) => {
     if (!seleccionada) return;
     const nuevoId = vendedorId || null;
@@ -482,9 +554,9 @@ export default function ChatClient({
   // así que ahí el check es de 1 o 2 rayitas nomás, sin el estado intermedio.
   const previewUltimoMensaje = (um: any) => {
     if (!um) return null;
-    if (um.tipo === "text") return um.texto || "";
+    if (um.tipo === "text") return sinMarcasWhatsapp(um.texto || "");
     const ICONS_TIPO: Record<string, string> = { image: "📷 Foto", audio: "🎙️ Audio", video: "🎥 Video", document: "📄 Documento", sticker: "😀 Sticker" };
-    return ICONS_TIPO[um.tipo] || um.texto || "Mensaje";
+    return ICONS_TIPO[um.tipo] || um.texto || textoDeReemplazo(um.tipo);
   };
 
   const CheckDeLeido = ({ um }: { um: any }) => {
@@ -510,38 +582,49 @@ export default function ChatClient({
       <button
         key={c.id}
         onClick={() => setSeleccionada(c.id)}
-        className={`w-full text-left p-3.5 border-b border-slate-100 dark:border-white/5 transition-all flex gap-3 ${isActive ? "bg-emerald-50 dark:bg-emerald-500/10 border-l-2 border-l-emerald-700 dark:border-l-emerald-400" : "bg-white dark:bg-transparent border-l-2 border-l-transparent hover:bg-slate-50 dark:hover:bg-white/5"}`}
+        className={plano
+          ? `w-full text-left px-4 py-3 border-b border-[#EEEFF2] dark:border-white/[0.06] transition-colors flex gap-3 ${isActive ? "bg-[#F3F4F6] dark:bg-white/[0.06]" : "hover:bg-[#FAFAFB] dark:hover:bg-white/[0.03]"}`
+          : nuevo
+          ? `w-full text-left p-3 rounded-2xl transition-colors flex gap-3 ${isActive ? "bg-[#0145F2]/[0.07] dark:bg-[#0145F2]/20 ring-1 ring-[#0145F2]/25" : "hover:bg-[#F3F4F7] dark:hover:bg-white/5"}`
+          : `w-full text-left p-3.5 border-b border-slate-100 dark:border-white/5 transition-all flex gap-3 ${isActive ? "bg-emerald-50 dark:bg-emerald-500/10 border-l-2 border-l-emerald-700 dark:border-l-emerald-400" : "bg-white dark:bg-transparent border-l-2 border-l-transparent hover:bg-slate-50 dark:hover:bg-white/5"}`}
       >
         <div className="relative shrink-0 self-start">
-          <AvatarVendedor vendedorId={c.vendedor_id} nombreRespaldo={c.vendedor?.nombre} clase="w-10 h-10" />
+          <AvatarVendedor vendedorId={c.vendedor_id} nombreRespaldo={c.vendedor?.nombre} clase={plano ? "w-9 h-9" : "w-10 h-10"} claseTexto={plano ? "text-xs" : "text-sm"} />
           <span className={`absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-[#111] ${colorCalificacion(c.calificacion)}`} title={c.calificacion || "Sin calificar"} />
           {canal === "whatsapp" ? <OrigenBadge canalOrigen={c.canal_origen} /> : <CanalBadge canal={canal} />}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex justify-between items-start mb-0.5">
-            <span className={`font-bold text-sm truncate flex items-center gap-1 ${isActive ? "text-emerald-900 dark:text-emerald-200" : "text-slate-900 dark:text-white"}`}>
+            {/* Celular (Walter, 13/11/2026): el nombre se corta con "…" y deja lugar a la hora (antes se pegaban: "Sosa10:30"). */}
+            <span className={`${plano ? "font-semibold text-[13px]" : "font-bold text-sm"} truncate flex items-center gap-1 min-w-0 ${isActive && !nuevo ? "text-emerald-900 dark:text-emerald-200" : "text-slate-900 dark:text-white"}`}>
               {esCaliente && <span title="Lead caliente" className="shrink-0 inline-flex"><Flame className="w-3.5 h-3.5 text-rose-500 fill-rose-500" /></span>}
               {c.origen_ads && <span title={c.origen_ads} className="shrink-0 inline-flex"><Megaphone className="w-3 h-3 text-indigo-500 dark:text-sky-300" /></span>}
-              {contacto?.nombre_perfil || contacto?.telefono}
+              <span className="truncate">{contacto?.nombre_perfil || contacto?.telefono}</span>
             </span>
             {/* Fallback a la fecha del último mensaje real (c.ultimo_mensaje,
                traído en whatsapp/instagram page.tsx) -- hay conversaciones
                viejas con last_message_at nulo que antes quedaban sin hora. */}
             {(() => {
               const fecha = c.last_message_at || c.ultimo_mensaje?.created_at;
-              return <span className="text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap">{fecha ? formatDay(fecha) : ""}</span>;
+              return <span className="text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0 ml-2">{fecha ? formatDay(fecha) : ""}</span>;
             })()}
           </div>
-          <div className="flex items-center justify-between gap-2 mb-1.5">
+          <div className={`flex items-center justify-between gap-2 ${plano ? "mb-0.5" : "mb-1.5"}`}>
             <span className="flex items-center gap-1 min-w-0 flex-1">
               <CheckDeLeido um={c.ultimo_mensaje} />
-              <p className="text-[13px] text-slate-500 dark:text-slate-400 truncate">
+              <p className={`${plano ? "text-[12px] text-slate-600 dark:text-slate-300" : "text-[13px] text-slate-500 dark:text-slate-400"} truncate`}>
                 {previewUltimoMensaje(c.ultimo_mensaje) ?? (c.vendedor?.nombre ? `Asignado a ${c.vendedor.nombre}` : "Sin asignar")}
               </p>
             </span>
             {c.unread_count > 0 && <span className="text-[10px] font-bold bg-emerald-600 text-white px-1.5 py-0.5 rounded-full shrink-0">{c.unread_count}</span>}
           </div>
-          {c.handoff_at && !c.ai_habilitada && (
+          {/* Plano: tercera línea gris como la referencia ("WhatsApp · Resolved by AI"), con lo que ya mostraba la lista. */}
+          {plano && (
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
+              {[c.origen_ads || etiquetaOrigen(c.canal_origen) || nombreCanal, c.vendedor?.nombre ? `Asignado a ${c.vendedor.nombre}` : "Sin asignar", c.handoff_at && !c.ai_habilitada ? "IA en pausa" : null].filter(Boolean).join(" · ")}
+            </p>
+          )}
+          {!plano && c.handoff_at && !c.ai_habilitada && (
             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 rounded-full mt-0.5">
               ⚠️ IA en pausa
             </span>
@@ -552,10 +635,14 @@ export default function ChatClient({
   };
 
   return (
-    <div className="flex w-full h-full text-slate-800 dark:text-slate-200">
+    // data-chat-abierto: en el celular, con un chat abierto, se ocultan la cabecera de la bandeja y la barra de abajo
+    // del panel para que la conversación tenga lugar (CSS en app/globals.css, 11/11/2026).
+    <div data-chat-abierto={seleccionada ? "" : undefined} className={plano ? "chat-plano flex w-full h-full bg-white dark:bg-[#111] text-slate-800 dark:text-slate-200" : nuevo ? `chat-nuevo flex w-full h-full gap-2 ${seleccionada ? "-mt-1 px-1 pb-1" : "px-2 pb-2"} md:mt-0 md:px-2 md:pb-2 text-slate-800 dark:text-slate-200` : "flex w-full h-full text-slate-800 dark:text-slate-200"}>
+      <div className={listaEnColumna ? `w-full ${plano ? "md:w-[320px] md:border-r md:border-[#E8E9ED] dark:md:border-white/10" : "md:w-[290px] gap-2"} shrink-0 flex-col ${seleccionada ? "hidden md:flex" : "flex"}` : "contents"}>
+      {listaEnColumna && <div className="hidden md:block shrink-0">{cabecera}</div>}
       {/* COLUMNA 1: BANDEJA */}
-      <div className={`w-full md:w-[280px] flex-col bg-white dark:bg-[#111] border-r border-slate-200 dark:border-white/10 shrink-0 ${seleccionada ? "hidden md:flex" : "flex"}`}>
-        <div className="p-2.5 border-b border-slate-100 dark:border-white/10 shrink-0 space-y-2">
+      <div className={`w-full flex-col bg-white dark:bg-[#111] shrink-0 ${plano ? "chat-plano-lista md:w-[320px]" : nuevo ? "chat-nuevo-lista md:w-[290px] rounded-[24px] ring-1 ring-black/[0.04] dark:ring-white/10 overflow-hidden" : "md:w-[280px] border-r border-slate-200 dark:border-white/10"} ${seleccionada ? "hidden md:flex" : "flex"} ${listaEnColumna ? "flex-1 min-h-0" : ""}`}>
+        <div className={`shrink-0 space-y-2 ${plano ? "px-4 pt-3 pb-2.5 border-b border-[#EEEFF2] dark:border-white/[0.06]" : nuevo ? "p-3" : "p-2.5 border-b border-slate-100 dark:border-white/10"}`}>
           {!canalFijo && (
             <div className="flex gap-1.5">
               <button onClick={() => { setCanal("whatsapp"); setSeleccionada(null); }} className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-bold rounded-lg transition-colors ${canal === "whatsapp" ? "bg-emerald-700 text-white" : "bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"}`}>
@@ -570,35 +657,59 @@ export default function ChatClient({
             </div>
           )}
 
-          {veTodos && (
+          {plano && (
+            <>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input type="text" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar..." className="w-full bg-white dark:bg-white/[0.03] border border-[#E4E6EB] dark:border-white/10 rounded-lg py-2 pl-9 pr-3 text-[16px] md:text-[13px] text-slate-900 dark:text-white outline-none focus:border-slate-400 placeholder:text-slate-400" />
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  {veTodos ? ([[true, "Míos"], [false, "Todos"]] as const).map(([v, label]) => (
+                    <button key={label} onClick={() => setSoloMias(v)} className={`text-[12px] py-1 ${soloMias === v ? "font-semibold text-slate-900 dark:text-white" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"}`}>{label}</button>
+                  )) : <span className="text-[12px] text-slate-500">Más nuevas</span>}
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setFiltro(filtro === "todas" ? "no-leidas" : "todas")} title="No leídas" aria-label="No leídas" className={`h-8 min-w-8 px-1.5 rounded-md text-[12px] font-semibold flex items-center justify-center gap-1 ${filtro === "no-leidas" ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5"}`}>
+                    {noLeidasTotal > 0 && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />} {noLeidasTotal}
+                  </button>
+                  <button onClick={() => { setFiltro(filtro === "archivadas" ? "todas" : "archivadas"); setSeleccionada(null); }} title="Archivadas" aria-label="Archivadas" className={`h-8 w-8 rounded-md flex items-center justify-center ${filtro === "archivadas" ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5"}`}>
+                    <Archive className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+          {!plano && veTodos && (
             <div className="flex gap-1">
               {([[true, "Míos"], [false, "Todos"]] as const).map(([v, label]) => (
                 <button key={label} onClick={() => setSoloMias(v)} className={`px-2.5 py-1 rounded-md text-[11px] font-bold border transition-colors ${soloMias === v ? "bg-slate-800 dark:bg-white text-white dark:text-slate-900 border-slate-800 dark:border-white" : "bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-300"}`}>{label}</button>
               ))}
             </div>
           )}
-          <div className="flex items-center gap-1.5">
+          {!plano && <div className="flex items-center gap-1.5">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-              <input type="text" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar..." className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg py-1.5 pl-8 pr-3 text-xs text-slate-900 dark:text-white outline-none focus:border-emerald-500 transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-500" />
+              <input type="text" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar..." className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg py-1.5 pl-8 pr-3 text-[16px] md:text-xs text-slate-900 dark:text-white outline-none focus:border-emerald-500 transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-500" />
             </div>
-            <button onClick={() => setFiltro(filtro === "todas" ? "no-leidas" : "todas")} title="No leídas" className={`shrink-0 px-2 py-1.5 text-[11px] font-semibold rounded-lg transition-colors flex items-center gap-1 ${filtro === "no-leidas" ? "bg-slate-800 dark:bg-white/10 text-white" : "bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"}`}>
+            <button onClick={() => setFiltro(filtro === "todas" ? "no-leidas" : "todas")} title="No leídas" aria-label="No leídas" className={`shrink-0 px-2 py-1.5 max-md:h-10 max-md:min-w-10 max-md:px-3 max-md:justify-center text-[11px] max-md:text-[13px] font-semibold rounded-lg transition-colors flex items-center gap-1 ${filtro === "no-leidas" ? "bg-slate-800 dark:bg-white/10 text-white" : "bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"}`}>
               {noLeidasTotal > 0 && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />} {noLeidasTotal}
             </button>
-            <button onClick={() => { setFiltro(filtro === "archivadas" ? "todas" : "archivadas"); setSeleccionada(null); }} title="Archivadas" className={`shrink-0 p-1.5 rounded-lg transition-colors ${filtro === "archivadas" ? "bg-slate-800 dark:bg-white/10 text-white" : "bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"}`}>
-              <Archive className="w-3.5 h-3.5" />
+            <button onClick={() => { setFiltro(filtro === "archivadas" ? "todas" : "archivadas"); setSeleccionada(null); }} title="Archivadas" aria-label="Archivadas" className={`shrink-0 p-1.5 max-md:w-10 max-md:h-10 max-md:p-0 max-md:flex max-md:items-center max-md:justify-center rounded-lg transition-colors ${filtro === "archivadas" ? "bg-slate-800 dark:bg-white/10 text-white" : "bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"}`}>
+              <Archive className="w-4 h-4 md:w-3.5 md:h-3.5" />
             </button>
-          </div>
+          </div>}
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className={`flex-1 overflow-y-auto custom-scrollbar ${nuevo && !plano ? "px-2 pb-2 space-y-1" : ""}`}>
           {porLlegada.map((c) => renderConversacion(c))}
           {conversacionesFiltradas.length === 0 && <p className="text-center text-xs text-slate-400 py-8">Sin conversaciones.</p>}
         </div>
       </div>
+      </div>
 
       {/* COLUMNA 2: CHAT */}
-      <div className={`flex-1 flex flex-col relative ${!seleccionada ? "hidden md:flex" : "flex"} ${noEsWhatsapp ? "bg-[#fafafa] dark:bg-[#0A0A0A]" : "bg-[#e5ddd4] dark:bg-[#0b141a]"}`}
+      <div className={`flex-1 min-w-0 flex flex-col relative ${!seleccionada ? "hidden md:flex" : "flex"} ${nuevo && !plano ? "rounded-[24px] ring-1 ring-black/[0.04] dark:ring-white/10 overflow-hidden" : ""} ${noEsWhatsapp ? "bg-[#fafafa] dark:bg-[#0A0A0A]" : "bg-[#e5ddd4] dark:bg-[#0b141a]"}`}
         style={!noEsWhatsapp ? { backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill='%23000000' fill-opacity='0.03'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z'/%3E%3C/g%3E%3C/svg%3E\")" } : undefined}>
         {!seleccionada ? (
           <div className="flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
@@ -606,26 +717,28 @@ export default function ChatClient({
           </div>
         ) : (
           <>
-            <div className={`h-[56px] flex justify-between items-center px-4 shrink-0 shadow-sm z-10 ${noEsWhatsapp ? "bg-white dark:bg-[#111] border-b border-slate-200 dark:border-white/10" : "bg-emerald-700 dark:bg-[#202c33]"}`}>
-              <div className="flex items-center gap-3">
-                <AvatarVendedor vendedorId={conversacionActiva?.vendedor_id} nombreRespaldo={conversacionActiva?.vendedor?.nombre} clase="w-9 h-9" claseTexto="text-xs" />
-                <div>
-                  <h3 className={`font-bold text-[15px] leading-tight ${noEsWhatsapp ? "text-slate-900 dark:text-white" : "text-white"}`}>{contactoActivo?.nombre_perfil || "Cliente"}</h3>
-                  <p className={`text-[11px] font-medium ${noEsWhatsapp ? "text-slate-500 dark:text-slate-400" : "text-emerald-100/80"}`}>{contactoActivo?.telefono}</p>
+            {/* Celular (Walter, 13/11/2026): el nombre en hasta dos renglones sin salirse por arriba; "Abrir en Leads" ya no se aplasta
+                (se veía un cuadrado azul vacío) y "Atrás", "Ver detalles" y ese botón quedan de 40 px. En la compu, igual que antes. */}
+            <div className={`${plano ? "min-h-[52px] md:h-[52px]" : "min-h-[56px] md:h-[56px]"} max-md:py-2 flex justify-between items-center gap-2 px-4 shrink-0 z-10 ${plano ? "bg-white dark:bg-[#111] border-b border-[#E8E9ED] dark:border-white/10" : nuevo ? "bg-white dark:bg-[#111] border-b border-slate-100 dark:border-white/10" : cabeceraClara ? "shadow-sm bg-white dark:bg-[#111] border-b border-slate-200 dark:border-white/10" : "shadow-sm bg-emerald-700 dark:bg-[#202c33]"}`}>
+              <div className="flex items-center gap-3 min-w-0">
+                <AvatarVendedor vendedorId={conversacionActiva?.vendedor_id} nombreRespaldo={conversacionActiva?.vendedor?.nombre} clase={plano ? "w-8 h-8" : "w-9 h-9"} claseTexto="text-xs" />
+                <div className="min-w-0">
+                  <h3 className={`${plano ? "font-semibold text-[14px]" : "font-bold text-[15px]"} leading-tight max-md:line-clamp-2 max-md:break-words ${cabeceraClara ? "text-slate-900 dark:text-white" : "text-white"}`}>{contactoActivo?.nombre_perfil || "Cliente"}</h3>
+                  <p className={`text-[11px] font-medium ${cabeceraClara ? "text-slate-500 dark:text-slate-400" : "text-emerald-100/80"}`}>{plano ? `${nombreCanal}${contactoActivo?.telefono ? " · " : ""}` : ""}{contactoActivo?.telefono}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 {/* Abre este lead en Leads (Walter, 27/10/2026). */}
                 <Link href={`/panel/leads?lead=${seleccionada}&origen=${canal}`} title="Abrir en Leads"
-                  className={CLASE_ABRIR_EN_LEADS}>
-                  <Image src="/icons/panel/leads.png" alt="" width={16} height={16} className="w-4 h-4 object-contain" /> <span className="hidden sm:inline">Abrir en Leads</span>
+                  className={`${plano ? "flex items-center gap-1.5 rounded-md border border-[#E4E6EB] dark:border-white/10 px-2.5 py-1.5 text-[12px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5" : CLASE_ABRIR_EN_LEADS} shrink-0 max-md:w-10 max-md:h-10 max-md:p-0 max-md:justify-center`}>
+                  <Image src="/icons/panel/leads.png" alt="" width={28} height={28} className="w-4 h-4 max-md:w-7 max-md:h-7 object-contain" /> <span className="hidden md:inline">Abrir en Leads</span>
                 </Link>
-                <button className={`md:hidden text-sm font-bold ${noEsWhatsapp ? "text-emerald-700 dark:text-emerald-300" : "text-white"}`} onClick={() => setSeleccionada(null)}>Atrás</button>
-                <button onClick={() => setMostrarDetallesMobile(true)} className={`lg:hidden p-1.5 rounded-md transition-colors ${noEsWhatsapp ? "text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-700 dark:hover:text-slate-200" : "text-emerald-100 hover:bg-white/10"}`} title="Ver detalles">
+                <button className={`md:hidden h-10 px-1 text-sm font-bold ${plano ? "text-slate-700 dark:text-slate-200" : cabeceraClara ? "text-emerald-700 dark:text-emerald-300" : "text-white"}`} onClick={() => setSeleccionada(null)}>Atrás</button>
+                <button onClick={() => setMostrarDetallesMobile(true)} aria-label="Ver detalles" className={`lg:hidden p-1.5 max-md:w-10 max-md:h-10 max-md:p-0 max-md:flex max-md:items-center max-md:justify-center rounded-md transition-colors ${cabeceraClara ? "text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-700 dark:hover:text-slate-200" : "text-emerald-100 hover:bg-white/10"}`} title="Ver detalles">
                   <PanelRight className="w-5 h-5" />
                 </button>
                 {!panelAbierto && (
-                  <button onClick={() => setPanelAbierto(true)} className={`hidden lg:flex p-1.5 rounded-md transition-colors ${noEsWhatsapp ? "text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-700 dark:hover:text-slate-200" : "text-emerald-100 hover:bg-white/10"}`} title="Mostrar detalles">
+                  <button onClick={() => setPanelAbierto(true)} className={`hidden lg:flex p-1.5 rounded-md transition-colors ${cabeceraClara ? "text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-700 dark:hover:text-slate-200" : "text-emerald-100 hover:bg-white/10"}`} title="Mostrar detalles">
                     <PanelRight className="w-5 h-5" />
                   </button>
                 )}
@@ -633,13 +746,16 @@ export default function ChatClient({
             </div>
 
             {conversacionActiva?.handoff_at && !conversacionActiva?.ai_habilitada && (
-              <div className="bg-amber-500 text-white px-4 py-2 flex items-center gap-2 shrink-0 shadow-sm z-10">
-                <Info className="w-4 h-4 shrink-0" />
-                <p className="text-xs font-bold flex-1">
-                  ⚠️ IA en pausa — {conversacionActiva.handoff_reason === "cliente_pidio_humano" ? "el cliente pidió hablar con una persona" : "esperando que atiendas vos"}.
-                  {conversacionActiva.handoff_resumen ? ` ${conversacionActiva.handoff_resumen}` : ""}
-                </p>
-              </div>
+              <button type="button" onClick={() => setVerResumenPausa((v) => !v)} aria-expanded={verResumenPausa}
+                title={verResumenPausa ? "Ocultar el resumen" : "Ver el resumen de la IA"}
+                className={plano ? "w-full text-left bg-white dark:bg-[#111] text-amber-700 dark:text-amber-300 px-5 py-2 flex items-start gap-2 shrink-0 border-b border-[#EEEFF2] dark:border-white/[0.06] z-10" : "w-full text-left bg-amber-500 text-white px-4 py-1.5 flex items-start gap-2 shrink-0 shadow-sm z-10"}>
+                <Info className="w-4 h-4 shrink-0 mt-px" />
+                <span className="min-w-0 flex-1 text-xs font-bold">
+                  <span className="block truncate">IA en pausa: {conversacionActiva.handoff_reason === "cliente_pidio_humano" ? "pidió hablar con una persona" : "esperando que atiendas vos"}</span>
+                  {verResumenPausa && conversacionActiva.handoff_resumen && <span className="block font-medium mt-0.5">{conversacionActiva.handoff_resumen}</span>}
+                </span>
+                {conversacionActiva.handoff_resumen && <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${verResumenPausa ? "rotate-180" : ""}`} />}
+              </button>
             )}
 
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-1.5 custom-scrollbar">
@@ -689,7 +805,9 @@ export default function ChatClient({
                               <span className="text-[13px] font-semibold underline underline-offset-2 truncate">{etiquetaAdjunto(m.media_url, m.tipo)}</span>
                             </a>
                           )}
-                          {m.texto && <p className="leading-relaxed whitespace-pre-wrap">{m.texto}</p>}
+                          {/* *negrita*, _cursiva_ y ~tachado~ como los ve el cliente en WhatsApp (Walter, 23/11/2026) */}
+                          {m.texto && <p className="leading-relaxed whitespace-pre-wrap">{tramosWhatsapp(m.texto).map((t, i) => <span key={i} className={`${t.negrita ? "font-bold" : ""} ${t.cursiva ? "italic" : ""} ${t.tachado ? "line-through" : ""}`}>{t.texto}</span>)}</p>}
+                          {!m.texto && !m.media_url && <p className="leading-relaxed italic opacity-70">{textoDeReemplazo(m.tipo)}</p>}
                           <div className={`flex items-center justify-end gap-1 mt-1 ${out && !noEsWhatsapp ? "opacity-60" : "opacity-70"}`}>
                             {out && m.ai_generado && <Bot className="w-3 h-3" />}
                             {m.editado && <span className="text-[10px] italic">editado</span>}
@@ -727,7 +845,7 @@ export default function ChatClient({
               <div ref={mensajesEndRef} />
             </div>
 
-            <div className={`p-3 relative ${noEsWhatsapp ? "bg-[#fafafa] dark:bg-[#0A0A0A]" : "bg-transparent"}`}>
+            <div className={`${plano ? "px-4 sm:px-5 pb-4 pt-2" : "p-3"} relative ${noEsWhatsapp && !nuevo ? "bg-[#fafafa] dark:bg-[#0A0A0A]" : "bg-transparent"}`}>
               {mostrarPlantillas && (
                 <div className="absolute bottom-full left-4 right-4 mb-2 bg-white dark:bg-[#1A1A1A] border border-slate-200 dark:border-white/10 rounded-xl shadow-xl max-h-56 overflow-y-auto z-20">
                   {plantillas.length === 0 ? (
@@ -742,32 +860,72 @@ export default function ChatClient({
                   )}
                 </div>
               )}
-              {aviso24h && (
-                <div className={`mb-2 flex items-start gap-2.5 rounded-xl border px-3 py-2.5 ${aviso24h.tono === "rojo" ? "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-200" : "bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-200"}`}>
-                  <Clock className="w-4 h-4 mt-0.5 shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-bold leading-snug">{aviso24h.titulo}</p>
-                    <p className="text-xs leading-snug mt-0.5 opacity-90">{aviso24h.detalle}</p>
-                  </div>
+              {/* Aviso de las 24 hs en una sola línea; al tocarlo se ve la explicación. Vencida, va en el lugar del cuadro
+                  para escribir, porque igual no se puede escribir libre (11/11/2026: en el celular el chat casi no se veía). */}
+              {aviso24h?.plantilla && plantillaRetomar && (
+                <MensajeListoParaEnviar
+                  texto={renderBody(plantillaRetomar.cuerpo || "", datosRetomar.map((d, i) => d || `{{${i + 1}}}`))}
+                  pedirNombre={nombreRetomar !== null || !nombreClienteRetomar}
+                  nombre={nombreRetomar ?? ""}
+                  onNombre={setNombreRetomar}
+                  puedeCambiarNombre={nombreRetomar === null && !!nombreClienteRetomar}
+                  onCambiarNombre={() => setNombreRetomar(nombreClienteRetomar)}
+                  onOtroMensaje={() => setMostrarSelectorAprobadas(true)}
+                  onEnviar={() => enviarConPlantilla({ templateId: plantillaRetomar.id, variables: datosRetomar })}
+                  enviando={enviandoPlantilla}
+                  puedeEnviar={!!datosRetomar[0]}
+                />
+              )}
+              {aviso24h && !(aviso24h.plantilla && plantillaRetomar) && (
+                <div className={`flex items-start gap-2 rounded-xl border px-2.5 py-1.5 ${aviso24h.tono === "rojo" ? "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-200" : "mb-2 bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-200"}`}>
+                  <button type="button" onClick={() => setVerDetalle24h((v) => !v)} aria-expanded={verDetalle24h} title={verDetalle24h ? "Ocultar" : "¿Por qué?"}
+                    className="min-w-0 flex-1 flex items-start gap-2 text-left py-1">
+                    <Clock className="w-4 h-4 mt-px shrink-0" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-bold leading-snug line-clamp-2">{aviso24h.corto}</span>
+                      {verDetalle24h && <span className="block text-xs leading-snug mt-0.5 opacity-90">{aviso24h.detalle}</span>}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 mt-px shrink-0 opacity-60 transition-transform ${verDetalle24h ? "rotate-180" : ""}`} />
+                  </button>
                   {aviso24h.plantilla && (
-                    <button type="button" onClick={() => setMostrarSelectorAprobadas(true)} className="shrink-0 self-center text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg px-3 py-1.5">Mandar plantilla</button>
+                    <button type="button" onClick={() => setMostrarSelectorAprobadas(true)} className="shrink-0 self-center text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg px-3 py-1.5">Elegir mensaje</button>
                   )}
                 </div>
               )}
+              {aviso24h?.tono !== "rojo" && plano && (
+              <form onSubmit={enviarMensaje} className="rounded-xl border border-[#E4E6EB] dark:border-white/10 bg-white dark:bg-[#111] px-3 pt-2 pb-2">
+                <input type="text" value={nuevoMensaje} onChange={(e) => setNuevoMensaje(e.target.value)} placeholder={`Responder a ${nombreDePila(contactoActivo?.nombre_perfil) || "este cliente"} por ${nombreCanal}...`} className="w-full bg-transparent px-1 py-2 text-[16px] md:text-[14px] text-slate-800 dark:text-white outline-none placeholder:text-slate-400" autoComplete="off" />
+                <div className="flex items-center justify-between gap-2 mt-1">
+                  <div className="flex items-center gap-0.5 text-slate-400">
+                    <button type="button" onClick={() => setMostrarPlantillas((v) => !v)} title="Plantillas" aria-label="Plantillas" className="w-9 h-9 rounded-md flex items-center justify-center hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/5 dark:hover:text-slate-200">
+                      <MessageSquareText className="w-4 h-4" />
+                    </button>
+                    <button type="button" onClick={() => setMostrarSelectorAprobadas(true)} title="Plantilla aprobada (ventana de 24hs vencida)" aria-label="Plantilla aprobada" className="w-9 h-9 rounded-md flex items-center justify-center hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/5 dark:hover:text-slate-200">
+                      <FileCheck2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <button type="submit" disabled={!nuevoMensaje.trim()} aria-label="Enviar" className="h-9 px-5 rounded-full bg-[#5B6470] hover:bg-[#4A525C] text-white text-[13px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    Enviar
+                  </button>
+                </div>
+              </form>
+              )}
+              {aviso24h?.tono !== "rojo" && !plano && (
               <form onSubmit={enviarMensaje} className="flex items-center gap-2 bg-white dark:bg-[#111] border border-slate-200 dark:border-white/10 rounded-xl px-2 py-1.5 shadow-sm">
-                <button type="button" onClick={() => setMostrarPlantillas((v) => !v)} title="Plantillas" className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-300 shrink-0">
+                <button type="button" onClick={() => setMostrarPlantillas((v) => !v)} title="Plantillas" aria-label="Plantillas" className="p-2 max-md:w-10 max-md:h-10 max-md:p-0 max-md:flex max-md:items-center max-md:justify-center text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-300 shrink-0">
                   <MessageSquareText className="w-4 h-4" />
                 </button>
                 {!noEsWhatsapp && (
-                  <button type="button" onClick={() => setMostrarSelectorAprobadas(true)} title="Plantilla aprobada (ventana de 24hs vencida)" className="p-2 text-slate-400 hover:text-amber-600 dark:hover:text-amber-300 shrink-0">
+                  <button type="button" onClick={() => setMostrarSelectorAprobadas(true)} title="Plantilla aprobada (ventana de 24hs vencida)" aria-label="Plantilla aprobada" className="p-2 max-md:w-10 max-md:h-10 max-md:p-0 max-md:flex max-md:items-center max-md:justify-center text-slate-400 hover:text-amber-600 dark:hover:text-amber-300 shrink-0">
                     <FileCheck2 className="w-4 h-4" />
                   </button>
                 )}
-                <input type="text" value={nuevoMensaje} onChange={(e) => setNuevoMensaje(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1 bg-transparent px-1 py-2 text-[15px] text-slate-800 dark:text-white outline-none" autoComplete="off" />
-                <button type="submit" disabled={!nuevoMensaje.trim()} className="bg-emerald-700 hover:bg-emerald-800 text-white p-2.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0">
+                <input type="text" value={nuevoMensaje} onChange={(e) => setNuevoMensaje(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1 min-w-0 bg-transparent px-1 py-2 text-[16px] md:text-[15px] text-slate-800 dark:text-white outline-none" autoComplete="off" />
+                <button type="submit" disabled={!nuevoMensaje.trim()} aria-label="Enviar" className="bg-emerald-700 hover:bg-emerald-800 text-white p-2.5 max-md:w-10 max-md:h-10 max-md:p-0 max-md:flex max-md:items-center max-md:justify-center rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0">
                   <Send className="w-4 h-4" />
                 </button>
               </form>
+              )}
             </div>
           </>
         )}
@@ -782,17 +940,87 @@ export default function ChatClient({
           {mostrarDetallesMobile && (
             <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setMostrarDetallesMobile(false)} />
           )}
-          <div className={`bg-white dark:bg-[#111] border-l border-slate-200 dark:border-white/10 flex-col shrink-0
+          <div className={`bg-white dark:bg-[#111] flex-col shrink-0 ${plano ? "chat-plano-detalles border-l border-[#E8E9ED] dark:border-white/10" : nuevo ? "chat-nuevo-detalles overflow-hidden rounded-l-[24px] lg:rounded-[24px] lg:ring-1 lg:ring-black/[0.04] dark:lg:ring-white/10" : "border-l border-slate-200 dark:border-white/10"}
             ${mostrarDetallesMobile ? "fixed inset-y-0 right-0 z-50 w-[88vw] max-w-[320px] flex shadow-2xl" : "hidden"}
-            ${panelAbierto ? "lg:flex lg:static lg:z-auto lg:w-[300px] lg:max-w-none lg:shadow-none" : "lg:hidden"}`}>
-            <div className="h-[52px] px-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between shrink-0">
-              <h3 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Detalles</h3>
-              <button onClick={() => { setPanelAbierto(false); setMostrarDetallesMobile(false); }} className="text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
-                <ChevronRight className="w-4 h-4" />
+            ${panelAbierto ? `lg:flex lg:static lg:z-auto ${nuevo ? "lg:w-[320px]" : "lg:w-[300px]"} lg:max-w-none lg:shadow-none` : "lg:hidden"}`}>
+            <div className={`h-[52px] px-4 border-b flex items-center justify-between shrink-0 ${plano ? "border-[#E8E9ED] dark:border-white/10" : "border-slate-200 dark:border-white/10"}`}>
+              <h3 className={plano ? "text-[15px] font-semibold text-slate-900 dark:text-white" : "text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest"}>{plano ? "Perfil del cliente" : "Detalles"}</h3>
+              <button onClick={() => { setPanelAbierto(false); setMostrarDetallesMobile(false); }} aria-label="Cerrar detalles" className="text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
+                {plano ? <X className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar">
+              {plano && (
+                <>
+                  {/* Portada, foto grande y nombre (como "Customer Profile" de la referencia). De fondo, la foto del auto
+                      vinculado a la charla (Walter, 19/11/2026); sin auto o sin foto, el degradé celeste. */}
+                  <div
+                    role={vehiculoVinculado?.fotos?.[0] ? "img" : undefined}
+                    aria-label={vehiculoVinculado?.fotos?.[0] ? `${vehiculoVinculado.marca} ${vehiculoVinculado.modelo}` : undefined}
+                    className="h-28 bg-cover bg-center bg-[linear-gradient(160deg,#cfe0f3_0%,#e9f1fa_45%,#f6f9fc_70%,#dde8f4_100%)] dark:bg-[linear-gradient(160deg,#1c2a3a_0%,#152030_60%,#111_100%)]"
+                    style={vehiculoVinculado?.fotos?.[0] ? { backgroundImage: `url("${String(vehiculoVinculado.fotos[0]).replace(/"/g, "%22")}")` } : undefined}
+                  />
+                  <div className="px-4 -mt-9">
+                    <div className="relative inline-block rounded-full ring-4 ring-white dark:ring-[#111]">
+                      <AvatarVendedor vendedorId={conversacionActiva?.vendedor_id} nombreRespaldo={conversacionActiva?.vendedor?.nombre} clase="w-[72px] h-[72px]" claseTexto="text-xl" />
+                      {canal === "whatsapp" ? <OrigenBadge canalOrigen={conversacionActiva?.canal_origen} /> : <CanalBadge canal={canal} />}
+                    </div>
+                    <h3 className="mt-2 text-[17px] font-semibold text-slate-900 dark:text-white truncate">{contactoActivo?.nombre_perfil || "Cliente"}</h3>
+                    <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate">{contactoActivo?.telefono}</p>
+                  </div>
+                  {/* Resumen de la IA en una tarjeta azulada (como "AI Summary"). */}
+                  <div className="p-4">
+                    <div className="rounded-lg p-4 bg-[linear-gradient(140deg,#e3edf9_0%,#f1f6fc_55%,#dbe7f5_100%)] dark:bg-[linear-gradient(140deg,#1b2736_0%,#16202c_100%)]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-7 h-7 rounded-full bg-white/80 dark:bg-white/10 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0"><Bot className="w-4 h-4" /></span>
+                        <span className="text-[14px] font-semibold text-slate-900 dark:text-white">Resumen de la IA</span>
+                      </div>
+                      {(conversacionActiva?.calificacion || conversacionActiva?.origen_ads || conversacionActiva?.handoff_at) && (
+                        <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                          {conversacionActiva?.calificacion && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${conversacionActiva.calificacion === "caliente" ? "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300" : conversacionActiva.calificacion === "tibio" ? "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300" : "bg-white/70 text-slate-500 dark:bg-white/5 dark:text-slate-400"}`}>
+                              {conversacionActiva.calificacion === "caliente" ? "🔥 Caliente" : conversacionActiva.calificacion === "tibio" ? "Tibio" : "Frío"}
+                            </span>
+                          )}
+                          {conversacionActiva?.origen_ads && (
+                            <span title={conversacionActiva.origen_ads} className="inline-flex items-center gap-1 bg-white/70 dark:bg-white/5 text-indigo-700 dark:text-sky-300 text-[10px] font-bold px-2 py-0.5 rounded-full max-w-full">
+                              <Megaphone className="w-2.5 h-2.5 shrink-0" /> <span className="truncate">{conversacionActiva.origen_ads}</span>
+                            </span>
+                          )}
+                          {conversacionActiva?.handoff_at && (
+                            <span className="inline-flex items-center gap-1 bg-white/70 dark:bg-white/5 text-amber-700 dark:text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                              <Info className="w-2.5 h-2.5 shrink-0" /> {conversacionActiva.handoff_reason === "cliente_pidio_humano" ? "Pidió hablar con alguien" : "IA en pausa"}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <p className="text-[12px] leading-relaxed text-slate-600 dark:text-slate-300">
+                        {conversacionActiva?.handoff_resumen || "Sin resumen todavía — lo genera la IA al derivar a un asesor."}
+                      </p>
+                    </div>
+                  </div>
+                  {/* Datos del contacto en filas (como "User data"), con la IA prendida o en pausa. */}
+                  <div className="px-4 pb-4 border-b border-[#EEEFF2] dark:border-white/[0.06]">
+                    <p className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-700 dark:text-slate-200 mb-2.5"><Info className="w-3.5 h-3.5 text-slate-400" /> Datos del contacto</p>
+                    <dl className="space-y-2 text-[12px]">
+                      <div className="flex justify-between gap-3"><dt className="text-slate-500 dark:text-slate-400">Teléfono</dt><dd className="text-slate-900 dark:text-white text-right truncate">{contactoActivo?.telefono || "—"}</dd></div>
+                      <div className="flex justify-between gap-3"><dt className="text-slate-500 dark:text-slate-400">Canal</dt><dd className="text-slate-900 dark:text-white text-right truncate">{etiquetaOrigen(conversacionActiva?.canal_origen) || nombreCanal}</dd></div>
+                      <div className="flex justify-between gap-3"><dt className="text-slate-500 dark:text-slate-400">Asignado a</dt><dd className="text-slate-900 dark:text-white text-right truncate">{conversacionActiva?.vendedor?.nombre || "Sin asignar"}</dd></div>
+                      <div className="flex justify-between items-center gap-3">
+                        <dt className="text-slate-500 dark:text-slate-400">IA en esta conversación</dt>
+                        <dd className="flex items-center gap-2">
+                          <span className={conversacionActiva?.ai_habilitada ? "text-emerald-600 dark:text-emerald-400 font-semibold" : "text-slate-500"}>{conversacionActiva?.ai_habilitada ? "Activada" : "Pausada"}</span>
+                          <button type="button" onClick={toggleIA} aria-label={conversacionActiva?.ai_habilitada ? "Pausar la IA" : "Activar la IA"} className={`w-9 h-5 rounded-full flex items-center px-0.5 cursor-pointer transition-colors shrink-0 ${conversacionActiva?.ai_habilitada ? "bg-emerald-600 justify-end" : "bg-slate-300 dark:bg-white/10 justify-start"}`}>
+                            <span className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                          </button>
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+                </>
+              )}
+              {!plano && (<>
               <div className="p-4 border-b border-slate-200 dark:border-white/10 flex items-center gap-3">
                 <div className="relative shrink-0">
                   <AvatarVendedor vendedorId={conversacionActiva?.vendedor_id} nombreRespaldo={conversacionActiva?.vendedor?.nombre} clase="w-11 h-11" />
@@ -830,7 +1058,7 @@ export default function ChatClient({
                 {conversacionActiva?.handoff_resumen ? (
                   <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{conversacionActiva.handoff_resumen}</p>
                 ) : (
-                  <p className="text-xs text-slate-400 italic">Sin resumen todavía — lo genera la IA al derivar a un vendedor.</p>
+                  <p className="text-xs text-slate-400 italic">Sin resumen todavía — lo genera la IA al derivar a un asesor.</p>
                 )}
               </div>
 
@@ -843,6 +1071,7 @@ export default function ChatClient({
                   <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
                 </button>
               </div>
+              </>)}
 
             <div className="p-4 border-b border-slate-200 dark:border-white/10">
               <div className="flex items-center justify-between mb-2.5">
@@ -866,19 +1095,53 @@ export default function ChatClient({
             </div>
 
             <div className="p-4 border-b border-slate-200 dark:border-white/10">
-              <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Vendedor asignado</h4>
+              <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Asesor asignado</h4>
               <select value={conversacionActiva?.vendedor_id || ""} onChange={(e) => reasignarVendedor(e.target.value)} className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm font-medium text-slate-800 dark:text-white outline-none focus:border-emerald-600 cursor-pointer">
                 <option value="">Sin asignar</option>
                 {vendedores.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
               </select>
             </div>
 
-            <div className="p-4 pb-0 space-y-2">
+            <div className="p-4 border-b border-slate-200 dark:border-white/10">
+              <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Vehículo vinculado</h4>
+              {vehiculoVinculado ? (
+                <div className="flex items-center gap-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg p-2">
+                  <div className="w-11 h-11 rounded-md bg-slate-200 dark:bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
+                    {vehiculoVinculado.fotos?.[0] ? <img src={vehiculoVinculado.fotos[0]} alt="" className="w-full h-full object-cover" /> : <Car className="w-5 h-5 text-slate-400" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{vehiculoVinculado.marca} {vehiculoVinculado.modelo}</p>
+                    <p className="text-[11px] text-slate-400">
+                      {vehiculoVinculado.anio} · {vehiculoVinculado.precio_venta ? `${vehiculoVinculado.moneda_venta === "ARS" ? "$" : "US$"} ${Number(vehiculoVinculado.precio_venta).toLocaleString("es-AR")}` : "Consultar precio"}
+                    </p>
+                  </div>
+                  <button onClick={() => vincularVehiculo(null)} title="Quitar vínculo" className="text-slate-400 hover:text-rose-500 shrink-0 p-1"><X className="w-3.5 h-3.5" /></button>
+                </div>
+              ) : buscandoVehiculoInline ? (
+                <div className="space-y-1">
+                  <input autoFocus value={buscarVehiculo} onChange={(e) => buscarVehiculosFn(e.target.value)} placeholder="Marca, modelo o patente..." className="w-full border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-900 dark:text-white rounded-lg px-3 py-2 text-sm" />
+                  <div className="max-h-56 overflow-y-auto">
+                  {vehiculosResult.map((v) => (
+                    <button key={v.id} onClick={() => { vincularVehiculo(v.id); setBuscandoVehiculoInline(false); setBuscarVehiculo(""); }} className="block w-full text-left text-sm text-slate-700 dark:text-slate-200 px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-white/10 rounded">
+                      {v.marca} {v.modelo} {v.patente ? `(${v.patente})` : ""}
+                    </button>
+                  ))}
+                  </div>
+                  <button onClick={() => { setBuscandoVehiculoInline(false); setBuscarVehiculo(""); }} className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">Cancelar</button>
+                </div>
+              ) : (
+                <button onClick={() => setBuscandoVehiculoInline(true)} className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-xs font-bold px-4 py-2 rounded-lg">
+                  + Vincular auto
+                </button>
+              )}
+            </div>
+
+            <div className={plano ? "p-4 pb-0 grid grid-cols-2 gap-2" : "p-4 pb-0 space-y-2"}>
               <button onClick={() => setShowVincular(true)} className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-xs font-bold px-4 py-2 rounded-lg">
                 {conversacionActiva?.cliente_id ? "Cliente vinculado ✓" : "Vincular a cliente"}
               </button>
               <button onClick={archivarConversacion} className="w-full flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-xs font-bold px-4 py-2 rounded-lg">
-                {conversacionActiva?.archivada ? <><ArchiveRestore className="w-3.5 h-3.5" /> Desarchivar</> : <><Archive className="w-3.5 h-3.5" /> Archivar conversación</>}
+                {conversacionActiva?.archivada ? <><ArchiveRestore className="w-3.5 h-3.5" /> Desarchivar</> : <><Archive className="w-3.5 h-3.5" /> {plano ? "Archivar" : "Archivar conversación"}</>}
               </button>
             </div>
 
@@ -972,7 +1235,7 @@ export default function ChatClient({
             )}
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setMostrarSelectorAprobadas(false)} className="px-3 py-2 rounded-xl text-xs font-bold text-slate-500">Cancelar</button>
-              <button onClick={enviarConPlantilla} disabled={!templateElegido || enviandoPlantilla} className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold disabled:opacity-50 flex items-center gap-1.5">
+              <button onClick={() => enviarConPlantilla()} disabled={!templateElegido || enviandoPlantilla} className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold disabled:opacity-50 flex items-center gap-1.5">
                 {enviandoPlantilla && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Enviar
               </button>
             </div>

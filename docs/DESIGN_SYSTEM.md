@@ -53,6 +53,14 @@ línea, 14-18px.
 ## 09 Pantallas
 Celular < 768px · Tablet 768-1280px · Escritorio > 1280px. Probar a 390px, 1366×768 y modo oscuro.
 
+## 10 Diseño nuevo de Web (26/11/2026)
+Leads, la ficha del lead, Propiedades, Visitas y las bandejas siguen el diseño "Nuevo" del panel completo de Pfaffen (estilo
+SaaS de alto contraste): fondo #F1F2F5, cajas blancas con línea fina #E8E9ED y esquinas de 8 a 12 px, números en una sola
+franja con separadores (`components/inmo/KpiFila.tsx`), filtros en un renglón con `SelectorWeb` (nada de `<select>` del
+navegador), estados como píldora chica con punto de color y tablas en la compu que pasan a tarjetas en el celular.
+`app/panel/propiedades/estiloStockMinimal.ts` ajusta lo que se abre adentro. Las clases nuevas con el azul escrito a mano van
+también en `app/panel-marca.css`.
+
 ## Reglas
 - Un solo acento: el color de la empresa. Nada de colores fuera de esta paleta.
 - No repetir el nombre de la pantalla dentro de la página.

@@ -44,6 +44,7 @@ export default async function WhatsappPage() {
 
   return (
     <ConversacionesShell
+      nuevo
       canalFijo="whatsapp"
       conversacionesIniciales={conversacionesVisibles}
       conversacionesInstagramIniciales={[]}

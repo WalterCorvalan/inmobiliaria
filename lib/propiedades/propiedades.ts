@@ -119,3 +119,16 @@ export function resumenCartera(lista: Pick<Propiedad, "estado" | "operacion">[])
     enAlquiler: activas.filter((p) => p.operacion === "alquiler").length,
   };
 }
+
+/** Días que lleva publicada la propiedad (desde que se cargó). */
+export function diasPublicada(createdAt: string | null | undefined, ahora: number = Date.now()): number {
+  if (!createdAt) return 0;
+  const t = new Date(createdAt).getTime();
+  return Number.isFinite(t) ? Math.max(0, Math.floor((ahora - t) / 86_400_000)) : 0;
+}
+
+/** Antigüedad de la publicación como en el Stock del panel completo: verde hasta 45 días, amarillo hasta 90, rojo desde 90. */
+export const DIAS_SIN_MOVIMIENTO = 90;
+export function antiguedad(dias: number): "ok" | "atencion" | "estancada" {
+  return dias >= DIAS_SIN_MOVIMIENTO ? "estancada" : dias >= 45 ? "atencion" : "ok";
+}

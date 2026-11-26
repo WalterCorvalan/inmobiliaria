@@ -11,7 +11,8 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 
-export type OpcionSelector = { valor: string; etiqueta: string; deshabilitada?: boolean; nota?: string };
+// icono (opcional, 24/11/2026): se dibuja antes de la etiqueta, en la lista y en el botón cuando es la elegida.
+export type OpcionSelector = { valor: string; etiqueta: string; deshabilitada?: boolean; nota?: string; icono?: React.ReactNode };
 
 export default function SelectorWeb({
   id, valor, onCambio, opciones, placeholder = "Elegir…", deshabilitado = false, claseBoton = "", claseFlecha = "w-4 h-4", ariaLabel, etiquetaActual,
@@ -105,7 +106,7 @@ export default function SelectorWeb({
         onClick={() => (abierto ? setAbierto(false) : abrir())} onKeyDown={teclado}
         className={`w-full flex items-center justify-between gap-2 text-left disabled:opacity-50 disabled:cursor-not-allowed ${claseBoton}`}
       >
-        <span className={`truncate ${hayTexto ? "" : "text-slate-400 dark:text-slate-500"}`}>{textoBoton}</span>
+        <span className={`truncate ${elegida?.icono ? "flex items-center gap-1.5" : ""} ${hayTexto ? "" : "text-slate-400 dark:text-slate-500"}`}>{elegida?.icono}{textoBoton}</span>
         <ChevronDown className={`${claseFlecha} shrink-0 text-slate-400 transition-transform ${abierto ? "rotate-180" : ""}`} />
       </button>
       {abierto && pos && contenedor && createPortal(
@@ -127,7 +128,7 @@ export default function SelectorWeb({
                   : "text-slate-700 dark:text-slate-200 cursor-pointer"
                 } ${sel ? "font-bold" : "font-medium"}`}
               >
-                <span className="truncate">{o.etiqueta}{o.nota && <span className="ml-1.5 text-[11px] font-semibold text-slate-400">{o.nota}</span>}</span>
+                <span className={`truncate ${o.icono ? "flex items-center gap-2" : ""}`}>{o.icono}{o.etiqueta}{o.nota && <span className="ml-1.5 text-[11px] font-semibold text-slate-400">{o.nota}</span>}</span>
                 {sel && <Check className="w-4 h-4 shrink-0" />}
               </li>
             );

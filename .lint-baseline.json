@@ -1,15 +1,15 @@
 {
-  "total": 218,
+  "total": 223,
   "porRegla": {
-    "@typescript-eslint/no-explicit-any": 147,
-    "react-hooks/set-state-in-effect": 23,
+    "@typescript-eslint/no-explicit-any": 150,
+    "react-hooks/set-state-in-effect": 25,
+    "@next/next/no-img-element": 10,
     "react/no-unescaped-entities": 10,
     "@typescript-eslint/no-unused-vars": 9,
     "react-hooks/exhaustive-deps": 9,
-    "@next/next/no-img-element": 9,
     "prefer-const": 4,
-    "react-hooks/purity": 3,
     "react-hooks/static-components": 3,
+    "react-hooks/purity": 2,
     "react-hooks/immutability": 1
   }
 }

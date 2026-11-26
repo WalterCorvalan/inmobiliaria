@@ -36,7 +36,7 @@ export default async function InstagramPage() {
   return (
     <ConversacionesShell
       canalFijo="instagram"
-      backTo="/panel/instagram?tab=leads"
+      nuevo
       conversacionesIniciales={[]}
       conversacionesInstagramIniciales={conversacionesVisibles}
       vendedores={vendedores}

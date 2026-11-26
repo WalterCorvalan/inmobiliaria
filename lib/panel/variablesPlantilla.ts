@@ -32,3 +32,11 @@ export function renderBody(body: string, valores: string[] | string | undefined)
  * "Sincronizar" no las vuelve a traer.
  */
 export const esPlantillaDeEjemploMeta = (nombre: string) => /^(hello_world|jaspers_market)/.test(nombre);
+
+// Primer nombre para saludar en una plantilla ("Juan Pérez 🚗" -> "Juan"). Vacío si no hay un nombre de verdad
+// (solo número, emojis o símbolos): ahí se le pide al vendedor que lo escriba (mensaje para retomar la charla, 16/11/2026).
+export function nombreDePila(nombre: string | null | undefined): string {
+  const primero = (nombre || "").trim().split(/\s+/)[0] || "";
+  const limpio = primero.replace(/[^\p{L}'-]/gu, "");
+  return limpio.length >= 2 ? limpio.charAt(0).toUpperCase() + limpio.slice(1) : "";
+}

@@ -67,3 +67,15 @@ describe("conteos", () => {
     expect(resumenCartera(lista)).toEqual({ total: 4, disponibles: 2, reservadas: 1, enVenta: 2, enAlquiler: 1 });
   });
 });
+
+describe("antigüedad de la publicación", () => {
+  it("cuenta días enteros y marca verde, amarillo y rojo", async () => {
+    const { diasPublicada, antiguedad } = await import("./propiedades");
+    const ahora = new Date("2026-11-26T12:00:00Z").getTime();
+    expect(diasPublicada("2026-11-16T12:00:00Z", ahora)).toBe(10);
+    expect(diasPublicada(undefined, ahora)).toBe(0);
+    expect(antiguedad(10)).toBe("ok");
+    expect(antiguedad(45)).toBe("atencion");
+    expect(antiguedad(90)).toBe("estancada");
+  });
+});

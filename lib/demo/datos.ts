@@ -132,7 +132,7 @@ const RUBRO: RubroDatosDemo = {
     const propiedades = PROPIEDADES.map((p, i) => ({
       id: idFijo(20, i + 1), empresa_id: EMPRESA_DEMO, sucursal_id: oficinaIds[p[15]], asesor_id: equipoIds[p[16]], codigo: p[0], titulo: p[1], tipo: p[2], operacion: p[3], estado: p[14],
       precio: p[4], moneda: p[5], expensas: p[6], direccion: null, barrio: p[7], ciudad: p[8], ambientes: p[9], dormitorios: p[10], banos: p[11], cocheras: p[12], superficie_total: p[13], superficie_cubierta: p[2] === "terreno" ? null : p[13],
-      descripcion: `${p[1]}. ${p[13]} m² en ${p[7]}. Ideal para ver en el día: consultá por visitas.`, latitud: null, longitud: null, creado_por: USUARIO_DEMO, created_at: haceMin(60 * 24 * (i + 2)), updated_at: haceMin(60 * 24 * i),
+      descripcion: `${p[1]}. ${p[13]} m² en ${p[7]}. Ideal para ver en el día: consultá por visitas.`, latitud: null, longitud: null, creado_por: USUARIO_DEMO, created_at: haceMin(60 * 24 * ((i * 13) % 110 + 3)), updated_at: haceMin(60 * 24 * i),
     }));
     const prop = (codigo: string) => propiedades.find((p) => p.codigo === codigo)!;
     const visita = (n: number, lead: number, codigo: string, dias: number, hora: string, estado: string, asesor: number, notas: string | null = null) => {

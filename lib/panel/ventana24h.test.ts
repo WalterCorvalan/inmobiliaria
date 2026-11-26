@@ -19,6 +19,8 @@ describe("ventana de 24 horas", () => {
     expect(avisoVentana("instagram", estadoVentana(ultimo, new Date("2026-10-12T12:55:00Z")))!.titulo).toBe("Contestale desde la app de Instagram");
     const vencida = avisoVentana("whatsapp", estadoVentana(ultimo, new Date("2026-10-12T12:55:00Z")))!;
     expect(vencida.plantilla).toBe(true);
+    // Una sola línea en el lugar del cuadro para escribir (11/11/2026).
+    expect(vencida.corto).toBe("Para seguir la charla, mandale un mensaje aprobado");
     expect(avisoVentana("whatsapp", estadoVentana(ultimo, new Date("2026-10-10T20:00:00Z")))).toBeNull();
   });
   it("tiempo restante legible", () => {
