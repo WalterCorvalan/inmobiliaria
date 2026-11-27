@@ -72,3 +72,9 @@ píldora suave (fondo claro, letra oscura del mismo color), nunca en color lleno
 - Un solo acento: el color de la empresa. Nada de colores fuera de esta paleta.
 - No repetir el nombre de la pantalla dentro de la página.
 - Primero celular. Modo oscuro: sí (clase `dark`).
+
+### Pantallas de plata y formularios cortos (26/11/2026)
+- Señas/Reservas, Ventas/Operaciones y Finanzas usan las piezas de `components/inmo/PlataUI.tsx` (`Tarjeta`, `Cifra`, `Pill`, `Pestanas`, `Vacio`): tarjetas blancas con borde fino, número grande con el dibujo en color, nada de íconos de línea.
+- Dólares y pesos siempre en columnas o tarjetas separadas, nunca sumados. Montos con `montoTexto()` (`USD 18.500`, `$ 1.250.000`).
+- Para elegir entre 2 a 5 opciones (moneda, condición, operación, forma de pago) se usan botones juntos (`components/inmo/Segmento.tsx`, clase `.im-seg`) en vez de un desplegable.
+- Formularios de alta: arriba solo lo justo para publicar; lo opcional va plegado en "Más datos" (`<details className="im-mas">`).

@@ -7,7 +7,7 @@ import NotificationBell from "@/components/panel/NotificationBell";
 import AvisoNotificacionesPush from "@/components/panel/AvisoNotificacionesPush";
 import { esModoDemo } from "@/lib/demo/modo";
 import ToastHost from "@/components/panel/ToastHost";
-import { puedeVerModulo } from "@/lib/panel/permisosModulos";
+import { puedeVerFinanzas, puedeVerModulo } from "@/lib/panel/permisosModulos";
 import { supabase2 } from "@/lib/supabase/client";
 import {
   ChevronRight,
@@ -43,12 +43,15 @@ const GRUPOS: { titulo: string; items: ItemMenu[] }[] = [
     items: [
       { href: "/panel/leads", label: "Leads", icon: "/icons/panel/leads.png", modulo: "leads" },
       { href: "/panel/visitas", label: "Visitas", icon: "/icons/panel/calendario.png", modulo: "visitas" },
+      { href: "/panel/reservas", label: "Reservas", icon: "/icons/panel/senas.png", modulo: "reservas" },
+      { href: "/panel/operaciones", label: "Operaciones", icon: "/icons/panel/ventas.png", modulo: "operaciones" },
     ],
   },
   {
     titulo: "Cartera",
     items: [
       { href: "/panel/propiedades", label: "Propiedades", icon: "/icons/panel/consignaciones.png", modulo: "propiedades" },
+      { href: "/panel/finanzas", label: "Finanzas", icon: "/icons/panel/finanzas.png", modulo: "finanzas" },
     ],
   },
   {
@@ -273,6 +276,7 @@ export default function PanelLayoutClient({
   }, [branding.nombre, pathname]);
 
   const itemVisible = (item: { href?: string; modulo?: string }) => {
+    if (item.modulo === "finanzas") return puedeVerFinanzas(roles);
     if (item.href === "/panel/comisiones" && !comisionesActivas)
       return false;
     return moduloVisible(item.modulo);

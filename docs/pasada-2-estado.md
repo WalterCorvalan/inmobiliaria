@@ -56,6 +56,7 @@ Qué cambió:
 6. **Gasto de IA** y **registro de errores** se anotan con la empresa.
 7. **Límite de pedidos por IP** (`rate_limit_check`) y **motivos de cierre iniciales** por empresa: migración `sql_007`.
 8. **Programación de las tareas**: migración `sql_008` deja la función `programar_tareas(url, clave)`; hay que llamarla una vez (ver el encabezado del archivo).
+9. **Reservas, operaciones cerradas y finanzas** (26/11/2026): migración `sql_011_reservas_operaciones_finanzas.sql` (tablas `reservas`, `operaciones` y `movimientos`, con seguridad por fila y prueba de aislamiento). Falta correrla en Supabase.
 
 Pruebas:
 - `migraciones/tests/aislamiento.test.ts`: 26 pruebas con dos empresas sobre Postgres en memoria (incluye que la lista de tablas de `lib/empresa/db.ts` coincida con la base).

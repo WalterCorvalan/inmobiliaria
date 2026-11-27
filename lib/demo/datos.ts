@@ -159,8 +159,63 @@ const RUBRO: RubroDatosDemo = {
         created_at: haceMin(60 * 3), updated_at: haceMin(60 * 2), recordatorio_enviado_at: null, vehiculo_marca: null, vehiculo_modelo: null, vehiculo_patente: null,
       };
     };
+    // Reservas, operaciones cerradas y finanzas de ejemplo (26/11/2026). Montos inventados pero creíbles.
+    const dia = (n: number) => fechaISO(enDias(n));
+    const reservas = [
+      { n: 1, cod: "A102", cliente: "Camila Torres", tel: "5491150004444", monto: 690000, moneda: "ARS", fecha: -3, vence: 4, estado: "vigente", ase: 1, notas: "Firma el contrato el lunes. Garantía propietaria." },
+      { n: 2, cod: "V206", cliente: "Federico Herrera", tel: "5491150005555", monto: 5000, moneda: "USD", fecha: -12, vence: -1, estado: "vigente", ase: 3, notas: "Espera la aprobación del hipotecario." },
+      { n: 3, cod: "V209", cliente: "Lucas Méndez", tel: "5491150006666", monto: 3000, moneda: "USD", fecha: -10, vence: -3, estado: "convertida", ase: 3, notas: null },
+      { n: 4, cod: "A103", cliente: "Sabrina Cano", tel: "5491150007777", monto: 1050000, moneda: "ARS", fecha: -25, vence: -18, estado: "devuelta", ase: 2, notas: "No consiguió garantía." },
+    ].map((r) => ({
+      id: idFijo(24, r.n), empresa_id: EMPRESA_DEMO, propiedad_id: prop(r.cod).id, cliente_nombre: r.cliente, cliente_telefono: r.tel, monto: r.monto, moneda: r.moneda,
+      fecha: dia(r.fecha), vence_el: dia(r.vence), estado: r.estado, asesor_id: equipoIds[r.ase], notas: r.notas, created_at: haceMin(60 * 24 * -r.fecha), updated_at: haceMin(60),
+    }));
+    // [días atrás, tipo, propiedad, cliente, valor, moneda, honorarios %, asesor, parte del asesor %]
+    const O: [number, string, string, string, number, string, number, number, number][] = [
+      [4, "venta", "3 ambientes con balcón aterrazado, Temperley", "Lucas Méndez", 97000, "USD", 3, 3, 30],
+      [9, "alquiler", "Casa 3 ambientes con jardín, Banfield", "Rocío Álvarez", 750000, "ARS", 100, 3, 30],
+      [15, "alquiler", "2 ambientes en Colegiales", "Tomás Bianchi", 620000, "ARS", 100, 1, 30],
+      [21, "venta", "PH 2 ambientes, Villa Urquiza", "Natalia Ferro", 112000, "USD", 3, 2, 30],
+      [33, "venta", "Casa 4 ambientes, Lomas de Zamora", "Gabriel Ortiz", 178000, "USD", 3, 3, 30],
+      [41, "alquiler", "Local en Av. Cabildo", "Café Molino SRL", 1250000, "ARS", 100, 2, 30],
+      [58, "venta", "2 ambientes, Belgrano", "Julieta Rey", 121000, "USD", 3, 1, 30],
+      [72, "alquiler", "3 ambientes en Núñez", "Matías Prieto", 980000, "ARS", 100, 4, 30],
+      [89, "venta", "Lote 10x30, Adrogué", "Hernán Villalba", 55000, "USD", 3, 3, 30],
+      [104, "venta", "3 ambientes con cochera, Núñez", "Carolina Paz", 205000, "USD", 3, 2, 30],
+      [131, "alquiler", "Monoambiente en Belgrano", "Iván Suárez", 480000, "ARS", 100, 1, 30],
+      [150, "venta", "Casa 3 ambientes, Temperley", "Pilar Gómez", 132000, "USD", 3, 4, 30],
+    ];
+    const operaciones = O.map(([d, tipo, desc, cliente, valor, moneda, hpct, ase, apct], i) => ({
+      id: idFijo(25, i + 1), empresa_id: EMPRESA_DEMO, tipo, propiedad_id: i === 0 ? prop("V209").id : null, propiedad_descripcion: desc, reserva_id: i === 0 ? idFijo(24, 3) : null,
+      cliente_nombre: cliente, cliente_telefono: null, fecha: dia(-d), valor, moneda, honorarios_pct: hpct, honorarios_monto: null, asesor_id: equipoIds[ase], asesor_pct: apct,
+      notas: null, created_at: haceMin(60 * 24 * d), updated_at: haceMin(60 * 24 * d),
+    }));
+    const movimientos: Record<string, unknown>[] = [];
+    let m = 0;
+    const mov = (d: number, tipo: string, categoria: string, descripcion: string, monto: number, moneda: string, operacionId: string | null = null) =>
+      movimientos.push({ id: idFijo(26, ++m), empresa_id: EMPRESA_DEMO, fecha: dia(-d), tipo, categoria, descripcion, monto, moneda, operacion_id: operacionId, creado_por: USUARIO_DEMO, created_at: haceMin(60 * 24 * d), updated_at: haceMin(60 * 24 * d) });
+    for (let mes = 0; mes < 6; mes++) {
+      const b = mes * 30;
+      const inf = 1 - mes * 0.03;
+      mov(b + 2, "egreso", "Sueldos", "Sueldos del equipo", Math.round(2_200_000 * inf), "ARS");
+      mov(b + 3, "egreso", "Alquiler de la oficina", "Alquiler de las dos oficinas", Math.round(900_000 * inf), "ARS");
+      mov(b + 5, "egreso", "Publicidad y portales", "Avisos en portales y redes", Math.round(420_000 * inf), "ARS");
+      mov(b + 8, "egreso", "Servicios", "Luz, internet y teléfono", Math.round(180_000 * inf), "ARS");
+      mov(b + 10, "ingreso", "Administración de alquileres", "Administración de 38 contratos", Math.round(3_200_000 * inf), "ARS");
+      if (mes % 2 === 0) mov(b + 13, "egreso", "Fotos y videos", "Fotógrafo para las propiedades nuevas", Math.round(250_000 * inf), "ARS");
+    }
+    mov(6, "ingreso", "Tasaciones", "Tasación de un PH en Saavedra", 120, "USD");
+    operaciones.forEach((o, i) => {
+      const total = o.honorarios_pct * o.valor / 100;
+      mov(O[i][0], "ingreso", o.tipo === "venta" ? "Honorarios de venta" : "Honorarios de alquiler", `${o.propiedad_descripcion} (${o.cliente_nombre})`, total, o.moneda, o.id);
+      mov(O[i][0] - 2 < 0 ? 0 : O[i][0] - 2, "egreso", "Comisiones de asesores", `Comisión por ${o.propiedad_descripcion}`, Math.round(total * o.asesor_pct / 100), o.moneda);
+    });
+
     return {
       propiedades,
+      reservas,
+      operaciones,
+      movimientos,
       // Fotos de ejemplo (public/demo/propiedades, de un proyecto con licencia MIT: ver LICENCIA.txt de esa carpeta).
       propiedad_fotos: Object.entries(FOTOS_DEMO).flatMap(([codigo, fotos]) => fotos.map((f, orden) => ({
         id: idFijo(23, propiedades.findIndex((x) => x.codigo === codigo) * 10 + orden + 1), empresa_id: EMPRESA_DEMO, propiedad_id: prop(codigo).id,

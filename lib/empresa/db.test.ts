@@ -84,7 +84,7 @@ describe("contexto del pedido", () => {
 
   it("la lista de tablas de empresa no tiene repetidas ni a las de la plataforma", () => {
     for (const t of ["empresas", "superadmins", "soporte_accesos"]) expect(TABLAS_DE_EMPRESA.has(t)).toBe(false);
-    expect(TABLAS_DE_EMPRESA.size).toBe(37);
+    expect(TABLAS_DE_EMPRESA.size).toBe(40); // 40 desde el 26/11/2026: + reservas, operaciones y movimientos
     vi.restoreAllMocks();
   });
 });

@@ -348,6 +348,20 @@ describe("propiedades: cada empresa ve y toca solo las suyas", () => {
     });
   });
 
+  it("reservas, operaciones y movimientos quedan en su empresa", async () => {
+    await db.exec(`insert into reservas (empresa_id, cliente_nombre, monto) values ('${A}', 'Ana', 2000), ('${B}', 'Beto', 3000)`);
+    await db.exec(`insert into operaciones (empresa_id, cliente_nombre, valor) values ('${A}', 'Ana', 150000), ('${B}', 'Beto', 98000)`);
+    await db.exec(`insert into movimientos (empresa_id, tipo, categoria, monto) values ('${A}', 'egreso', 'Sueldos', 450000), ('${B}', 'egreso', 'Portales', 90000)`);
+    await como(U.asesorA1, async () => {
+      expect((await filas(`select cliente_nombre from reservas`)).map((r) => r.cliente_nombre)).toEqual(['Ana']);
+      expect((await filas(`select cliente_nombre from operaciones`)).map((r) => r.cliente_nombre)).toEqual(['Ana']);
+      expect((await filas(`select categoria from movimientos`)).map((r) => r.categoria)).toEqual(['Sueldos']);
+      await expect(db.query(`insert into operaciones (empresa_id, cliente_nombre, valor) values ('${B}', 'Intruso', 1)`)).rejects.toThrow();
+      const propia = await uno(`insert into movimientos (tipo, categoria, monto) values ('ingreso', 'Tasaciones', 100) returning empresa_id`);
+      expect(propia.empresa_id).toBe(A);
+    });
+  });
+
   it("al borrar una propiedad se borran sus fotos", async () => {
     const p = await uno(`insert into propiedades (empresa_id, titulo) values ('${A}', 'Para borrar') returning id`);
     await db.exec(`insert into propiedad_fotos (empresa_id, propiedad_id, url) values ('${A}', '${p.id}', 'https://ejemplo.test/x.jpg')`);

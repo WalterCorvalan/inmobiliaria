@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { supabase2 } from "@/lib/supabase/client";
+import Segmento from "@/components/inmo/Segmento";
 import {
   ESTADOS, ESTADO_LABEL, MONEDAS, OPERACIONES, OPERACION_LABEL, TIPOS, TIPO_LABEL, fotoPortada,
   type EstadoPropiedad, type Moneda, type Operacion, type Propiedad, type TipoPropiedad,
@@ -154,13 +155,3 @@ export default function PropiedadModal({ propiedad, sucursales, asesores, miId, 
   );
 }
 
-/** Botones juntos para elegir una opción (en vez de un desplegable). */
-function Segmento({ valor, opciones, onCambio, etiqueta }: { valor: string; opciones: [string, string][]; onCambio: (v: string) => void; etiqueta: string }) {
-  return (
-    <div className="im-seg" role="group" aria-label={etiqueta}>
-      {opciones.map(([v, t]) => (
-        <button key={v} type="button" aria-pressed={valor === v} className={valor === v ? "on" : ""} onClick={() => onCambio(v)}>{t}</button>
-      ))}
-    </div>
-  );
-}

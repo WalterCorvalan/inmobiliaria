@@ -2,6 +2,9 @@
 export const MODULOS_DEMO: { nombre: string; href: string; detalle: string }[] = [
   { nombre: "Leads", href: "/panel/leads", detalle: "Todos los interesados de WhatsApp, Instagram, Messenger y la web en una lista, con temperatura y asesor" },
   { nombre: "Propiedades", href: "/panel/propiedades", detalle: "La cartera de venta y alquiler, con precio, estado y asesor" },
+  { nombre: "Reservas", href: "/panel/reservas", detalle: "La plata que deja cada cliente para reservar una propiedad, con su vencimiento" },
+  { nombre: "Operaciones", href: "/panel/operaciones", detalle: "Ventas y alquileres cerrados, con los honorarios y la parte de cada asesor" },
+  { nombre: "Finanzas", href: "/panel/finanzas", detalle: "Lo que entró y se gastó en dólares y en pesos, mes a mes" },
   { nombre: "Visitas", href: "/panel/visitas", detalle: "La agenda de visitas que arma el bot y las que cargás vos" },
   { nombre: "WhatsApp", href: "/panel/whatsapp", detalle: "Las charlas de WhatsApp, con el bot o un asesor respondiendo" },
   { nombre: "Instagram", href: "/panel/instagram", detalle: "Mensajes directos de Instagram" },

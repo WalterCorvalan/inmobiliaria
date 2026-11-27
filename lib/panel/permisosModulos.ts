@@ -57,3 +57,9 @@ export function filtrarPorVendedorAsignado<T extends { vendedor_id?: string | nu
   if (soyAdmin || soyEncargado) return items;
   return items.filter((i) => !i.vendedor_id || i.vendedor_id === miId);
 }
+
+// Finanzas (gastos, ingresos y honorarios que quedan para la inmobiliaria): solo el dueño, el director y el encargado. El
+// asesor ve las reservas y las operaciones, pero no los gastos (Walter, 26/11/2026: es "un poquito de rentabilidad" para el dueño).
+export function puedeVerFinanzas(roles: string[] | null | undefined): boolean {
+  return (roles || []).some((r) => r === "admin" || r === "director" || r === "encargado");
+}

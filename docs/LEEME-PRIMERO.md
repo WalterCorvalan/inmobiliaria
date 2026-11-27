@@ -90,6 +90,8 @@ Resumen; el detalle está en `manual-de-arranque.md`.
 
 **Actualización 25/11/2026 (rediseño visual):** panel con el mismo aspecto que Automotora (menú claro, barra de abajo en el celular, Inicio en `/panel` con lo del día, cuentas en `lib/panel/inicio.ts`) y portada de `/demo` nueva. Detalle en `decisiones.md` y `DESIGN_SYSTEM.md`.
 
+**Actualización 26/11/2026 (CRM corporativo y módulos de plata):** Inicio nuevo, formularios de alta cortos y tres pantallas nuevas: Reservas, Operaciones cerradas y Finanzas (cuentas en `lib/finanzas/`). Antes de usarlas con una base real, Walter corre `migraciones/sql_011_reservas_operaciones_finanzas.sql`. Detalle en `decisiones.md`.
+
 **NUNCA se probó contra un Supabase real ni contra Meta real.** La base se probó en memoria. Hasta que eso pase, la guía de canales y el manual figuran como "sin probar".
 
 **Regla firme:** no conectar ninguna inmobiliaria real hasta probar todo contra un Supabase real.

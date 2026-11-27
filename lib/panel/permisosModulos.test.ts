@@ -75,3 +75,13 @@ describe("puedeVerModulo", () => {
     expect(puedeVerModulo(["taller"])).toBe(false);
   });
 });
+
+import { puedeVerFinanzas } from "./permisosModulos";
+describe("puedeVerFinanzas", () => {
+  it("solo dueño, director y encargado; el asesor no", () => {
+    expect(puedeVerFinanzas(["admin"])).toBe(true);
+    expect(puedeVerFinanzas(["encargado", "ventas"])).toBe(true);
+    expect(puedeVerFinanzas(["ventas"])).toBe(false);
+    expect(puedeVerFinanzas(null)).toBe(false);
+  });
+});
