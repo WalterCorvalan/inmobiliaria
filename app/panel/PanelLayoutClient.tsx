@@ -8,6 +8,7 @@ import AvisoNotificacionesPush from "@/components/panel/AvisoNotificacionesPush"
 import { esModoDemo } from "@/lib/demo/modo";
 import ToastHost from "@/components/panel/ToastHost";
 import { puedeVerFinanzas, puedeVerModulo } from "@/lib/panel/permisosModulos";
+import { MODULOS_PRO } from "@/lib/planes";
 import { supabase2 } from "@/lib/supabase/client";
 import {
   ChevronRight,
@@ -67,6 +68,7 @@ const GRUPOS: { titulo: string; items: ItemMenu[] }[] = [
     titulo: "Ajustes",
     items: [
       { href: "/panel/configuracion/empresa", prefijo: "/panel/configuracion", label: "Configuración", icon: "/icons/panel/configuracion.png", modulo: "configuracion" },
+      { href: "/panel/planes", label: "Planes", icon: "/icons/panel/facturacion.png", modulo: "planes" },
     ],
   },
 ];
@@ -392,6 +394,9 @@ export default function PanelLayoutClient({
                         : <span className={activo ? "flex w-6 h-6 -m-0.5 items-center justify-center rounded-md bg-white" : ""}><IconoPanel src={item.icon} alt="" className="w-5 h-5" /></span>}
                     </span>
                     {!angosto && <span className="truncate">{item.label}</span>}
+                    {!angosto && item.modulo && MODULOS_PRO.has(item.modulo) && (
+                      <span className={`ml-auto shrink-0 rounded px-1.5 py-px text-[9.5px] font-bold uppercase tracking-wider ${activo ? "bg-white/20 text-white" : "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"}`} title="Viene en el plan Pro">Pro</span>
+                    )}
                   </span>
                   {celular && !activo && <ChevronRight className="relative ml-auto w-4 h-4 text-slate-300 dark:text-slate-600" aria-hidden="true" />}
                 </Link>
